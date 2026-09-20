@@ -18,45 +18,48 @@
 
 ## 0. 结论摘要
 
+> **2026-09-20 范围决策(用户):放弃 iOS 支持,仅 Android。** 本节与 §1 已按此重写。iOS 相关分析保留在 §1.5,仅作为**决策依据的留档**,不再是设计输入。
+
 | 议题 | 结论 |
 |---|---|
-| 载体(回答 **Q-05**) | **推荐 PWA 作为第一载体**,但必须诚实承认两个平台缺口:**纯 PWA 在 iPhone 上不能用 BLE**(F-2),且**HTTPS 页面连 `ws://` 局域网地址在规范上被拦、需实测确认宽容度**(F-3 / V-06) |
-| 对 iOS 的产品表述 | iOS = 「Wi-Fi/`wss` 模式可用,BLE 配网与近距 BLE 不可用」。S2 场景对 iOS 用户不可得 |
+| 载体(回答 **Q-04**) | **推荐 PWA(Android)作为主载体**。仅 Android 后,**BLE 能力不再有平台缺口**(Web Bluetooth 在 Android Chrome/Edge/Samsung/UC/Baidu 均可用),PWA 可覆盖 F-07 + F-08 + 配网全流程,且本机零新工具链(F-5) |
+| 何时才需要原生 | 仅当需要:(a) **后台保活**(PWA 做不到,见 §2.4);(b) **证书固定**(Android 上 PWA 亦无此 API,但 Android 原生可做)。两者都不是当前 P0 的阻塞项 |
 | 双通道 | 近距离优先 BLE,远距离/高吞吐走 Wi-Fi;扫频/捕获进行中**不切换**(§2.3) |
 | 保活 | 心跳 PING/PONG 5s(契约 §3.1);**前后台切换后必须整页重载重建连接**,不能只重连 socket(§2.4) |
 | 规模纪律 | 请求规模**必须**读 `CAPS.limits.ble_frame_max` 与 `max_edges`,不得硬编码 4096/3669(契约 §2.2.1、§3.4) |
+| 配对 | 设备端有 **OLED(C-07)**,显示 6 位一次性 `pair_code`;App 经 BLE 完成首次配对并取回 `pairing_secret`(契约 §7.1) |
 | AI | 分析在 App 侧调用 DeepSeek,设备只回传 `features`(ADR-0002);链路细节见 [`../50-ai/010-deepseek-analysis.md`](../50-ai/010-deepseek-analysis.md) |
 
 ---
 
-## 1. 载体选型对比(Q-05)
+## 1. 载体选型(仅 Android,Q-04)
 
 ### 1.1 对比表
 
+> **iOS 列已移除**(C-06:放弃 iOS)。原三载体 × iOS 的完整对比留档在 §1.5,仅供追溯决策过程。
+
 | 维度 | **PWA**(HTML/JS + Service Worker) | **Flutter** | **React Native / Expo** |
 |---|---|---|---|
-| BLE 能力(Android) | ✅ Web Bluetooth(`Bluetooth.requestDevice()`) | ✅ `flutter_blue_plus` 2.3.12 | ✅ `react-native-ble-plx` |
-| BLE 能力(**iOS**) | ❌ **Safari on iOS/iPadOS 全版本不支持 `navigator.bluetooth`**;iOS 上所有浏览器都跑 WebKit(App Store 指南 2.5.6),故**换浏览器也不行** | ✅ 原生 CoreBluetooth | ✅ 支持 background mode on iOS |
-| Wi-Fi WebSocket | ⚠️ 可用,但页面必须 HTTPS 且设备必须 `wss://`(§1.3) | ✅ 无混合内容限制,可直连 `ws://` | ✅ 同左 |
-| 开发环境成本(本机 F-5) | **最低**:Node v22.22.1 + npm 已装,**零新工具链** | **高**:Flutter/Dart **未安装**(数 GB);Android 需 Android SDK;iOS 构建需 macOS + Xcode(本机无) | **高**:同左;Expo 需 `prebuild` 生成原生工程 |
-| 后台保活 | ❌ 弱:切后台 socket 必断;iOS 上重连还可能卡死(§2.4) | ✅ iOS 需配 `Info.plist`,被唤醒约 10s 预算 | ✅ 需 `isBackgroundEnabled` + Android 前台服务 |
-| 原生能力 | 低:**无证书固定 API**(§1.3)、蓝牙权限受浏览器管控、无后台 | 高:可做证书固定、前台服务、文件保存 | 高:同上 |
-| 上架要求 | **无**(免安装、免审核);代价是进不了应用商店,且 iOS 依赖用户手动「添加到主屏幕」 | Google Play + App Store 审核(隐私清单、蓝牙权限说明) | 同左 |
+| BLE 能力(Android) | ✅ Web Bluetooth(`Bluetooth.requestDevice()`) | ✅ `flutter_blue_plus` | ✅ `react-native-ble-plx` |
+| Wi-Fi WebSocket | ⚠️ 可用,但页面必须 HTTPS 且设备须 `wss://`(§1.3);除非实测确认局域网 `ws://` 被放行(V-06) | ✅ 无混合内容限制,可直连 `ws://` | ✅ 同左 |
+| 开发环境成本(本机 F-5) | **最低**:Node v22.22.1 + npm 已装,**零新工具链** | **高**:Flutter/Dart **未安装**(数 GB);需 Android SDK | **高**:同左;Expo 需 `prebuild` 生成原生工程 |
+| 后台保活 | ❌ 弱:切后台/进 Doze 后 socket 必断(见 §2.4) | ✅ Android 前台服务 + `flutter_foreground_task` | ✅ 需 `isBackgroundEnabled` + Android 前台服务 |
+| 原生能力 | 低:**无证书固定 API**(§1.3);蓝牙权限受浏览器管控;无后台 | 高:证书固定、前台服务、任意文件保存 | 高:同上 |
+| 上架要求 | **无**(免安装、免审核);代价是进不了应用商店 | Google Play 审核(隐私清单、蓝牙权限说明) | 同左 |
 | 迭代速度 | 服务端发版即生效,无需重新审核 | 需重新构建/发版 | 需重新构建/发版(Expo 可 OTA) |
-| **推荐** | ✅ **主载体**:Android + 桌面浏览器 + iOS 的 Wi-Fi 模式 | ⭕ 备选:仅当必须覆盖 iPhone BLE 时 | ⭕ 备选:同左 |
+| **推荐** | ✅ **主载体** | ⭕ 备选:仅当必须后台保活或必须证书固定时 | ⭕ 备选:同左 |
 
 ### 1.2 已核实的平台事实(Web Bluetooth)
 
-完整表格与来源见 [`040-verified-platform-facts.md` F-2](../00-overview/040-verified-platform-facts.md)(来源:[caniuse — Web Bluetooth](https://caniuse.com/web-bluetooth),2026-09-20 抓取)。要点:
+完整表格与来源见 [`040-verified-platform-facts.md` F-2](../00-overview/040-verified-platform-facts.md)(来源:[caniuse — Web Bluetooth](https://caniuse.com/web-bluetooth),2026-09-20 抓取)。
 
-- ✅ Chrome 桌面 56+、Edge 79+、Opera 43+、Chrome for Android、Samsung Internet 6.2+、UC 15.5+、Baidu 13.52+
-- ❌ **Safari(macOS)全版本、Safari on iOS/iPadOS 全版本**、Firefox(桌面与 Android)、Opera Mini、KaiOS
-- 全局支持率 78.02%
-- caniuse 注明:第三方 Safari 扩展 **iOSWebBLE** 桥接 CoreBluetooth 在 JS 层 polyfill `navigator.bluetooth`,但属**用户态支持、非 WebKit 的一部分**,支持状态仍计为不支持。**不作为产品路径**,只登记为技术验证的临时手段。
+**与本期(仅 Android)相关的部分:**
 
-工程推论 1:**iOS 上不存在「换个浏览器就行」这条路。** [App Store 审核指南 2.5.6](https://developer.apple.com/app-store/review/guidelines/) 要求「浏览网页的 App 必须使用相应的 WebKit 框架与 WebKit JavaScript」。iOS 上所有第三方浏览器都跑 WebKit,因此都不可能自带 Web Bluetooth。(欧盟/日本已有替代引擎的 entitlement,但那是**浏览器 App 的引擎许可**,不等于 Web Bluetooth 已被实现 —— **待确认**,不作为设计依据。)
+- ✅ **Android 侧无缺口**:Chrome for Android、Edge、Samsung Internet 6.2+、UC 15.5+、Baidu 13.52+ 均支持 `navigator.bluetooth`。这就是"仅 Android"使 PWA 直接够用的原因。
 
-工程推论 2:Web Bluetooth **只能在安全上下文(secure context)中使用**,受 `Permissions-Policy: bluetooth` 管控(默认 allowlist `self`),权限弹窗由 `requestDevice()` 触发且需要 [transient activation](https://developer.mozilla.org/en-US/docs/Glossary/Transient_activation)(用户手势)([MDN — Web Bluetooth API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API))。后果:**不能后台静默扫描**,每次连新设备都需要用户点击。
+**不相关部分(留档):** Firefox(桌面与 Android)、Opera Mini、KaiOS 不支持;Safari(macOS)与 Safari on iOS/iPadOS 全版本不支持 —— 后者是放弃 iOS 的**直接原因**,分析见 §1.5。
+
+工程推论:Web Bluetooth **只能在安全上下文(secure context)中使用**,受 `Permissions-Policy: bluetooth` 管控(默认 allowlist `self`),权限弹窗由 `requestDevice()` 触发且需要 [transient activation](https://developer.mozilla.org/en-US/docs/Glossary/Transient_activation)(用户手势)([MDN — Web Bluetooth API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API))。后果:**不能后台静默扫描**,每次连新设备都需要用户点击。**这一条与平台无关,仅 Android 也照样成立** —— 它决定了 §3.1 的配对流程必须由用户手势发起。
 
 ### 1.3 HTTPS 页面 → `ws://` 局域网地址(F-3 / V-06)
 
@@ -82,13 +85,28 @@
 3. 契约 §7 写的「自签证书 + 指纹校验」**在浏览器里做不到**:浏览器没有暴露证书指纹固定 API(这是 **X.509 信任链**之外没有第二把尺子的结果),信任只能来自系统信任链。可行路径:(a) 用户手动把设备自签 CA 装进系统信任;(b) 设备用覆盖内网域名、由受信 CA 签发的证书(局域网裸 IP 的公信证书不现实,需配 split-DNS + 内网域名);(c) **App 走原生外壳**,由原生代码做证书固定 —— 这是原生载体相对 PWA 的**实质性**优势。此点已作为契约反馈登记(§9 第 1 条)。
 4. 若为了绕开第 1 条而把 App 用 `http://` 提供,则页面本身不是安全上下文 → **Service Worker、PWA 安装、Web Bluetooth 全部失效**(且 F-3 已列为「牺牲 PWA 能力」的备选)。这是一个真实的二选一。
 
-### 1.4 推荐结论,以及对 iOS 用户的诚实说明
+### 1.4 推荐结论(仅 Android)
 
-**推荐:PWA 作为第一载体,按「Android 全功能 / iOS 仅 Wi-Fi 模式」分层交付。**
+**推荐:PWA(Android)作为唯一主载体。**
 
 - **Android(Chrome/Edge/Samsung/UC/Baidu)**:PWA 可覆盖 F-07(Wi-Fi)+ F-08(BLE)+ 配网全流程;本机零新工具链(F-5);满足 A-01。
-- **iOS**:PWA 只能覆盖 **F-07 的 Wi-Fi 通道**,前提是设备提供 `wss://` 且证书被 iOS 信任(§1.3)。**F-08 与 BLE 首次配网在 iOS 的纯 PWA 上不可实现** —— 这不是取舍,是平台缺失。
-- **要让 iPhone 用户拿到 BLE**:只能加**原生外壳**(Flutter 或 RN/Expo),或接受「iOS 用 Wi-Fi 模式,BLE 不提供」。**Q-05 需要用户在此二选一上拍板。** 本文档的建议:**先交 PWA 验证协议与 UI,把原生外壳作为 iOS-BLE 的后续增量** —— 理由是协议的 Wi-Fi 路径与全部 UI 在两个载体上完全复用,而原生工具链在本机尚不存在。
+- **不再需要为覆盖 iOS 而引入原生外壳** —— 这是放弃 iOS 带来的最大简化:**原方案里"要不要为了 iPhone 的 BLE 去装 Flutter 工具链"这个数 GB 的决策,连同它的风险,一起消失了。**
+- **仍然保留的两个原生理由**(都不阻塞当前 P0,故不推荐现在就上):
+  1. **后台保活**:S1(车内/背包远置无人值守)若要求 App 在息屏后持续收 `SCAN_HIT`,PWA 做不到(§2.4)。当前设计用「设备侧自助扫描 + 完成后一次性 `SCAN_DONE` 拉取」规避,见 §2.4。
+  2. **证书固定**:Android 上 PWA 同样没有证书指纹固定 API(§1.3),只有原生能做。若将来要求"设备证书不可被中间人替换"的强保证,则需要原生外壳。
+- **决策留痕**:若将来重开 iOS,原分析见 §1.5,当时结论是"PWA 只能覆盖 iOS 的 Wi-Fi 模式,BLE 必须在 iOS 上缺失或另做原生壳"。
+
+### 1.5 【留档】原 iOS 分析(已不适用,仅供追溯)
+
+> 本节内容在 2026-09-20 的"放弃 iOS"决策前撰写。**它不是设计输入**,保留是为了:① 记录当时的依据;② 若将来重开 iOS,不必重新调研。
+
+**结论:Web Bluetooth 在 iOS 上不存在任何可用路径。** 依据:
+
+- [caniuse — Web Bluetooth](https://caniuse.com/web-bluetooth):Safari(macOS)与 **Safari on iOS/iPadOS 全版本 ❌**;Firefox(桌面与 Android)、Opera Mini、KaiOS 亦不支持;全局支持率 78.02%。
+- **更根本的一环**:[App Store 审核指南 2.5.6](https://developer.apple.com/app-store/review/guidelines/) 强制"浏览网页的 App 必须使用相应的 WebKit 框架与 WebKit JavaScript"。iOS 上所有第三方浏览器都跑 WebKit,**因此没有一个能自带 Web Bluetooth** —— 换浏览器无解。
+- 第三方 Safari 扩展 **iOSWebBLE** 桥接 CoreBluetooth 在 JS 层 polyfill `navigator.bluetooth`,但属**用户态扩展、非 WebKit 一部分**,caniuse 仍计为不支持。**不作为产品路径**。
+- 当时的产品表述:「iOS = Wi-Fi/`wss` 模式可用,BLE 配网与近距 BLE 不可用;S2 场景对 iOS 用户不可得」。要让 iPhone 拿到 BLE 只能加原生外壳(Flutter/RN)。
+- 另外记录一个当时影响保活设计的 iOS 缺陷:[WebKit Bug 308073](https://bugs.webkit.org/show_bug.cgi?id=308073)(2026-02-17):回前台后 `new WebSocket()` 可能**永久卡在 `readyState=0 (CONNECTING)`**,Safari 标签页与「添加到主屏幕」独立模式均复现,而 HTTP `fetch` 仍正常。当时据此定了"回前台 HTTP 通而 WS 不通时直接整页重载"的策略(§2.4 仍保留,因为 Android WebView/Chrome 也可能有类似粘滞状态,代价极低)。
 
 ---
 
@@ -139,11 +157,10 @@ App 侧要维护「设备状态影子副本」,以 `CAPS` + 各 `*_STATE`/`SCAN_
 - **心跳**:契约 §3.1,`PING{t_ms}` / `PONG{t_ms}`,间隔 **5s**;连续 **3 次**(15s)无 PONG 判为断线;RTT 同时用于链路质量指示。BLE 路径 15s 内无任何帧同样判为断线。
 - **重连退避**:1s → 2s → 4s → 8s → 15s 封顶,无限重试但**每 5 次向用户报一次**。
 - **前后台切换是最大的坑(已核实的证据)**:
-  - **iOS**:切后台后既有 socket 以 **1006** 关闭(预期);但回到前台后 `new WebSocket()` **可能永久卡在 `readyState=0 (CONNECTING)`** —— 已作为 WebKit Bug 308073 记录(2026-02-17 报告),报告中说明该问题**在 Safari 标签页与「添加到主屏幕」的独立模式上均复现**,同设备的 Brave 正常([bugs.webkit.org #308073](https://bugs.webkit.org/show_bug.cgi?id=308073))。同一报告记录:HTTP `fetch` 仍正常,**只有 WebSocket 子系统坏了**;加 cache-buster、先发一次 fetch「唤醒」均无效。
-    → **设计决策**:监听 `visibilitychange`;回到前台若发现 WS 不可用,**先做一次 HTTP 健康探测**,若 HTTP 通而 WS 不通,直接 `location.reload()` 整页重载重建渲染进程,而不是无限重连。
-  - **Android Chrome**:切后台/进入 Doze 后 WebSocket 会被断开,社区长期存在此问题([StackOverflow: Chrome/Android kills websockets running in background](https://stackoverflow.com/questions/55582103);PWA 场景 1005 断开与事件序列缺口有一手复现记录:[openclaw#2672](https://github.com/openclaw/openclaw/issues/2672))。
+  - **Android Chrome**(本期唯一目标平台):切后台/进入 Doze 后 WebSocket 会被断开,社区长期存在此问题([StackOverflow: Chrome/Android kills websockets running in background](https://stackoverflow.com/questions/55582103);PWA 场景 1005 断开与事件序列缺口有一手复现记录:[openclaw#2672](https://github.com/openclaw/openclaw/issues/2672))。
+  - **通用防御**:监听 `visibilitychange`;回到前台若发现 WS 不可用,**先做一次 HTTP 健康探测**,若 HTTP 通而 WS 不通,直接 `location.reload()` 整页重载重建渲染进程,而不是无限重连。(此策略原为 iOS 的 WebKit Bug 308073 而设,见 §1.5;**对 Android WebView/Chrome 同样可能有粘滞 socket 状态,而整页重载的代价极低,故保留**。)
   - Service Worker **不能**用于保活:它本身会被终止,不适合长期持有 socket。
-  - iOS 16.4+ 的 Home Screen Web App 支持 **Screen Wake Lock API**([WebKit blog](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/)),可在**扫频进行中**申请屏幕唤醒锁避免息屏断连 —— 这是 PWA 侧唯一现实的缓解手段,且**只在前台有效**。
+  - **Screen Wake Lock API 是 PWA 侧唯一现实的缓解手段**:可在**扫频进行中**申请屏幕唤醒锁避免息屏断连,且**只在前台有效**(Android Chrome 支持;`navigator.wakeLock.request('screen')`)。注意它会持续耗电并点亮屏幕,应在任务结束/切后台时主动释放。
 - **对 C-05(无人值守)的诚实结论**:PWA **不适合**长时间无人值守的远程监控。S1 若要「挂几小时自动记录」,记录职责应由**设备侧**承担,App 回前台后拉取结果 —— 这需要契约补「离线记录/回读」能力(§9 第 10 条),当前**不存在**。
 
 ---
@@ -157,34 +174,47 @@ App 侧要维护「设备状态影子副本」,以 `CAPS` + 各 `*_STATE`/`SCAN_
 ```
 设备开机若未配对:生成 32B 随机 pairing_secret(硬件 RNG)
   → 存 NVS(不可读回)
-  → 同时生成 6 位一次性配对码,显示在设备端
-App   → HELLO{client_id, pair_code}
-设备  → HELLO_ACK{device_id, pair_ok:true} + 经 BLE 加密链路单独下发 pairing_secret
+  → 同时生成 6 位一次性配对码 pair_code,显示在设备 OLED 上(C-07)
+App   → HELLO{client_id, pairing:true, pair_code}
+设备  → HELLO_ACK{device_id, pair_ok:true, first_bond:true, pairing_secret:"<32B base64url>"}   # 仅 BLE
+   或  HELLO_ACK{pair_ok:false, pair_error:"bad_code"|"already_bound"|"ble_only"|"rng_failed"}
 ```
 
-**路径 A(推荐,Android / 原生载体):BLE 配对 + 配网**
+**路径 A(推荐):BLE 配对 + 配网**(Android PWA 全支持,§1.2)
 
-1. 用户点「添加设备」→ 点**「扫描」**(Web Bluetooth 必须由用户手势触发,§1.2 推论 2)。
+1. 用户点「添加设备」→ 点**「扫描」**(Web Bluetooth 必须由用户手势触发,§1.2)。
 2. 浏览器弹出设备选择器;用户选中设备(设备名含 `RFLAB-xxxx`)。
-3. App 建立 GATT 连接 → 读设备屏幕上的 **6 位一次性配对码** → 发 `HELLO{app_version, proto_min, proto_max, client_id, pair_code}`。
-4. 收 `HELLO_ACK{fw_version, proto, device_id, chip, uptime_ms, pair_ok:true}`;App 经 BLE 加密链路接收 `pairing_secret` 并只存本地。配对码的作用是**防中间人**(BLE 配对若被截获,攻击者拿不到设备屏幕上的码)。
+3. App 建立 GATT 连接 → 读 **设备 OLED 上的 6 位一次性配对码**(C-07) → 发 `HELLO{app_version, proto_min, proto_max, client_id, pairing:true, pair_code}`。
+4. 收 `HELLO_ACK{fw_version, proto, device_id, chip, uptime_ms, pair_ok:true, first_bond, pairing_secret}`;App 经 BLE 加密链路接收 `pairing_secret` 并只存本地。配对码的作用是**防中间人**(BLE 配对若被截获,攻击者拿不到 OLED 上的码)。
 5. `GET_CAPS` 拿 `CAPS`,校验 `proto` 与 `proto_min/max` 有交集;无交集 → 提示升级并终止(契约 §8)。
-6. 展示 Wi-Fi 表单 → 发 `SET_NET{ssid, pass}`。
-7. **设备入网后目前不会主动回报结果** —— 契约 §3.8 只有 `SET_NET` 单向消息,**没有对应的 ack**。降级做法:发完后在 60s 内轮询 `GET_STATUS`,看 Wi-Fi RSSI 是否变为有效值(读字段名待定,见 §9 第 8 条),或直接对候选地址做 `wss` 握手探测。(已作为契约反馈登记,§9 第 4 条。)
-8. 握手成功 → 写设备档案(`device_id` + `pairing_secret` + 上次地址 + 通道偏好)进 IndexedDB。
-9. **重新配对需设备端物理按键确认**(契约 §7.1(1)),App 不得提供「远程一键重新配对」。
+6. **对齐令牌基线**:把 `HELLO_ACK.last_accepted_seq` 存入设备档案,本地 `seq := max(本地值, last_accepted_seq)`(**这是防止 App 重装后被永久拒绝发射的关键**,契约 §7.1(1.2))。
+7. 展示 Wi-Fi 表单 → 发 `SET_NET{ssid, pass}`。
+8. **设备入网后目前不会主动回报结果** —— 契约 §3.8 只有 `SET_NET` 单向消息,**没有对应的 ack**(见 §9)。降级做法:发完后在 60s 内轮询 `GET_STATUS`,看 Wi-Fi RSSI 是否变为有效值(字段名待定义,见 §9),或直接对候选地址做 `wss` 握手探测。
+9. 握手成功 → 写设备档案(`device_id` + `pairing_secret` + `last_accepted_seq` + 上次地址 + 通道偏好)进 IndexedDB。
+10. **重新配对需设备端按键确认**(契约 §7.1(1)),App 不得提供「远程一键重新配对」。
 
-**路径 B(iOS 兜底):Wi-Fi AP 直连**
+**配对失败的 UI 处置**(契约 §7.1(1.1),必须区分——否则用户会反复重试一个永远失败的动作):
 
-1. 用户按设备说明把设备切到 AP 模式(硬件按键/上电窗口)。
+| `pair_error` | App 文案与动作 |
+|---|---|
+| `bad_code` | 「配对码不匹配,请核对设备 OLED 上的 6 位数字后重试」;连续失败 3 次后限速并提示检查是否选错了设备 |
+| `already_bound` | 「该设备已与另一部手机绑定。如需改绑,请在**设备端按键**确认后重新配对」——**不要**提示重试 |
+| `ble_only` | 「首次配对必须通过蓝牙完成,请改用蓝牙连接」 |
+| `rng_failed` | 「设备安全模块异常,拒绝配对」;不得降级为弱随机,引导联系维护 |
+
+**路径 B(备选):Wi-Fi AP 直连** —— 当 BLE 不可用(Web Bluetooth 被浏览器策略禁用、权限被拒、或设备 BLE 故障)时使用
+
+1. 用户按设备说明把设备切到 AP 模式(硬件按键/上电窗口);**OLED 上显示 SSID 与默认地址**(C-07),省去猜 IP。
 2. 在**系统设置**里连上设备 AP(浏览器无法代劳,此路径不涉及 `SET_NET`)。
-3. App 里手输设备地址(或尝试 `192.168.4.1`)→ `wss` 握手。
-4. 证书不受信任时,iOS 会直接失败且**无法在 App 内绕过** → 需要「用户安装设备 CA」的一次性引导页(§1.3 第 3 条)。
-   **注意**:此路径下 `pairing_secret` **无法建立**(契约 §7.1 明确只经 BLE 加密链路下发一次,Wi-Fi 路径不下发)→ Wi-Fi-only 的 iOS 用户**不具备发射授权能力**(`tx_requires_token=true` 时 `TX_REQUEST` 必然 `tx_bad_token`)。届时应把发射页设计为**只读**,并在 UI 上说明原因,而不是让用户反复失败。**这是 iOS 路径上一个此前未被记录的功能缺口,已登记为契约反馈(§9 第 2 条)。**
+3. App 里手输/确认设备地址(OLED 给出的地址,如 `192.168.4.1`)→ `wss` 握手。
+4. 证书不受信任时,Android 会直接失败 → 需要「用户安装设备 CA」的一次性引导页(§1.3 第 3 条);或改走原生载体做证书固定。
+5. ⚠️ **此路径下 `pairing_secret` 无法建立**(契约 §7.1 明确**只经 BLE 加密链路下发一次**,Wi-Fi 路径不下发)→ 该设备**不具备发射授权能力**(`tx_requires_token=true` 时 `TX_REQUEST` 必然 `tx_bad_token`)。届时应把发射页设计为**只读**,并在 UI 上说明原因,而不是让用户反复失败。
+
+> **不要用 OLED 传密钥。** 一个看起来诱人的做法是"让 OLED 显示配对码/二维码,用户输入后 Wi-Fi 路径也能拿到 `pairing_secret`"。**在当前合规前提下这不成立**:`pairing_secret` 一旦能经"人眼看屏"这条带外信道传递,就意味着**不在设备旁边的人也能拿到它**(照片、录屏、远程视频),而本项目的红线之一是"远程可控但发射必须受在场约束"。因此 §7.1 的"只经 BLE"不是实现偷懒,而是**有意的信任边界**:BLE 需要物理在场。若将来确实要开放 Wi-Fi 配对,必须先在合规文档中重新评估这条红线是否仍然成立。
 
 ### 3.2 之后的重连
 
-记住设备后,App 每次启动:① 尝试 BLE 直连(仅 Android/原生)→ ② 否则对「上次地址 + mDNS 名」做 `wss` 探测 → ③ 都失败则提示「设备不在线」并允许手动改地址。**不重复走配对流程。**
+记住设备后,App 每次启动:① 尝试 BLE 直连(Android PWA 支持)→ ② 否则对「上次地址 + mDNS 名」做 `wss` 探测 → ③ 都失败则提示「设备不在线」并允许手动改地址。**不重复走配对流程。**
 
 ---
 
@@ -200,7 +230,7 @@ App   → HELLO{client_id, pair_code}
 | **④ 捕获与波形(F-03/F-04)** | 波形(RLE 展开)、`edges`/`duration_ms`/`truncated` 徽章、**特征面板**(§3.6 全字段,**含 `*_confidence`、`raw_semantics`、`incomplete`**)、解码结论 | 捕获/中止;波形缩放;`truncated=true` 提示「已达 max_edges 上限」;`incomplete=true` 时必须**显眼标注「数据不完整」** |
 | **⑤ AI 分析(F-09)** | 分析卡片:`signal_type`/`protocol_guess`/`confidence`/`threat_level`、`matched_protocols`、`recommended_actions`、`caveats`、「已发送内容」折叠区 | 点「分析」上传特征;可展开查看**实际发送的 JSON**;置信度低标黄 |
 | **⑥ 信号库** | 已保存信号(名称、频点、调制、来源:本地/设备)、特征预览 | `SAVE_SIGNAL` / `LIST_SAVED` / `DELETE_SAVED` |
-| **⑦ 发射(F-05/F-10)** | 目标参数、**四道门禁**校验结果、二次确认区、`TX_STATUS` 结果 | 见 §5(b);`tx_whitelist` 为空 → 整页只读并显示「本机未授权任何发射频段」;无 `pairing_secret`(iOS Wi-Fi 路径)→ 同样只读(§3.1 路径 B) |
+| **⑦ 发射(F-05/F-10)** | 目标参数、**四道门禁**校验结果、二次确认区、`TX_STATUS` 结果 | 见 §5(b);`tx_whitelist` 为空 → 整页只读并显示「本机未授权任何发射频段」;无 `pairing_secret`(Wi-Fi-only 路径,§3.1 路径 B)→ 同样只读 |
 | **⑧ 设置与审计** | 链路偏好、DeepSeek Key 管理、同意书、**发射审计镜像**、数据清理 | 导出审计(JSON/CSV);清理缓存;切换模型 |
 
 ### 4.2 扫频结果如何可视化
@@ -338,9 +368,9 @@ App   → HELLO{client_id, pair_code}
 | 场景 | 文案 | 动作 |
 |---|---|---|
 | `wss` 握手失败/证书不可信 | 「无法建立安全连接:证书不受信任」 | 引导安装设备 CA;或提示改用原生外壳(§1.3) |
-| 无 `pairing_secret` 却尝试发射 | 「本机未完成安全配对,无法发射」 | 引导走 BLE 配对(§3.1 路径 A);iOS Wi-Fi 路径下说明该能力不可得 |
+| 无 `pairing_secret` 却尝试发射 | 「本机未完成安全配对,无法发射」 | 引导走 BLE 配对(§3.1 路径 A);Wi-Fi-only 路径下说明该能力不可得及其原因 |
 | DeepSeek 401 / 402 / 429 / 5xx | 分别「Key 无效」/「余额不足」/「请求过快」/「服务暂时不可用」 | 见 AI 文档 §4.4 |
-| 回到前台后 WS 不通但 HTTP 通 | (不提示) | 直接 `location.reload()`(§2.4,iOS WebKit Bug 308073) |
+| 回到前台后 WS 不通但 HTTP 通 | (不提示) | 直接 `location.reload()`(§2.4) |
 
 ---
 
@@ -399,15 +429,15 @@ App 侧实现要点:
 
 | # | 严重度 | 对象 | 问题 | 建议 |
 |---|---|---|---|---|
-| 1 | **高** | §7 | `wss://` 的**信任模型在浏览器中不可实现**:浏览器没有证书指纹固定 API,§7 写的「自签证书 + 指纹校验」只有原生代码能做;而 `ws://` 又在规范上被 HTTPS 页面按混合内容拦截。§7 把两种载体的信任方案写成了一个笼统的「指纹校验」 | 按载体分列:PWA 路径 = 用户安装设备 CA,或内网域名 + 受信 CA 签发证书;原生路径 = 证书固定 |
-| 2 | **高** | §7.1(1)+ §3.8 | **Wi-Fi-only 的设备无法获得 `pairing_secret`**(§7.1 明确只经 BLE 加密链路下发一次,Wi-Fi 不下发),因此 iOS(纯 Wi-Fi 路径)用户**永远无法发射**。这不是 bug 而是设计的结果,但契约没有把「Wi-Fi-only ⇒ 不可发射」写成显式结论 | 在 §7.1 明确写出该推论,并给出 Wi-Fi-only 用户的配对/授权替代方案(例如设备端按键触发的一次性令牌导出),或显式声明其不具备发射能力 |
+| 1 | ~~高~~ ⚠️ **部分关闭** | §7 | ✅ 契约 §9.1 已把它写成"**不是本契约能补齐的字段,而是载体选型的直接约束**",并说明 PWA 只能靠用户装 CA 或内网域名+受信 CA、证书固定只有原生能做。**但 §7 表格正文仍写"自签证书 + 指纹校验"**,未按载体分列 —— 保留为待办(低风险,因 §9.1 已给出正确口径)。原问题:`wss://` 的**信任模型在浏览器中不可实现**:浏览器没有证书指纹固定 API,§7 写的「自签证书 + 指纹校验」只有原生代码能做;而 `ws://` 又在规范上被 HTTPS 页面按混合内容拦截。§7 把两种载体的信任方案写成了一个笼统的「指纹校验」 | 按载体分列:PWA 路径 = 用户安装设备 CA,或内网域名 + 受信 CA 签发证书;原生路径 = 证书固定 |
+| 2 | ~~高~~ ✅ **已关闭** | §7.1(1) | ~~**Wi-Fi-only 的设备无法获得 `pairing_secret`**,因此纯 Wi-Fi 路径用户**永远无法发射**~~ | **契约 v1.1 §7.1(5) 已把该推论写成显式结论**,并给出三个处置选项(A 接受 / B 设备端本地授权 / C 带外传密钥),同时说明"不要用 OLED 传密钥"的理由(会破坏"在场约束")。App 侧按方案 A 处理:Wi-Fi-only 时发射页只读并说明原因(§3.1 路径 B)。**iOS 已放弃(C-06),该限制现在只影响"BLE 不可用"的降级场景** |
 | 3 | **高** | §3.8 | `SET_NET{ssid,pass}` **没有对应的结果回报**,App 无法知道配网成败(§3 路径 A 第 7 步只能靠轮询猜测) | 增加 `NET_STATUS{ok, ip, ssid, err}` |
-| 4 | **中** | §3.7 | `TX_STATUS.state` 已列出 `armed`,但**未定义** `armed` 的触发条件、有效期、以及是否需要第二次 `TX_REQUEST` 才到 `sent` | 补充两段式发射的状态机,或删掉 `armed` 取值 |
+| 4 | ~~中~~ ✅ **已关闭** | §3.7 | ✅ 契约 v1.1 §3.7 已定义完整的 `armed` 语义(两段式:第一阶段带完整参数+令牌 → `armed`;第二阶段**只带** `{armed_ack:true}` → `sent`;`CAPS.limits.arm_timeout_ms` 窗口内未确认则回落 `failed`/`arm_timeout`),并明确 **`armed` 期间射频必须零输出**。原问题:`TX_STATUS.state` 已列出 `armed`,但**未定义** `armed` 的触发条件、有效期、以及是否需要第二次 `TX_REQUEST` 才到 `sent` | 补充两段式发射的状态机,或删掉 `armed` 取值 |
 | 5 | **中** | §7 / §3.8 | 审计写在设备侧环形日志,但**没有读取审计的消息类型**,App 无法做镜像与导出(A-05 的回执) | 增加 `GET_AUDIT` / `AUDIT_LOG` |
-| 6 | **中** | §3.6(已在 schemas §7 第 14 项部分登记) | v1.1 新增的 `*_confidence` / `raw_semantics` / `incomplete` 在 schema 里是**可选**字段(为保证 v1 报文合法),但契约没有一处说明「App 在字段缺失时应当如何降级」。App 与 AI 提示词都需要这条规则 | 在 §3.6 增加一句:缺失 ≠ 高置信;App 应把缺失的置信度按「未知/低」处理(AI 文档 §3.1 已按此假设写提示词) |
-| 7 | **中** | §3.5 / §3.7(已在 schemas §7 第 3 项登记) | `TX_REQUEST.payload_rle` 的**编码未定义**:§3.5 只定义了**设备→App** 方向的二进制 RLE 布局,App→设备方向是否同一布局未说明 | 明确两方向复用 §3.5 布局,或定义 App→设备 的独立布局 |
-| 8 | **中** | §3.8(已在 schemas §7 第 5 项登记) | `STATUS` 载荷**未定义字段名**(只写「温度、供电、Wi-Fi RSSI、模块状态」)。§3 路径 A 第 7 步的配网探测**正是依赖它**,目前无法实现 | 补字段名 |
-| 9 | **低** | §3.3 / §3.5 | `SCAN_HIT.t_ms`、`RSSI_SAMPLE.t_ms`、`DATA_CHUNK` 元数据的 `sample_clock_hz` 未说明**时间基准**(设备 uptime?绝对时间?) | 注明基准;若需绝对时间,在 `HELLO_ACK` 或新增字段提供一次对齐点 |
+| 6 | ~~中~~ ✅ **已关闭** | §3.6 | ✅ 契约 v1.1 §3.6 **规则 5** 已定义「字段缺失时的降级规则(强制,两端同源)」,区分 `*_confidence` 有值 / `null` / **字段缺失**三种情况,并写明**缺失 = 未知,绝不默认当真**。原问题:新增字段是可选的,但契约没说缺失时怎么降级 |
+| 7 | ~~中~~ ✅ **已关闭** | §3.5 / §3.7 | ✅ 契约 v1.1 §3.7 已规定**两方向复用同一 RLE 布局**,在 JSON 消息里以 **base64url 字符串**承载,并明确 **`REPLAY_SIGNAL` 不承载该结构**(按 `name` 引用设备本地信号,码流不经过 App) |
+| 8 | **中(已推迟 v1.2)** | §3.8 | 契约 **§9.1 已显式登记**该推迟项(`STATUS` 字段名需先定硬件采样点与单位)。原问题:`STATUS` 载荷**未定义字段名**(只写「温度、供电、Wi-Fi RSSI、模块状态」)。§3 路径 A 第 7 步的配网探测**正是依赖它**,目前无法实现 | 补字段名 |
+| 9 | ~~低~~ ✅ **已关闭** | §3.3 / §3.5 | ✅ 契约 v1.1 新增 **§3.6.1 时间基准**:`t_ms` = 设备**单调 `uptime_ms`**,**不是绝对时间**(设备无 RTC),跨重启不可比较;`sample_clock_hz` 是采样时钟频率而非时间戳。§3.3 的载荷行亦已注明 |
 | 10 | **低** | §3.8 / C-05 | 无「设备侧离线记录 / 回读」能力,PWA 的前后台断连使 S1 长时无人值守无法实现(§2.4) | 若要支持需新增「记录会话 → 回读」消息对;否则应在 §9 非目标里显式写明 |
 | 11 | **低** | §3.2 / §4(已在 schemas §7 第 1 项登记) | `MODULES` 与 `CAPS.modules` 元素字段不一致:`driver_version`/`spi`/`ant` 只在 §3.2,`tx_allowed` 只在 §4。App 的模块页两个来源都要用 | 统一为一个元素定义 |
 | 12 | **低** | §4 | `CAPS` 缺 UI 必需字段:设备**展示名**、**配对状态**(`bound:bool`) | 增加 `device_name`、`bound` |
@@ -417,7 +447,7 @@ App 侧实现要点:
 
 ## 10. 与其他文档的关系
 
-- 载体选型结论回答 **Q-05**(`docs/README.md` 待决问题汇总);是否采纳属用户决策。
+- 载体选型结论回答 **Q-04**(`docs/README.md` 待决问题汇总)。**已由用户决策收窄为"仅 Android + PWA"**(C-06),不再需要用户拍板。
 - 平台事实不再在本文重复记录:**唯一记录地是** [`040-verified-platform-facts.md`](../00-overview/040-verified-platform-facts.md);本文的平台结论均引用其 F-2 / F-3 / F-5,待核实项引用 V-06。该文件的**复核触发条件**(6 个月、切换载体、DeepSeek 改名、增删模块、进入实现阶段前)同样适用于本文。
 - AI 调用链、提示词、成本与评测见 [`../50-ai/010-deepseek-analysis.md`](../50-ai/010-deepseek-analysis.md)。
 - AI 放 App 侧的决策与理由见 [`../adr/0002-ai-analysis-in-app.md`](../adr/0002-ai-analysis-in-app.md)(`accepted`)。

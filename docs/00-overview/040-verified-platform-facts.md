@@ -88,10 +88,15 @@
 
 **原文注意事项**:Safari on iOS/iPadOS 无原生支持。存在第三方 Safari 扩展 **iOSWebBLE**(通过桥接 CoreBluetooth 在 JS 层 polyfill `navigator.bluetooth`),但属**用户态支持、非 WebKit 的一部分**,caniuse 的支持状态仍计为不支持。
 
-**对产品的影响**(这是 Q-05 的核心):
-- **纯 PWA 方案无法在 iPhone 上使用 BLE 近距控制**。场景 S2(近距 BLE 调试)对 iOS 用户不可用
-- 但 **Wi-Fi/WebSocket 通道不受 Web Bluetooth 限制**,iOS 上仍可工作——**前提是解决混合内容限制**(见 F-3)
-- 因此 iOS 用户的可行路径是:仅用 Wi-Fi 通道;或改用原生/包装方案获得 BLE 能力
+**对产品的影响**(原为 Q-05 的核心决策依据):
+
+> ✅ **2026-09-20:该约束已被用户决策消解 —— 放弃 iOS,仅支持 Android(见 C-06)。** 因此下面三条不再是设计输入,保留为决策依据的留档:
+>
+> - **纯 PWA 方案无法在 iPhone 上使用 BLE 近距控制**。场景 S2(近距 BLE 调试)对 iOS 用户不可用
+> - 但 **Wi-Fi/WebSocket 通道不受 Web Bluetooth 限制**,iOS 上仍可工作——**前提是解决混合内容限制**(见 F-3)
+> - 因此 iOS 用户的可行路径是:仅用 Wi-Fi 通道;或改用原生/包装方案获得 BLE 能力
+>
+> **Android 侧的结论(仍然有效、且是本期的实际依据)**:Chrome for Android、Edge、Samsung Internet、UC、Baidu 均支持 Web Bluetooth,**BLE 没有平台缺口**,所以 PWA 在 Android 上可以覆盖 F-07 + F-08 + 配网全流程。完整载体选型见 [`../40-app/010-mobile-app-design.md`](../40-app/010-mobile-app-design.md) §1。
 
 ---
 
@@ -130,6 +135,46 @@
 
 **对产品的影响**:见 [ADR-0001](../adr/0001-frequency-coverage-gap.md)。需求的 119–1050MHz 无法由现有三模块覆盖。
 
+### F-4b 模块制造商与官方文档(2026-09-20 核实)
+
+**制造商确定:三块模块均为「泽耀科技 / Ashining」产品**,官网 `ashining.com.cn`(英文站 `en.ashining.com`)。此前文档里"来源:模块标称"的说法过于含糊——现已定位到厂牌与官方文档入口。
+
+| 模块 | 官方文档标题(原文) | 已核实的官方口径 | 官方文档入口 |
+|---|---|---|---|
+| AS10-M4463D-SMA | 《AS10-M4463D-SMA 产品手册(Spec_ AS10-M4463D-SMA _V1.1)》 | 基于 **SI4463**、**433MHz**、**100mW**、**SMA** 接口的射频收发模块 | [官网 PDF](http://www.ashining.com.cn/datasheets/as10m4463dsmacn.pdf) · [代理商文档页](https://www.sekorm.com/doc/3565737.html) |
+| AS07-M1101D-SMA | 《AS07-M1101D-SMA 产品手册》 | 基于 **CC1101**、**433MHz**、**10mW**、**SMA** 接口 | [代理商文档页](https://www.sekorm.com/doc/3565737.html) · [等价型号规格(E07-M1101D)](https://github.com/TobiasPSP/doneland_sources/blob/main/Components/Data/Data%20Transmission/Wireless/Short%20Range%20Device/FM/FSK/Transceiver/E07-M1101D/README.md) |
+| AS01-ML01 | 见下"未核实" | 厂牌确认;**具体型号变体与功率未确认** | [官网产品页](http://www.ashining.com.cn/products_detail.aspx?t=10&cid=254&page=1) |
+
+**AS07-M1101D-SMA 的完整官方规格**(来源为等价型号 E07-M1101D 的规格页,该页明确注明 "also known as AS07-M1101D / AS07-M1101D-SMA"):
+
+| 项 | 值 |
+|---|---|
+| 频率范围 | **387–464MHz** |
+| 发射功率 | **10dBm / 10mW** |
+| 接收灵敏度 | **−112dBm** @1.2kbps |
+| 调制 | 2-FSK / GFSK / MSK |
+| 速率 | 1.2–500kbps |
+| 供电 | 1.8–3.6V,典型工作电流 30mA(电源需 >100mA) |
+| 接口/尺寸 | SPI,8 脚(GND/VCC/GDO0/CSN/SCK/MOSI/MISO/GDO2),15×28 或 38×10mm |
+
+> ⚠️ **注意:该模块不支持 OOK/ASK。** 官方原文:2-FSK 基于频率调制,**与使用 ASK(AM)的简单遥控器不兼容**。这直接影响产品需求里的"OOK 解码"——**M2 槽位无法用于 OOK 遥控器捕获**,必须由 SI4463 槽位承担。此项已回写产品定义与硬件文档。
+
+### F-4c ⚠️ 未能核实:本次网络受限
+
+**ashining.com.cn 与 sekorm.com 的深层文档路径对本环境返回 403 / 交互式 JS 挑战 / 人机验证,官方 PDF 正文未取得。**因此以下仍是**未核实**,不得用推断冒充结论:
+
+| ID | 未核实内容 | 为什么关键 |
+|---|---|---|
+| V-01 | **AS10-M4463D-SMA 的 `Spec_V1.1` 正文里,可调频率范围到底写的是 425–525MHz 还是别的区间、以及对应 SI4463 是 B1B 还是 C2A** | 官方仅到标题级("SI4463 / 433MHz / 100mW"),**没有给出可调范围**。这仍是 Q-01,决定 60% 频段覆盖 |
+| V-09 | **AS01-ML01(不带后缀)是否真为 20dBm / 含 RFX2401C PA** | 官方文档里带 PA 的是 **AS01-ML01DP3**(SI24R1 或 nRF24L01P + PA/LNA,**2.4GHz / 100mW**)。裸 `AS01-ML01` 的功率与是否含 PA **未能确认**,而 20dBm 这个数字正是硬件文档"压掉本机 Wi-Fi"风险的量级依据 |
+
+**补充证据(不是结论,是方向)**:官方产品族里"433MHz 版"与"915MHz 版"(AS10-M4463D-915SMA/915TH)是**并列的两个型号**,说明 AS10-M4463D-SMA 是按 433MHz 频段定制前端的型号——这与"SI4463 B1B 版 425–525MHz"高度一致,但**不等于官方确认**。取规格书正文前,ADR-0001 的处置不能定稿。
+
+**取得规格书的可行途径**(任一即可关闭 V-01):
+1. 直接向泽耀科技/代理商索取 `Spec_ AS10-M4463D-SMA _V1.1` 与 `AS01-ML01` 规格书(电子邮件,最可靠)
+2. 在能正常访问该站的网络环境下打开上述官网 PDF 链接
+3. 让供应商书面确认"AS10-M4463D-SMA 的可调频率范围"与"AS01-ML01 的发射功率及是否含 PA"
+
 ---
 
 ## F-5 本机开发环境(2026-09-20 实测)
@@ -165,7 +210,7 @@
 出现以下任一情况时,本文件必须重新核实并更新日期:
 
 1. 距核实日期超过 **6 个月**
-2. 决定切换 App 载体或升级到 iOS 26+/新 Safari 版本
+2. 决定切换 App 载体(**或重新把 iOS 纳入范围**)——注:iOS 已于 2026-09-20 移出范围,若重开需重跑 F-2 并与 §F-4b 的模块核实一并复核
 3. DeepSeek 宣布模型改名或 API 版本变更
 4. 决定增加/替换射频模块
 5. 进入实现阶段前(作为门禁)

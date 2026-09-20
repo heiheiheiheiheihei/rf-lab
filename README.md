@@ -9,12 +9,16 @@
 
 ## 1. 这是什么
 
-一个免焊接、可远程控制的无线射频实验平台。设备本体(ESP32-S3 + 多个独立射频模块,每个模块独占 SPI 与天线)放在车内、背包等远处;人通过手机 App 经 Wi-Fi(路由器)或 BLE(近距离)遥控它完成:
+一个免焊接、可远程控制的无线射频实验平台。设备本体(ESP32-S3 + 多个独立射频模块,每个模块独占 SPI 与天线)放在车内、背包等远处;人通过**手机 App(仅 Android)**经 Wi-Fi(路由器)或 BLE(近距离)遥控它完成:
 
 - **自动扫频** — 在目标频段快速扫描,标记 RSSI 超阈值的信号
 - **信号解码** — 捕获 OOK/FSK 原始时序,识别遥控器、传感器等协议
 - **信号发射** — 在合规频段与功率下复现/模拟目标信号
 - **智能分析** — App 把信号特征交给 DeepSeek,拿回信号类型 / 协议 / 威胁等级
+
+设备端带 **OLED 显示屏**(显示配对码、AP 地址、模块与门控状态)——在"人不在设备旁边"时,它是唯一的本地状态出口。
+
+> **范围决策(2026-09-20)**:**放弃 iOS,仅支持 Android**;App 推荐 **PWA**;设备端**增加 I²C OLED**。分析留档见 [`docs/40-app/010-mobile-app-design.md`](docs/40-app/010-mobile-app-design.md) §1.5 与 §3.1。
 
 ## 2. 当前状态
 
@@ -39,16 +43,28 @@ for f in protocol/schemas/*.json; do python3 -m json.tool "$f" >/dev/null || ech
 
 ### ⚠️ 阻塞项:现有三个模块拼不出 119–1050MHz
 
-需求写的是「119–1050MHz 快速扫描」,但给定的三个模块实际覆盖如下(数据来源见文档内引用):
+需求写的是「119–1050MHz 快速扫描」,但给定的三个模块是**泽耀科技 / Ashining**(厂牌已确认,官方文档入口见 [`040-verified-platform-facts.md`](docs/00-overview/040-verified-platform-facts.md) F-4b),覆盖如下:
 
-| 模块 | 芯片 | 芯片实际频率能力 | 覆盖 119–1050MHz 的比例 |
+| 模块 | 芯片 | 实际频率能力 | 覆盖 119–1050MHz |
 |---|---|---|---|
-| AS07-M1101D-SMA | CC1101 | 300–348 / 387–464 / **779–928** MHz 三段 | ~21% |
-| AS10-M4463D-SMA | SI4463 | 芯片 C2A 版为 **142–1050MHz**;但该模块标称 425–525MHz(疑为 B1B 版) | 待确认 |
-| AS01-ML01 | nRF24L01P + RFX2401C | 2400–2525MHz | 在目标范围之外 |
+| AS07-M1101D-SMA | CC1101 | **387–464MHz**(官方规格;芯片本身为 300–348 / 387–464 / 779–928 三段) | ~9% |
+| AS10-M4463D-SMA | SI4463 | 官方口径 **433MHz**;可调范围待规格书(V-01)。C2A 版芯片为 142–1050MHz / B1B 版为 425–525MHz | **待确认** |
+| AS01-ML01 | nRF24L01P | 2400–2525MHz | 在目标范围之外 |
 
 **结论**:119–142 / 348–387 / 525–779 / 928–1050MHz 存在覆盖空白;2.4GHz 需单列需求。
 完整分析与处置建议见 [`docs/adr/0001-frequency-coverage-gap.md`](docs/adr/0001-frequency-coverage-gap.md)。
+
+### ⚠️ 第二条硬约束:M2/M3 不能解 OOK
+
+官方规格明确 **AS07-M1101D(CC1101)不支持 OOK/ASK**——其 2-FSK 基于频率调制,原文写明"与使用 ASK(AM)的简单遥控器不兼容"。**因此 433MHz OOK 遥控器的捕获与复现只能由 M1(SI4463)承担**,成功判据 A-03 已绑定 M1。详见[产品定义 §6.2](docs/00-overview/010-product-definition.md)。
+
+### ⚠️ 第三条:一次网络受限,有 2 项官方参数没拿到
+
+`ashining.com.cn` 与 `sekorm.com` 的深层文档路径对本环境返回 403 / JS 挑战 / 人机验证,**官方 PDF 正文未取得**。因此:
+- **V-01**:AS10-M4463D-SMA 的**可调频率范围**与**对应 SI4463 版本**(仍是 Q-01,决定 60% 覆盖)
+- **V-09**:**AS01-ML01 的实际发射功率与是否含 PA**(官方带 PA 的是 `AS01-ML01DP3`;而"20dBm"正是"发射压掉本机 Wi-Fi"风险的量级依据)
+
+**这两项必须向供应商索取规格书正文关闭**,不要用推断代替。
 
 ## 3. 目录结构
 
@@ -83,11 +99,12 @@ rf-lab/
 6. [`protocol/schemas/README.md`](protocol/schemas/README.md) — 机器可读 schema 的清单、约定与「已知文档缺口」
 7. [`docs/adr/`](docs/adr/) — 已定决策与其理由(0001 频段空白 / 0002 AI 放 App 侧)
 
-### 三条会改变设计的硬事实(别在读完前动手)
+### 会改变设计的事实(别在读完前动手)
 
 1. **给定三模块拼不出 119–1050MHz** — 见 ADR-0001 与上文阻塞项。
-2. **iOS 全平台不支持 Web Bluetooth** — 纯 PWA 覆盖不了 iPhone 的 BLE 近距控制;载体选型(Q-05)受此约束,见 [`docs/40-app/`](docs/40-app/010-mobile-app-design.md)。
-3. **nRF24L01+RFX2401C 以 20dBm 发射时,会压掉本机的 Wi-Fi/BLE** — 同频段、同壳体、厘米级间距。后果不止掉线,而是"设备发出的发射动作自己收不到中止指令",属**架构前提级风险**,见 [`docs/10-hardware/010-system-architecture.md`](docs/10-hardware/010-system-architecture.md) §4.2。
+2. **M2/M3 不能解 OOK** — 433MHz OOK 遥控器只能靠 M1(SI4463),成功判据 A-03 已绑定 M1。
+3. **M3 发射会压掉本机 Wi-Fi/BLE**(20dBm、同频带、同壳体、厘米级间距)—— 后果不止掉线,而是"设备发出的发射动作自己收不到中止指令",属**架构前提级风险**,见 [`docs/10-hardware/010-system-architecture.md`](docs/10-hardware/010-system-architecture.md) §4.2。⚠️ 该风险的量级依据(20dBm)尚未核实,见 V-09。
+4. **仅 Android + PWA**(2026-09-20 决策)—— iOS 的 Web Bluetooth 缺失问题因此不再是设计输入,留档于 [`docs/40-app/`](docs/40-app/010-mobile-app-design.md) §1.5。
 
 ### 必须先读 ADR-0001 的原因
 
