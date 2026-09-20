@@ -48,7 +48,7 @@
     },
     "pairError": {
       "type": "string",
-      "description": "配对失败原因(§7.1(1.1)):bad_code = 配对码不匹配(让用户重看设备屏幕,连续失败应限速);already_bound = 设备已绑定其他 client_id(需设备端按键改绑,不是反复重试);ble_only = 在 Wi-Fi 链路上尝试配对(pairing_secret 只经 BLE 下发);rng_failed = 设备侧 RNG 初始化失败(拒绝配对,不得降级为弱随机)。",
+      "description": "配对失败原因(§7.1(1.1)):bad_code = 配对码不匹配(让用户重看设备屏幕,连续失败应限速);already_bound = 设备已绑定其他 client_id(需设备端按键改绑,不是反复重试);ble_only = 在不被信任的链路上尝试配对(见 §7.1(5):USB 与 BLE 是可信配对信道,纯 Wi-Fi 不是);rng_failed = 设备侧 RNG 初始化失败(拒绝配对,不得降级为弱随机)。",
       "enum": [
         "bad_code",
         "already_bound",
@@ -615,6 +615,11 @@
           "minimum": 1,
           "maximum": 4096
         },
+        "usb_frame_max": {
+          "type": "integer",
+          "description": "USB 链路上单个完整帧的最大 LEN,单位 字节(契约 §2.2.2/§4)。USB CDC 是包边界明确的字节流,没有 BLE 的 20–244B 约束,也不需要 FRAG 头,故可比 ble_frame_max 大得多(示例 16384)。**仍须**用它约束 DATA_CHUNK 的分块大小:禁止把整次捕获塞进一帧。超限一律回 ERROR{frame_too_large},不得静默截断。",
+          "minimum": 1
+        },
         "max_edges": {
           "type": "integer",
           "description": "单次捕获跳变数硬上限;CAPTURE_START.max_edges 超出即被钳制到本值并回 WARN{edge_clamped},同时 CAPTURE_DONE.truncated = true(§3.4)。文档 §4 示例 16384。",
@@ -635,6 +640,7 @@
       "required": [
         "ble_frag_total_max",
         "ble_frame_max",
+        "usb_frame_max",
         "max_edges",
         "stream_rate_hz",
         "arm_timeout_ms"
@@ -694,6 +700,15 @@
         "long_gaps"
       ],
       "additionalProperties": false
+    },
+    "transport": {
+      "type": "string",
+      "description": "控制链路类型(契约 §2.2)。wifi = WebSocket 承载(设备开 AP 或连现场路由器);ble = GATT Notify/Write;usb = USB Serial/JTAG 的 CDC-ACM 有线通道(ADR-0003/F-11)。三条传输共用同一套帧格式与消息语义,新增传输不新增消息类型。",
+      "enum": [
+        "wifi",
+        "ble",
+        "usb"
+      ]
     }
   }
 }

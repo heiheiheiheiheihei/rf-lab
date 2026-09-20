@@ -32,7 +32,8 @@ firmware/
     ├── proto/                  # 帧编解码 + 分片重组(纯逻辑,可 host 编译)
     ├── transport_ws/           # WebSocket 服务端(承载 §2 帧)
     ├── transport_ble/          # GATT 服务(承载 §2 帧 + FRAG 头)
-    ├── session/                # IDLE/READY/SCANNING/CAPTURING 状态机 + 限流
+    ├── transport_usb/          # USB Serial/JTAG CDC-ACM 有线控制通道(承载 §2 帧)★ADR-0003
+    ├── session/                # IDLE/READY/SCANNING/CAPTURING 状态机 + 限流 + 活动链路唯一性
     ├── store/                  # 信号库(NVS/分区)
     ├── audit/                  # 发射审计环形日志(只写不删)
     └── policy/                 # 编译期白名单/功率上限/令牌校验(HMAC)
@@ -52,12 +53,15 @@ firmware/
                                  │
                              session ──► store / audit
                                  │
-                    transport_ws / transport_ble
+                    transport_ws / transport_ble / transport_usb
                                  │
                               main(app_main)
 
   规则:箭头 = "依赖/可以调用"。下层**绝不**回调上层的具体类型;
   跨层通知统一走事件队列(未画出的 event_bus),而非直接函数调用。
+
+  三条传输**完全等价**:都只做"把字节流按 §2 帧切分/拼接",不含任何业务语义。
+  业务逻辑一律在 proto / session 之上,故新增传输**不触碰**任何业务代码。
   (*) features / proto 为纯逻辑组件:只依赖 C 标准库与 cJSON,
       不依赖 ESP-IDF 外设驱动 → 可在 host 上跑单元测试(见 §10)。
 ```
@@ -242,6 +246,7 @@ OOK/ASK 信号在解调器输出端就是**数字电平跳变序列**,而 ESP32-
 | `proto_task` | 中 | Core 0 | 6KB | 帧编解码、分片重组、会话状态机、限流令牌桶 | 队列 |
 | `transport_ws_task` | 中 | Core 0 | 6KB | WebSocket 收发 | socket |
 | `transport_ble_task` | 中 | Core 0 | 6KB | GATT notify/write | 协议栈回调 |
+| `transport_usb_task` | 中 | Core 0 | 4KB | CDC-ACM 字节流收发(有线控制通道) | USB 驱动缓冲 |
 | `features_task` | 中低 | Core 1 | 8KB | 捕获结束后算特征(可抢占采集) | 队列 |
 | `monitor_task` | 低 | Core 0 | 4KB | 温度/供电/看门狗喂狗/Wi-Fi 恢复 | 定时器 |
 
@@ -366,6 +371,40 @@ rf_tx_request(src) ──► [1] 状态检查 ──► [2] 模块在位/活动�
 | 协议栈与射频互斥 | 发射前向 `transport_*` 申请"静默窗口",窗口内有帧待发则**延迟发射**而非丢帧 |
 | 异常自愈 | 所有错误汇聚到 `error_sink`,按 `hw_error` / `not_ready` 映射为契约错误码;严重错误触发模块级复位而非系统复位 |
 | 掉电安全 | 审计与信号库写入使用"先写临时槽 + 提交标志",避免断电产生半条记录 |
+| **USB 有线通道**(ADR-0003) | 见 §9.1;**2.4GHz 发射期间不得因无线断连而丢失控制能力** |
+
+### 9.1 USB 有线控制通道(ADR-0003 / F-11)
+
+**用 ESP32-S3 内建 USB Serial/JTAG 的 CDC-ACM,它由硬件实现,固件不需要写 USB 协议栈。**
+
+| 项 | 设计 | 理由 |
+|---|---|---|
+| 设备侧角色 | **CDC-ACM 从设备**,手机为 USB 主机 | Android 经 OTG 供电+数据;设备作从设备是唯一可行方向(手机难作 USB 从设备) |
+| 组件 | `transport_usb`:把 CDC 字节流按 §2 帧切分/拼接 | 与 `transport_ws`/`transport_ble` **完全等价**,不含业务语义 |
+| 控制器 | **USB Serial/JTAG**(非 USB-OTG) | 硬件 CDC、零额外 BOM、保留 JTAG(ADR-0003 §3.2) |
+| 分片 | **不需要 FRAG 头**——USB 是包边界明确的字节流,无 BLE 的 20–244B 限制 | 简化实现;上限取 `CAPS.limits.usb_frame_max` |
+
+**⚠️ 必须处理的三个实现要点:**
+
+1. **控制流与日志流必须分离(USB-R3,高风险)**
+   `CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG` 会让**日志/控制台也走这个端口**。若不处理,App 会在控制通道上读到 `I (1234) wifi: ...` 这类日志,导致**帧解析失败**。处置:
+   - **量产配置关闭 USB 上的 console 输出**(日志改走 UART0 的 43/44 或完全关掉),**或**
+   - 在帧层做明确区分(如 App 侧只认 `MAGIC=0x52` 起始的帧,其余字节丢弃并计数)
+   - **推荐两者都做**:配置上避免产生日志,**同时**在解析器里保持"非帧字节即丢弃"的健壮性。**禁止**假设"USB 上只有协议帧"
+2. **USB 连接期间不得进入深睡(USB-R4)**
+   深睡会让 USB 设备从主机消失。须检测 VBUS/连接状态并抑制休眠;若启用自动电源管理,用 `CONFIG_USJ_NO_AUTO_LS_ON_CONNECTION` 类机制阻止自动轻睡。
+3. **活动链路唯一性**
+   同一时刻**只有一条活动控制链路**(Wi-Fi / BLE / USB 三选一)。这是 `session` 的职责:
+   - 新链路完成 `HELLO` 时,若已有活动链路 → 按契约"隐式中止"语义处理,并回 `WARN{preempted}` 给**旧**链路
+   - **禁止**两条链路同时下发命令(否则 `seq` 重放校验、状态机抢占都会出现竞态)
+   - ⚠️ **例外:USB 应被允许"抢占"无线链路**,因为它的使用场景正是"无线已不可用或即将不可用"(2.4GHz 发射)。这条**优先级规则必须显式写实现**,不能靠默认行为
+
+**2.4GHz 发射期间的行为要求(判据 A-07 的固件侧落点)**:
+
+- M3 发射时,无线链路**允许**掉线;但 `transport_usb` **必须**保持可用
+- 设备**不得**因为无线断连而中止正在进行的发射序列(用户可能在有线侧看着)
+- **中止指令的送达路径**:USB 收到 `TX_ABORT` → 立即 `enter_idle()` + 拉低 `RF KILL`(GPIO8),**不依赖任何无线链路**
+- 无线链路的"因本机发射而不可用"状态**必须可查询**(建议经 `STATUS` 暴露一个字段),App 据此显示"因本机发射暂不可用",而不是"设备离线"——**这是 A-07 的硬要求**
 
 ---
 

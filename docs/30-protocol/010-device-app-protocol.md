@@ -65,10 +65,26 @@
 
 ### 2.2 传输映射
 
+**三条传输共用同一套帧格式与全部消息语义。** 这是本契约的核心约定:新增一条传输**不新增任何消息类型**。
+
 | 通道 | 承载 | 参数 |
 |---|---|---|
 | **Wi-Fi** | WebSocket 二进制帧(1 帧 = 1 个 RF-Lab 帧) | 设备开 AP 或连现场路由器;`ws://<ip>:8266/v1` |
 | **BLE** | GATT Notify / Write,自定义 Service | 单帧超 MTU 时按 §2.3 分片;可达上限见 §2.2.1 |
+| **USB**(ADR-0003 / F-11) | **CDC-ACM 字节流**(手机为 USB 主机,设备为从设备) | 复用 ESP32-S3 内建 **USB Serial/JTAG**;上限见 §2.2.2 |
+
+**活动链路唯一性**:同一时刻**只有一条**链路承载会话。新链路完成 `HELLO` 时,旧链路被隐式中止(按 §5 规则 3,旧链路收到 `WARN{preempted}`)。**禁止**两条链路同时下发命令——否则 `seq` 防重放校验与状态机抢占都会出现竞态。
+
+> ⚠️ **一条必须实现的优先级例外**:`USB` **可以抢占**正在使用的 Wi-Fi/BLE 链路。理由:USB 的使用场景正是"无线已不可用或即将不可用"(2.4GHz 模块以 20dBm 发射时,本机 Wi-Fi/BLE 会被自己的 PA 压掉,见硬件文档 §4.2)。**若 USB 不能抢占,就会出现"最需要中止的时候恰恰接管不了"的死结**——这正是判据 A-07 要防的失效模式。
+
+### 2.2.2 USB 上"一个完整帧"能有多大
+
+USB CDC 是**包边界明确的字节流**,没有 BLE 那样的 20–244B 分片约束,因此:
+
+- **不需要 `FRAG` 头**(§2.3 的分片机制**只适用于 BLE**)
+- 上限取 `CAPS.limits.usb_frame_max`,设备按自身缓冲给出
+- 虽无协议层小上限,**仍不得**把整次捕获塞进一帧:捕获数据必须按 `DATA_CHUNK` 分块(块大小 ≤ `usb_frame_max`),以便 App 增量展现进度、且任一侧缓冲不会爆
+- **禁止静默截断**:超限一律回 `ERROR{frame_too_large}`(与 BLE 同规)
 
 ### 2.2.1 BLE 上"一个完整帧"到底能有多大(**先算清楚,不要拍脑袋**)
 
@@ -346,23 +362,29 @@ App **必须**以 `CAPS` 为唯一真实来源,不得硬编码频段。
   "fw": "0.1.0",
   "device_id": "RFLAB-A1B2",
   "active_slot": 1,
+  "transports": ["usb", "ble", "wifi"],
+  "active_transport": "usb",
   "modules": [
     { "slot": 1, "chip": "si4463", "present": true,
-      "bands": [[142000000,1050000000]],
+      "bands": [[425000000,525000000]],
       "tx_max_dbm": 20, "tx_allowed": false },
     { "slot": 2, "chip": "cc1101", "present": true,
-      "bands": [[300000000,348000000],[387000000,464000000],[779000000,928000000]],
+      "bands": [[387000000,464000000]],
       "tx_max_dbm": 10, "tx_allowed": false },
     { "slot": 3, "chip": "nrf24l01p", "present": true,
       "bands": [[2400000000,2525000000]],
       "tx_max_dbm": 20, "tx_allowed": false }
   ],
   "policy": { "tx_whitelist": [], "tx_power_cap_dbm": 10, "tx_requires_token": true },
-  "limits": { "ble_frag_total_max": 15, "ble_frame_max": 3600, "max_edges": 16384, "stream_rate_hz": 50, "arm_timeout_ms": 5000 }
+  "limits": { "ble_frag_total_max": 15, "ble_frame_max": 3600, "usb_frame_max": 16384, "max_edges": 16384, "stream_rate_hz": 50, "arm_timeout_ms": 5000 }
 }
 ```
 
+> ⚠️ **`modules[].bands` 必须是模块级、不是芯片级**(本示例已于 2026-09-20 按官方手册更正)。此前示例误用了芯片能力(SI4463 写成 142–1050MHz、CC1101 写成三段),**那会让 App 以为能扫到实际扫不到的频段**——正是 ADR-0001 §5.3 与判据 A-06 要禁止的失效模式。真实值:**M1 425–525MHz、M2 387–464MHz、M3 2400–2525MHz**。固件**必须**按实际装的前端上报,不得按芯片能力上报。
+
 `policy.tx_whitelist` 为空 = **禁止一切发射**。出厂默认即为空。
+
+**`transports` 与 `active_transport`**:设备支持的链路清单与当前承载会话的那一条(§2.2 活动链路唯一性)。`active_transport` 会在链路切换时变化,App 应以 `HELLO_ACK` / `STATUS` 的最新值为准。
 
 `limits` 各项:
 
@@ -370,6 +392,7 @@ App **必须**以 `CAPS` 为唯一真实来源,不得硬编码频段。
 |---|---|
 | `ble_frag_total_max` | BLE 分片上界,固定 `15`(4bit `FRAG_TOTAL`) |
 | `ble_frame_max` | **当前 BLE 连接下单个完整帧的最大 `LEN`**(按实际协商的 ATT 载荷算出,见 §2.2.1)。**App 必须读它来定请求规模**;Wi-Fi 连接下此值不代表 Wi-Fi 上限 |
+| `usb_frame_max` | **USB 链路上单个完整帧的最大 `LEN`**(见 §2.2.2)。USB 无 BLE 的分片约束,故可比 BLE 大得多;但**仍须**用它约束 `DATA_CHUNK` 的分块大小 |
 | `max_edges` | 单次捕获跳变数硬上限;请求值超出即**钳制**并回 `WARN{edge_clamped}`(§3.4) |
 | `stream_rate_hz` | 高频消息令牌桶速率(§2.4) |
 | `arm_timeout_ms` | `TX_STATUS{state:"armed"}` 的等待窗口(§3.7)。超时未收到二次确认则回落 `failed`/`arm_timeout`。**必须有承载,否则 App 无法知道设备的实际窗口** |

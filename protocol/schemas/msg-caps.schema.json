@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "msg-caps.schema.json",
   "title": "CAPS (0x82)",
-  "description": "方向:设备→App · 文档 §4 · 协议 v1。能力集,App 启动后必须首先获取并作为唯一真实来源。modules 元素按 §4 用 tx_allowed 且不含 driver_version/spi/ant;limits 含 §2.2.1 新增的 ble_frame_max。",
+  "description": "方向:设备→App · 文档 §4 · 协议 v1.1。能力集,App 启动后必须首先获取并作为唯一真实来源。modules 元素按 §4 用 tx_allowed 且不含 driver_version/spi/ant;limits 含 §2.2.1 新增的 ble_frame_max。 v1.1 新增 transports/active_transport(契约 §2.2 三条传输:Wi-Fi/BLE/USB),limits 新增 usb_frame_max(§2.2.2)。modules[].bands 必须为**模块级**能力,不得按芯片能力上报(§4 警示)。",
   "type": "object",
   "properties": {
     "proto": {
@@ -45,6 +45,21 @@
         "description": "被弃用的字段名。"
       },
       "description": "已弃用字段清单。文档 §8 规定「移除字段前必须先在 CAPS 中标记 deprecated:[...],保留至少一个小版本」,但 §4 的示例与 limits 表都没有它的形状——本 schema 按 §8 展示的数组语法建模为可选字段(string 元素属推断),见 README §7。"
+    },
+    "transports": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/transport"
+      },
+      "description": "设备支持的链路清单(契约 §2.2)。App 据此决定可用通道;至少含一条。"
+    },
+    "active_transport": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/transport"
+        }
+      ],
+      "description": "当前承载会话的那一条链路(契约 §2.2 活动链路唯一性)。链路由 USB 抢占无线时该值变化,App 应以 HELLO_ACK/STATUS 的最新值为准。"
     }
   },
   "required": [
@@ -54,7 +69,9 @@
     "active_slot",
     "modules",
     "policy",
-    "limits"
+    "limits",
+    "transports",
+    "active_transport"
   ],
   "additionalProperties": false
 }
