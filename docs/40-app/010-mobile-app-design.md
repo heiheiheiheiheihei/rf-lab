@@ -1,4 +1,4 @@
-# 手机 App 设计(Wi-Fi / BLE 双通道)
+# 手机 App 设计(Wi-Fi / BLE / USB 三通道)
 
 状态: draft · 最后更新:2026-09-20 · 上游依据:
 
@@ -19,15 +19,19 @@
 ## 0. 结论摘要
 
 > **2026-09-20 范围决策(用户):放弃 iOS 支持,仅 Android。** 本节与 §1 已按此重写。iOS 相关分析保留在 §1.5,仅作为**决策依据的留档**,不再是设计输入。
+>
+> **2026-09-20 第二次决策:新增 USB 有线控制通道(F-11 / ADR-0003),产品面向屏蔽室。** 这给载体选型增加了一个**硬性新维度:WebUSB**。
 
 | 议题 | 结论 |
 |---|---|
-| 载体(回答 **Q-04**) | **推荐 PWA(Android)作为主载体**。仅 Android 后,**BLE 能力不再有平台缺口**(Web Bluetooth 在 Android Chrome/Edge/Samsung/UC/Baidu 均可用),PWA 可覆盖 F-07 + F-08 + 配网全流程,且本机零新工具链(F-5) |
-| 何时才需要原生 | 仅当需要:(a) **后台保活**(PWA 做不到,见 §2.4);(b) **证书固定**(Android 上 PWA 亦无此 API,但 Android 原生可做)。两者都不是当前 P0 的阻塞项 |
-| 双通道 | 近距离优先 BLE,远距离/高吞吐走 Wi-Fi;扫频/捕获进行中**不切换**(§2.3) |
-| 保活 | 心跳 PING/PONG 5s(契约 §3.1);**前后台切换后必须整页重载重建连接**,不能只重连 socket(§2.4) |
-| 规模纪律 | 请求规模**必须**读 `CAPS.limits.ble_frame_max` 与 `max_edges`,不得硬编码 4096/3669(契约 §2.2.1、§3.4) |
-| 配对 | 设备端有 **OLED(C-07)**,显示 6 位一次性 `pair_code`;App 经 BLE 完成首次配对并取回 `pairing_secret`(契约 §7.1) |
+| 载体(回答 **Q-04**) | **推荐 PWA(Android)作为主载体**。仅 Android 后,**BLE 与 WebUSB 两个能力都不再有平台缺口**(Web Bluetooth 与 WebUSB 在 Android Chrome/Edge/Samsung/UC/Baidu 均可用),PWA 可覆盖 F-07 + F-08 + **F-11** + 配网全流程,且本机零新工具链(F-5) |
+| 何时才需要原生 | 仅当需要:(a) **后台保活**(PWA 做不到,见 §2.4);(b) **证书固定**;(c) **WebUSB 实测失败时的兜底**(见下方 ⚠️)。三者都不是当前 P0 的阻塞项 |
+| ⚠️ PWA 的唯一技术未知 | **WebUSB 能否访问 CDC-ACM 设备必须真机实测**(风险 USB-R1)。[caniuse](https://caniuse.com/webusb) 显示 WebUSB 全球 **77.89%**、**Chrome for Android 支持**;但移动端对部分设备类有限制的社区报告存在。**失败则降级为原生 Android USB Host 小壳**——只包一层 USB 读写,业务逻辑仍留在 Web 层 |
+| 三通道 | **有线优先(USB) > 近距 BLE > 远距 Wi-Fi**;扫频/捕获进行中**不切换**(§2.3);**USB 可抢占无线**(契约 §2.2,是硬性优先级例外) |
+| 保活 | 心跳 PING/PONG 5s(契约 §3.1);**前后台切换后必须整页重载重建连接**,不能只重连 socket(§2.4)。⚠️ 有线模式下整页重载**会丢失 WebUSB 授权**,处置见 §2.6 |
+| 规模纪律 | 请求规模**必须**读 `CAPS.limits.ble_frame_max` / **`usb_frame_max`** 与 `max_edges`,不得硬编码 4096/3669(契约 §2.2.1、§2.2.2、§3.4) |
+| 配对 | 设备端有 **OLED(C-07)**,显示 6 位一次性 `pair_code`;App 经 **BLE 或 USB**(两者皆可信信道)完成首次配对并取回 `pairing_secret`(契约 §7.1)。**纯 Wi-Fi 不是可信配对信道** |
+| 离线 | **屏蔽室内手机可能无网** ⇒ DeepSeek 不可用,§5.3 的本地规则库降级**必须真的可用**,不能只是文档上的一句话 |
 | AI | 分析在 App 侧调用 DeepSeek,设备只回传 `features`(ADR-0002);链路细节见 [`../50-ai/010-deepseek-analysis.md`](../50-ai/010-deepseek-analysis.md) |
 
 ---
@@ -41,13 +45,18 @@
 | 维度 | **PWA**(HTML/JS + Service Worker) | **Flutter** | **React Native / Expo** |
 |---|---|---|---|
 | BLE 能力(Android) | ✅ Web Bluetooth(`Bluetooth.requestDevice()`) | ✅ `flutter_blue_plus` | ✅ `react-native-ble-plx` |
+| **USB 能力(Android)** | ⚠️ **WebUSB(`navigator.usb`)—— 需真机实测**(USB-R1) | ✅ 原生 USB Host API(`android.hardware.usb`)最稳 | ✅ 需第三方原生模块 |
 | Wi-Fi WebSocket | ⚠️ 可用,但页面必须 HTTPS 且设备须 `wss://`(§1.3);除非实测确认局域网 `ws://` 被放行(V-06) | ✅ 无混合内容限制,可直连 `ws://` | ✅ 同左 |
 | 开发环境成本(本机 F-5) | **最低**:Node v22.22.1 + npm 已装,**零新工具链** | **高**:Flutter/Dart **未安装**(数 GB);需 Android SDK | **高**:同左;Expo 需 `prebuild` 生成原生工程 |
 | 后台保活 | ❌ 弱:切后台/进 Doze 后 socket 必断(见 §2.4) | ✅ Android 前台服务 + `flutter_foreground_task` | ✅ 需 `isBackgroundEnabled` + Android 前台服务 |
 | 原生能力 | 低:**无证书固定 API**(§1.3);蓝牙权限受浏览器管控;无后台 | 高:证书固定、前台服务、任意文件保存 | 高:同上 |
 | 上架要求 | **无**(免安装、免审核);代价是进不了应用商店 | Google Play 审核(隐私清单、蓝牙权限说明) | 同左 |
 | 迭代速度 | 服务端发版即生效,无需重新审核 | 需重新构建/发版 | 需重新构建/发版(Expo 可 OTA) |
-| **推荐** | ✅ **主载体** | ⭕ 备选:仅当必须后台保活或必须证书固定时 | ⭕ 备选:同左 |
+| **推荐** | ✅ **主载体**(前提:WebUSB 实测通过,见 §1.2) | ⭕ 备选:必须后台保活 / 必须证书固定 / **WebUSB 实测失败**时 | ⭕ 备选:同左 |
+
+> **推荐结论为什么没有因为"多了一条 USB 通道"而改变**:WebUSB 与 Web Bluetooth 一样属于 **PWA 可用的 Web API**,且 Android 侧两者都受支持。因此"仅 Android ⇒ PWA 够用"这个推理**依旧成立**——只是**多了一个必须实测的前提**。
+>
+> **如果 WebUSB 实测失败怎么办**:不必整体切到 Flutter。可行且代价最小的路径是**只把那一段包成原生 Android 小壳**(USB 读写 + 把字节流转发给 WebView/本地服务),UI 与业务逻辑仍留在 Web 层。这样"零新工具链"的收益基本保住,只需引入 Android SDK 构建一个薄壳。
 
 ### 1.2 已核实的平台事实(Web Bluetooth)
 
@@ -60,6 +69,41 @@
 **不相关部分(留档):** Firefox(桌面与 Android)、Opera Mini、KaiOS 不支持;Safari(macOS)与 Safari on iOS/iPadOS 全版本不支持 —— 后者是放弃 iOS 的**直接原因**,分析见 §1.5。
 
 工程推论:Web Bluetooth **只能在安全上下文(secure context)中使用**,受 `Permissions-Policy: bluetooth` 管控(默认 allowlist `self`),权限弹窗由 `requestDevice()` 触发且需要 [transient activation](https://developer.mozilla.org/en-US/docs/Glossary/Transient_activation)(用户手势)([MDN — Web Bluetooth API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API))。后果:**不能后台静默扫描**,每次连新设备都需要用户点击。**这一条与平台无关,仅 Android 也照样成立** —— 它决定了 §3.1 的配对流程必须由用户手势发起。
+
+### 1.2.1 已核实的平台事实(WebUSB,新增)
+
+来源:[caniuse — WebUSB](https://caniuse.com/webusb)(2026-09-20 抓取)。
+
+| 浏览器 | WebUSB 支持 |
+|---|---|
+| Chrome(桌面) | ✅ 61+ |
+| **Chrome for Android** | ✅ **支持** |
+| Edge | ✅ 79+ |
+| Samsung Internet | ✅ 8.2+ |
+| UC Browser for Android | ✅ 15.5+ |
+| Baidu Browser | ✅ 13.52+ |
+| Opera Mobile | ✅ 80+ |
+| Firefox(含 Android) | ❌ 不支持(Mozilla 立场为 *harmful*) |
+| **Safari / iOS 全平台** | ❌ 不支持 |
+| 全球使用率 | **77.89%** |
+
+**与本期(仅 Android)相关的结论:Android Chrome 支持 WebUSB**,故 F-11 在 PWA 路径上**理论可行**。
+
+⚠️ **但这不等于"已验证"**,必须区分三件事:
+
+| 层级 | 状态 |
+|---|---|
+| 浏览器**声称支持** WebUSB | ✅ caniuse 与 Chrome 官方文档证实 |
+| WebUSB 能在 Android 上**访问 CDC-ACM 设备** | ⚠️ **未验证**。社区有在 Android 上用 WebUSB 跑 CH340 串口的实践,但也有"移动端对部分设备类受限"的报告。**列为必须真机实测的第一项**(风险 USB-R1) |
+| 我们的设备**(USB Serial/JTAG CDC)能被识别** | ⚠️ 未验证。设备侧是固定功能 CDC-ACM,VID/PID 为 Espressif;需确认 `navigator.usb.requestDevice()` 能枚举到它、且能 `claimInterface` |
+
+**两个工程约束(与 Web Bluetooth 同源,必须遵守)**:
+
+1. **安全上下文**:WebUSB 同样要求 secure context ⇒ 页面必须 `https://`。**这加重了 §1.3 的问题**:局域网 HTTP 页面不仅连不了 `ws://`,**也用不了 WebUSB**。
+2. **用户手势 + 授权持久化**:`navigator.usb.requestDevice()` 必须由用户手势触发,且**授权与"页面会话/设备插入状态"绑定**。后果:
+   - **不能后台静默连接**;
+   - **整页重载(`location.reload()`)会丢失 WebUSB 授权** ⇒ §2.4 的"回前台整页重载"策略在有线模式下**代价更高**(需重新授权,若设备已插着通常一次点击即可)。
+   - 因此 §2.6 给出有线模式下的**重连优先级**:先尝试复用既有 `USBDevice` 对象 → 失败再重授权 → 最后才整页重载。
 
 ### 1.3 HTTPS 页面 → `ws://` 局域网地址(F-3 / V-06)
 
@@ -110,32 +154,38 @@
 
 ---
 
-## 2. 双通道连接管理
+## 2. 三通道连接管理
 
 ### 2.1 通道能力对照(契约 §2.2 / §2.2.1)
 
-| 项 | Wi-Fi(WebSocket) | BLE(GATT) |
-|---|---|---|
-| 地址 | `wss://<host>:8266/v1`(PWA 必须 `wss`;原生可用 `ws`) | 自定义 Service + Notify/Write |
-| 单帧上限 | `LEN` ≤ 65535 | **以 `CAPS.limits.ble_frame_max` 为准**(契约推得理论上界 3669B,出厂建议 3600B) |
-| 吞吐 | 高(`SCAN_HIT`/`DATA_CHUNK` 受 §2.4 令牌桶限流,`stream_rate_hz` 默认 50) | 低,分片重组缺片 500ms 即弃整帧 |
-| 角色 | 远距离、无人值守、长时扫频(S1) | 近距、免配网、调试(S2) |
+| 项 | Wi-Fi(WebSocket) | BLE(GATT) | **USB(CDC-ACM,新增)** |
+|---|---|---|---|
+| 地址 | `wss://<host>:8266/v1`(PWA 必须 `wss`;原生可用 `ws`) | 自定义 Service + Notify/Write | `navigator.usb.requestDevice()` 选设备 + `claimInterface` |
+| 单帧上限 | `LEN` ≤ 65535 | **以 `CAPS.limits.ble_frame_max` 为准**(理论上界 3669B,建议 3600B) | **以 `CAPS.limits.usb_frame_max` 为准**(示例 16384;**无 FRAG 头**) |
+| 吞吐 | 高(`SCAN_HIT`/`DATA_CHUNK` 受 §2.4 令牌桶限流,`stream_rate_hz` 默认 50) | 低,分片重组缺片 500ms 即弃整帧 | **高且稳定**(USB 2.0 全速;不受射频干扰) |
+| 抗本机 2.4GHz 自扰 | ❌ 会被压掉 | ❌ 会被压掉 | ✅ **不受影响**(有线) |
+| 角色 | 远距离、无人值守、长时扫频(S1) | 近距、免配网、调试(S2) | **2.4GHz 发射时的保底通道(S5)**、首次配对、桌面式调试 |
 
 **规模纪律(必须遵守,否则会吃到 `frame_too_large` / `edge_clamped`)**:
 
 - 单次 `CAPTURE_START.max_edges` 不得超过 `CAPS.limits.max_edges`;超出会被**钳制**并回 `WARN{edge_clamped}`,`CAPTURE_DONE.truncated=true`(契约 §3.4)。App 应**先读 CAPS 再决定请求值**,把钳制当异常路径。
-- BLE 路径上单帧 `LEN` 不得硬编码 4096 或 3669,一律读 `ble_frame_max`;超限设备回 `ERROR{frame_too_large}` 且**不静默截断**(契约 §2.2.1)。
+- BLE 路径上单帧 `LEN` 不得硬编码 4096 或 3669,一律读 `ble_frame_max`;**USB 路径**同理读 `usb_frame_max`。超限设备回 `ERROR{frame_too_large}` 且**不静默截断**(契约 §2.2.1 / §2.2.2)。
 - `DATA_CHUNK` 的分块上限是**承载相关**的,App 不得假设固定块大小(契约 §2.2.1)。
 
 ### 2.2 自动择优规则
 
-App 启动与每次进入前台时**同时**探测两条通道,10s 内按序择优:
+App 启动与每次进入前台时**同时**探测各通道,10s 内按序择优:
 
 | 优先级 | 条件 | 选中 |
 |---|---|---|
+| **0** | **USB 已插入且已授权**(`navigator.usb.getDevices()` 返回已授权设备) | **USB** —— **优先级最高** |
 | 1 | 已绑定设备通过 BLE 在范围内且可连 | **BLE** |
 | 2 | 已记住的地址可达且 `wss` 握手成功(≤5s) | **Wi-Fi** |
-| 3 | 两者都不可达 | 进入「扫描设备」页,走 §3 配网/重连流程 |
+| 3 | 都不可达 | 进入「扫描设备」页,走 §3 配网/重连流程 |
+
+> **为什么 USB 排在最前**(与契约 §2.2 的"USB 可抢占无线"一致):USB 连通意味着①带宽与延迟最好;②**不受本机 2.4GHz 发射干扰**。当用户插着线时,没有任何理由退回到会被自扰压掉的无线通道。这是**确定性规则,不是偏好**——不要为"省电"或"统一体验"而降级到无线。
+>
+> ⚠️ **一个必须做的例外**:USB 插入/拔出会改变活动链路。**若设备正在扫频/捕获,不要立即切**(见 §2.3);待任务结束再切,或明确提示用户本次数据作废。
 
 补充:用户可在「设置」里把偏好固定为某一条(S1 远程部署时强制 Wi-Fi),固定后不再自动择优。**不要做「按 RSSI 猜距离」的判断** —— 设备不做功率标定(产品定义 §3.1 非目标),用信号强度推距离是伪精度。
 
@@ -150,6 +200,8 @@ App 启动与每次进入前台时**同时**探测两条通道,10s 内按序择�
 | **`SCAN` / `CAPTURING`** | ❌ **禁止自动切换** | 保持当前通道直到任务结束;UI 把「切换」置灰并提示「扫频中,已暂停通道切换」。用户强切则先 `STOP_SCAN`/`CAPTURE_ABORT`,**明确告知本次数据作废**,再切 |
 | 断线(被动) | — | 不切;按 §2.4 重连**同一条**通道,避免两个变量同时变化 |
 
+> ⚠️ **唯一允许的例外**:当**无线链路被本机 2.4GHz 发射压掉**时(判据 A-07 的场景),若此时 USB 可用,**必须**切到 USB —— 因为那不是"优化",而是"当前通道已物理不可用"。固件侧同样允许 USB 抢占(契约 §2.2)。App 必须能识别这种状态并**显示"因本机发射暂不可用"**,而**不是**"设备离线"。
+
 App 侧要维护「设备状态影子副本」,以 `CAPS` + 各 `*_STATE`/`SCAN_DONE` 为唯一更新源(契约 §1「能力协商优先」)。**不要假设切换后设备还记得之前的模块选择。**
 
 ### 2.4 心跳、断线与重连
@@ -162,6 +214,44 @@ App 侧要维护「设备状态影子副本」,以 `CAPS` + 各 `*_STATE`/`SCAN_
   - Service Worker **不能**用于保活:它本身会被终止,不适合长期持有 socket。
   - **Screen Wake Lock API 是 PWA 侧唯一现实的缓解手段**:可在**扫频进行中**申请屏幕唤醒锁避免息屏断连,且**只在前台有效**(Android Chrome 支持;`navigator.wakeLock.request('screen')`)。注意它会持续耗电并点亮屏幕,应在任务结束/切后台时主动释放。
 - **对 C-05(无人值守)的诚实结论**:PWA **不适合**长时间无人值守的远程监控。S1 若要「挂几小时自动记录」,记录职责应由**设备侧**承担,App 回前台后拉取结果 —— 这需要契约补「离线记录/回读」能力(§9 第 10 条),当前**不存在**。
+
+### 2.5 USB 有线通道(F-11 / ADR-0003)——一次性解决三个老问题
+
+USB 不只是一条"更快更稳"的通道。它同时关闭了本项目此前**绕了很久的三个问题**:
+
+| 老问题 | 为什么被解决 |
+|---|---|
+| 2.4GHz 发射压掉本机 Wi-Fi/BLE ⇒ **发射中无法中止** | USB 是线,射频压不掉它。中止指令可送达(A-07) |
+| "Wi-Fi-only 设备永远拿不到 `pairing_secret` ⇒ 无法发射" | **USB 与 BLE 同为可信配对信道**(契约 §7.1(5)),不再依赖 BLE 可用性 |
+| 设备 AP 模式要猜 IP / 配网易失败 | 插线即用,不需要 IP、不需要 SSID、不需要路由器 |
+
+**App 侧实现要点**:
+
+| 项 | 做法 |
+|---|---|
+| 选择设备 | `navigator.usb.requestDevice({filters:[...]})` —— **必须由用户手势触发**(同 Web Bluetooth) |
+| 已授权设备复用 | `navigator.usb.getDevices()` 返回**本会话内已授权**的设备;可用于"免再次弹窗"重连 |
+| 接口 | 设备侧是固定功能 CDC-ACM ⇒ 需 `claimInterface()`;**若驱动已被系统占用可能抛错**,需捕获并给出可读提示 |
+| 读写 | `device.transferIn()` / `transferOut()` 的 **Promise 版**(非事件回调版,后者已被弃用) |
+| 帧层 | **与 Wi-Fi/BLE 完全相同**:同一套 6 字节帧头 + PAYLOAD;**无 FRAG 头** |
+| 授权丢失 | 整页重载/刷新会丢授权 ⇒ 重连顺序:①尝试复用 `USBDevice` 对象 → ②`getDevices()` 找回 → ③重新 `requestDevice()`(需一次点击)→ ④最后才 `location.reload()` |
+| 拔线检测 | 监听 `navigator.usb` 的 `disconnect` 事件 → 立即转为"通道丢失"UI,并按 §2.2 回落到 BLE/Wi-Fi |
+
+**⚠️ 必须先验证的事(USB-R1,实现阶段第一项)**:
+
+> **在 Android Chrome 上,`navigator.usb` 能否真的枚举并读写我们这个 CDC 设备。**
+> 这不是"查文档能确认"的问题——WebUSB 的**设备类过滤**与 Android 的 USB 驱动占用情况都会影响结果。**验收方式**:一个最小 HTML 页面 + ESP32-S3 跑 USB Serial/JTAG echo,在真机上点"授权 → 收发改环"。
+> **失败时的降级路径**(不必推翻 PWA 方案):只把 USB 那段包成**原生 Android 小壳**(`android.hardware.usb` USB Host API),把字节流转给 WebView 或本地 WebSocket;UI 与业务逻辑仍留在 Web 层。代价是引入 Android SDK 构建薄壳,但**不损失已有设计**。
+
+### 2.6 有线模式下的重连(与 §2.4 的差异)
+
+§2.4 对无线通道给出的策略是"回前台整页重载"。**有线模式不能照搬**,因为整页重载会丢 WebUSB 授权:
+
+| 情形 | 无线通道(§2.4) | **有线通道** |
+|---|---|---|
+| 回前台发现通道不通 | 直接 `location.reload()` | ①先检查 `USBDevice` 是否仍在(`device.opened` / `getDevices()`);②重建传输(重新 `claimInterface` + 重做 `HELLO`);③失败才提示重新授权(一次点击);④**最后**才整页重载 |
+| 心跳 | PING/PONG 5s | 同左。USB 通路极少丢包,**但 App 被系统挂起时 `transferIn` 不会执行**,故心跳仍是必要的判活手段 |
+| 拔线 | 不适用 | `disconnect` 事件 → 立即切通道,不等心跳超时(比无线快得多) |
 
 ---
 

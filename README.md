@@ -18,20 +18,24 @@
 
 设备端带 **OLED 显示屏**(显示配对码、AP 地址、模块与门控状态)——在"人不在设备旁边"时,它是唯一的本地状态出口。
 
-> **范围决策(2026-09-20)**:**放弃 iOS,仅支持 Android**;App 推荐 **PWA**;设备端**增加 I²C OLED**。分析留档见 [`docs/40-app/010-mobile-app-design.md`](docs/40-app/010-mobile-app-design.md) §1.5 与 §3.1。
+> **范围决策(2026-09-20)**:
+> - **放弃 iOS,仅支持 Android**;App 推荐 **PWA**;设备端**增加 I²C OLED**。
+> - **2.4GHz 列入本期需求**(M3 保留);产品面向**射频屏蔽室**使用,合规门禁降级为参考设计。
+> - **新增 USB 有线控制通道**(F-11/ADR-0003):复用 ESP32-S3 内建 **USB Serial/JTAG 的硬件 CDC-ACM**,**不采用 USB-OTG 外设**(二者共用 GPIO19/20 且互斥;OTG 需外接 PHY 或烧不可逆 eFuse 并失去 JTAG 调试)。用途是**在 2.4GHz 模块发射时保持控制**——屏蔽室挡得住内外互扰,**挡不住同壳体厘米级自扰**,那时无线通道会被自己的 20dBm PA 压掉。
+> - 分析留档见 [`docs/40-app/010-mobile-app-design.md`](docs/40-app/010-mobile-app-design.md) §1.5 与 §3.1,USB 决策见 [`docs/adr/0003-usb-wired-control-channel.md`](docs/adr/0003-usb-wired-control-channel.md)。
 
 ## 2. 当前状态
 
 | 项 | 状态 |
 |---|---|
 | 目录骨架 | ✅ 已建立 |
-| 设计文档 | ✅ 见 [`docs/`](docs/README.md) — **14 份 Markdown**(overview ×4 / 硬件 / 固件 / 协议 / App / AI / 合规 / 测试 + 2 份 ADR + 1 份索引),约 32 万字符 |
-| 协议契约 | ✅ **v1.1**,已同步机器可读 schema(36 个消息 + common,`$defs` 29 个),`python3 tools/validate_schemas.py` 退出码 0 |
-| 合规文档 | ✅ 已成文(四道发射门、红线、审计必录字段) |
-| 测试计划 | ✅ 已成文(**104 个用例**,含 v1.1 边界/负向测试与 A-06 带外可见性) |
+| 设计文档 | ✅ 见 [`docs/`](docs/README.md) — **15 份 Markdown**(overview ×4 / 硬件 / 固件 / 协议 / App / AI / 合规 / 测试 + **3 份 ADR** + 1 份索引),约 35 万字符 |
+| 协议契约 | ✅ **v1.1**,已同步机器可读 schema(36 个消息 + common,`$defs` **30** 个),`python3 tools/validate_schemas.py` 退出码 0 |
+| 合规文档 | ⚠️ **已降级为参考设计**(屏蔽室用途,非验收门)——但四道门禁、审计、红线仍作为纵深防御保留实现 |
+| 测试计划 | ✅ 已成文(**112 个用例**,含 v1.1 边界/负向、A-06 带外可见性、**USB 通道与 A-07**) |
 | 固件实现 | ❌ 未开始(本阶段明确不做) |
 | App 实现 | ❌ 未开始 |
-| 硬件选型定稿 | ✅ **已定稿**(2026-09-20):三块模块即最终配置,**不增补**;范围 = 387–525MHz |
+| 硬件选型定稿 | ✅ **已定稿**(2026-09-20):三块模块即最终配置,**不增补**;范围 = **387–525MHz + 2.4GHz** |
 
 ### ✅ 自检命令(纯标准库,无需安装依赖)
 
@@ -41,7 +45,7 @@ python3 tools/validate_schemas.py     # 协议 schema 结构与引用完整性,�
 for f in protocol/schemas/*.json; do python3 -m json.tool "$f" >/dev/null || echo "BAD: $f"; done
 ```
 
-### ✅ 已决策(不再是阻塞项):接受覆盖空白,只支持 387–525MHz
+### ✅ 已决策(不再是阻塞项):接受覆盖空白,只支持 387–525MHz + 2.4GHz
 
 需求写的是「119–1050MHz 快速扫描」,但给定的三个模块是**泽耀科技 / Ashining**(厂牌已确认),其**模块级**能力已由**厂商官方手册**核实(2026-09-20):
 
@@ -49,9 +53,9 @@ for f in protocol/schemas/*.json; do python3 -m json.tool "$f" >/dev/null || ech
 |---|---|---|---|
 | AS07-M1101D-SMA | CC1101 | **387–464MHz** | ~8% |
 | AS10-M4463D-SMA | SI4463 | **425–525MHz** | ~11% |
-| AS01-ML01 | nRF24L01P + RFX2401C | 2400–2525MHz | 在目标范围之外 |
+| AS01-ML01 | nRF24L01P + RFX2401C | 2400–2525MHz(2.4GHz,已列入需求) | 在 119–1050MHz 之外 |
 
-**结论**:模块级真实覆盖仅 **387–525MHz(约 15%)**;空白 **119–300 / 525–779 / 928–1050MHz**;2.4GHz 需单列需求。
+**结论**:Sub-GHz 模块级真实覆盖仅 **387–525MHz(约占 119–1050MHz 的 15%)**;空白 **119–300 / 525–779 / 928–1050MHz**。**2.4GHz 已于 2026-09-20 列入本期需求**(Q-03 关闭,M3 保留)。
 
 > **2026-09-20 决策(ADR-0001 §5.1):不增补模块,接受覆盖空白。** 硬件已采购完毕,三块模块即最终配置。因此 **119–300 / 525–779 / 928–1050MHz 不是"暂不支持",而是"物理上不可及"**(产品定义 C-08)。
 >
@@ -81,12 +85,12 @@ for f in protocol/schemas/*.json; do python3 -m json.tool "$f" >/dev/null || ech
 
 ```
 rf-lab/
-├── docs/                  设计文档(本阶段主要交付物)
+├── docs/                  设计文档(本阶段主要交付物;含 adr/ 决策记录)
 │   ├── 00-overview/       产品目标、场景、术语
 │   ├── 10-hardware/       系统架构、多模块共存、天线、BOM
 │   ├── 20-firmware/       ESP-IDF 分层、模块驱动模型、RMT 采集
-│   ├── 30-protocol/       设备↔App 协议契约(JSON Schema)
-│   ├── 40-app/            手机 App(Wi-Fi / BLE 双通道)
+│   ├── 30-protocol/       设备↔App 协议契约(机器可读 schema 见 protocol/schemas/)
+│   ├── 40-app/            手机 App(Wi-Fi / BLE / USB 三通道)
 │   ├── 50-ai/             DeepSeek 分析链路与提示词契约
 │   ├── 60-compliance/     频段合规、发射授权、审计
 │   ├── 70-test/           验证策略与验收标准
