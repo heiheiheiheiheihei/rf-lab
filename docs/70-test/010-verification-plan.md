@@ -93,8 +93,8 @@
 | ID | 目标 | 前置 | 步骤 | 期望结果 | 类型 |
 |---|---|---|---|---|---|
 | TC-011 | `EC-band_out_of_range` | 活动模块=槽位 2(CC1101) | `START_SCAN{f_start_hz:200e6, f_stop_hz:250e6}` | 回 `ERROR{band_out_of_range}`;不下发任何调谐命令 | U+I |
-| TC-012 | `EC-band_clipped`:部分裁剪必须告知 | 活动模块=槽位 2 | `START_SCAN{f_start_hz:400e6, f_stop_hz:950e6}` | 回 `WARN{band_clipped}`;`SCAN_DONE.coverage` 为**真实扫过的区间集合**(387–464 与 779–928 两段),**不得静默跳过、不得夸大为 400–950** | U+I |
-| TC-013 | 覆盖诚实性:coverage 与请求的交集 | 活动模块=槽位 2 | 扫 300–348MHz(恰在能力内) | `coverage == [[300e6,348e6]]`;**无** `band_clipped` | U |
+| TC-012 | `EC-band_clipped`:部分裁剪必须告知 | 活动模块=槽位 2(**官方模块级能力 387–464MHz**) | `START_SCAN{f_start_hz:400e6, f_stop_hz:950e6}` | 回 `WARN{band_clipped}`;`SCAN_DONE.coverage` 为**真实扫过的区间集合**,对该模块应仅含 `[[387e6,464e6]]`,**不得静默跳过、不得夸大为 400–950、更不得报出芯片级的 779–928 段** | U+I |
+| TC-013 | 覆盖诚实性:coverage 与请求的交集(**专防"按芯片能力上报"缺陷**) | 活动模块=槽位 2(387–464MHz) | ① 扫 400–460MHz(在能力内)② 扫 300–348MHz(**芯片可及但模块已裁剪**) | ① `coverage == [[400e6,460e6]]`,**无** `band_clipped`;② 必须回 `WARN{band_clipped}` 且 `coverage` **为空**(300–348MHz 完全落在模块带外)。**本用例的用意就是防止把芯片级频段当成模块能力上报** —— 见 040 F-4 的芯片级/模块级区分与 ADR-0001 §3 | U |
 | TC-014 | `SCAN_HIT` 只回超阈值的点 | 活动模块=槽位 2,有一路 433.92MHz 信号 | `START_SCAN{..., rssi_threshold_dbm:-80}` | 仅收到 `rssi_dbm > -80` 的点;低于阈值的点不出现 | I+H |
 | TC-015 | `SCAN_DONE` 统计正确 | 同上 | 扫描完成后核对 | `hits` 与实收 `SCAN_HIT` 条数一致;`elapsed_ms` 与假时钟一致;`aborted` 正确反映是否被中断 | U+I |
 | TC-016 | `SET_RSSI_STREAM` 定点采样 | READY | `SET_RSSI_STREAM{f_hz:433.92e6, interval_ms:100, enable:true}` | 按 `interval_ms` 收到 `RSSI_SAMPLE`;`enable:false` 后停止 | I+H |
