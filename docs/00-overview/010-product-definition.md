@@ -80,7 +80,7 @@
 |---|---|---|---|---|---|---|---|
 | M1 | AS10-M4463D-SMA | Silicon Labs SI4463 | **425–525MHz**(官方手册,软件可调) | **100mW / 20dBm** | 4-Pin 硬件 SPI,24×16mm 直插 | 工业级,绕射及穿墙能力强,官方标称距离 2km;灵敏度 −126dBm@1kbps | **OOK/ASK + FSK 族**(SI4463 支持)⇒ **433MHz OOK 遥控器靠它** |
 | M2 | AS07-M1101D-SMA | TI CC1101 | **387–464MHz**(官方手册,推荐 433±10MHz) | **10mW / 10dBm** | DIP 直插,28×15mm | 自带 FEC 与交织编码,抗干扰强,功耗低;灵敏度 −111dBm@1.2kbps | ⚠️ **官方手册只列 2-FSK / GFSK / MSK,无 OOK/ASK**(芯片本身支持 OOK,是模块未承诺) |
-| M3 | AS01-ML01(疑为 **DP5**) | Nordic nRF24L01P + **RFX2401C PA/LNA** | 2400–2525MHz(126 信道) | **约 20dBm / 100mW**(官方手册) | SPI,18×33.3mm 直插,SMA-K | 内建 LNA,6 通道数据;官方标称距离 2.0km | GFSK |
+| M3 | AS01-ML01(**已确认,无后缀**) | Nordic nRF24L01P + **RFX2401C PA/LNA** | 2400–2525MHz(126 信道) | **约 20dBm / 100mW**(官方手册) | SPI,18×33.3mm 直插,SMA-K | 内建 LNA,6 通道数据;官方标称距离 2.0km;**带金属屏蔽罩** | GFSK |
 
 > **制造商已确认**:三块均为**泽耀科技 / Ashining**(`ashining.com.cn`)。官方资料包已于 2026-09-20 完整取得,上表**全部为官方手册口径**;明细与"仍开放项"见 [`040-verified-platform-facts.md`](040-verified-platform-facts.md) F-4/F-4c。
 >
