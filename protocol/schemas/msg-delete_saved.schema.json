@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-delete_saved.schema.json",
+  "title": "DELETE_SAVED (0x51)",
+  "description": "方向:App→设备 · 文档 §3.8 · 协议 v1。删除设备本地已存信号。",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "要删除的信号名称。"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "additionalProperties": false
+}

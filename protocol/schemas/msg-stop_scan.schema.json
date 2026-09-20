@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-stop_scan.schema.json",
+  "title": "STOP_SCAN (0x21)",
+  "description": "方向:App→设备 · 文档 §3.3 · 协议 v1。停止扫频。载荷按文档为空对象 {}。",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-get_scan_hits.schema.json",
+  "title": "GET_SCAN_HITS (0x23)",
+  "description": "方向:App→设备 · 文档 §3.3 · 协议 v1。分页取回上次扫描的完整命中明细(设备端缓存保留到下一次扫描开始)。用于绕开 §2.4 的速率限流而不丢失明细——「限流不得吃掉覆盖诚实性」。",
+  "type": "object",
+  "properties": {
+    "scan_id": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/scanId"
+        }
+      ],
+      "description": "目标扫描会话标识;必须是设备端仍缓存的那一次。"
+    },
+    "offset": {
+      "type": "integer",
+      "description": "分页起始偏移(命中序号)。文档只写「分页取回」,未定义 0/1 起始与越界行为,按从 0 开始建模(判断,见 README §7)。",
+      "minimum": 0
+    },
+    "limit": {
+      "type": "integer",
+      "description": "本次最多取回的命中条数。文档未规定上限,故不设 maximum(见 README §7)。",
+      "minimum": 1
+    }
+  },
+  "required": [
+    "scan_id",
+    "offset",
+    "limit"
+  ],
+  "additionalProperties": false
+}

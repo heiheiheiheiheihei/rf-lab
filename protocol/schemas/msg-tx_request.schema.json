@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-tx_request.schema.json",
+  "title": "TX_REQUEST (0x40)",
+  "description": "方向:App→设备 · 契约 §3.7 · 协议 v1.1。发射请求。发射默认拒绝:需频段白名单 + 功率上限 + 显式用户确认 + 有效令牌(§1、§7);auth_token 只是第四道门,前三道任何一道不过即拒绝且不因令牌有效而放宽(§7.1(4))。每次 TX_REQUEST(含被拒的)必须写本地环形审计日志,含时间、频率、功率、结果(§7)。**两段式发射复用本消息**:第一阶段带完整参数与令牌,设备回 TX_STATUS{armed};第二阶段**只带** {armed_ack:true}。",
+  "type": "object",
+  "properties": {
+    "f_hz": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/frequencyHz"
+        }
+      ],
+      "description": "发射频率,单位 Hz(整数)。必须落在 policy.tx_whitelist 内,否则 ERROR{tx_denied}(§6)。"
+    },
+    "mod": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/txMod"
+        }
+      ],
+      "description": "发射调制方式,契约 §3.7 正文已明确:`mod:\"ook\"|\"2fsk\"`,**不含 auto**(auto 是接收侧 CAPTURE_START 的自动选择语义)。"
+    },
+    "payload_rle": {
+      "type": "string",
+      "description": "待发射的 RLE 跳变序列,以 **base64url 字符串**承载(契约 §3.7)。解码后与 §3.5 的二进制布局同构:FLAGS(1B) + edge[0] 起点(u32 LE 相对微秒) + RLE 对(u16 LE dt_us + u8 level)。发射方向 FLAGS 的 bit1(判决点)置 0。**注意:REPLAY_SIGNAL 不承载本结构**——它按 name 引用设备本地已存信号(§3.7)。"
+    },
+    "repeats": {
+      "type": "integer",
+      "description": "重复发射次数。",
+      "minimum": 1
+    },
+    "power_dbm": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/powerDbm"
+        }
+      ],
+      "description": "发射功率,单位 dBm;不得超过 policy.tx_power_cap_dbm 与模块 tx_max_dbm。令牌把它按 ×10 的整数绑定(power_dbm_x10_be16,§7.1(2))。"
+    },
+    "auth_token": {
+      "type": "string",
+      "description": "授权令牌。仅当 policy.tx_requires_token 为真时必需(§4、§7),故不列入 required。格式(§7.1(2)):token_wire = base64url(HMAC-SHA256(key = pairing_secret, msg = device_id | seq_be32 | f_hz_be64 | mod | power_dbm_x10_be16)[0:16]),即 16 字节截断后的 base64url 文本(无填充时 22 字符);一次有效,设备校验后记录 seq。"
+    },
+    "armed_ack": {
+      "type": "boolean",
+      "description": "两段式发射的第二次确认(§3.7「TX_STATUS.state = armed 的语义」):设备回 armed 后,App 用 TX_REQUEST{armed_ack:true} 再次确认才真正发射;arm_timeout_ms(建议 5s)内未收到二次确认则设备自动回落,并回 TX_STATUS{state:\"failed\", code:\"arm_timeout\"}。仅第二阶段出现,故不列入 required。"
+    },
+    "reason": {
+      "type": "string",
+      "description": "发射理由,自由文本;用于审计日志(§7)。"
+    }
+  },
+  "required": [
+    "f_hz",
+    "mod",
+    "payload_rle",
+    "repeats",
+    "power_dbm",
+    "reason"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-tx_status.schema.json",
+  "title": "TX_STATUS (0xC0)",
+  "description": "方向:设备→App · 文档 §3.7 · 协议 v1。发射状态上报。state 的四态取值来自文档 §3.7;code/detail 的取值空间文档未明确(code 疑似取自 §6 错误码,如 tx_denied/tx_bad_token,但未写明),故按自由文本建模并列入 README §7。",
+  "type": "object",
+  "properties": {
+    "state": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/txState"
+        }
+      ],
+      "description": "发射状态:denied / armed / sent / failed。"
+    },
+    "code": {
+      "type": "string",
+      "description": "补充代码,自由文本(如 tx_denied、tx_bad_token)。文档未声明其取值空间,故不设 enum,也不列入 required(仅 denied/failed 时有意义)。"
+    },
+    "detail": {
+      "type": "string",
+      "description": "补充说明,自由文本。文档未声明何时必须出现,故不列入 required。"
+    }
+  },
+  "required": [
+    "state"
+  ],
+  "additionalProperties": false
+}

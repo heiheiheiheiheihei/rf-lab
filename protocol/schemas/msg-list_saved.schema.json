@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-list_saved.schema.json",
+  "title": "LIST_SAVED (0x50)",
+  "description": "方向:双向 · 文档 §3.8 · 协议 v1。请求已存信号清单。文档 §3.8 只写「已存信号清单」未给字段,按其它空载荷请求(§3.1 GET_CAPS、§3.2 LIST_MODULES)的写法建模为空对象;见 README §7。",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-replay_signal.schema.json",
+  "title": "REPLAY_SIGNAL (0x43)",
+  "description": "方向:App→设备 · 文档 §3.7 · 协议 v1。回放设备本地已存信号,属发射行为,受 §7 发射授权与审计约束(令牌规则同 TX_REQUEST,见 §7.1)。",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "已存信号名称,来自 SAVE_SIGNAL。"
+    },
+    "repeats": {
+      "type": "integer",
+      "description": "重复回放次数。",
+      "minimum": 1
+    },
+    "auth_token": {
+      "type": "string",
+      "description": "授权令牌;仅当 policy.tx_requires_token 为真时必需(§7),故不列入 required。格式见 §7.1(2):base64url(HMAC-SHA256(...)[0:16])。"
+    }
+  },
+  "required": [
+    "name",
+    "repeats"
+  ],
+  "additionalProperties": false
+}

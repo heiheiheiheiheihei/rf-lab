@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-hello.schema.json",
+  "title": "HELLO (0x01)",
+  "description": "方向:App→设备 · 文档 §3.1 · 协议 v1。App 发起握手,声明自身版本与协议区间;设备在 IDLE 状态下除 HELLO 外一切命令回 ERROR{not_ready}(§5)。首次配对时另见 §7.1。",
+  "type": "object",
+  "properties": {
+    "app_version": {
+      "type": "string",
+      "description": "App 版本号,自由文本(如 \"1.0.3\")。"
+    },
+    "proto_min": {
+      "type": "integer",
+      "description": "App 支持的最低协议主版本。文档 §2 当前 VER = 0x01,故常见值为 1。"
+    },
+    "proto_max": {
+      "type": "integer",
+      "description": "App 支持的最高协议主版本。设备与 App 取交集,无交集即 ERROR{version_mismatch}(§8)。"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "App 实例标识,用于设备侧配对与防串台(§7、§7.1)。"
+    },
+    "pairing": {
+      "type": "boolean",
+      "description": "配对握手标志(§3.1「配对时另带」/ §7.1(1)):true 表示本次 HELLO 是首次配对请求。仅配对时出现,故不列入 required。"
+    },
+    "pair_code": {
+      "type": "string",
+      "description": "首次配对用的 6 位一次性配对码(§7.1(1)),用于防中间人:BLE 配对若被中间人截获,攻击者拿不到设备端显示的一次性码。文档未规定其类型,按字符串建模以免丢失前导零(判断)。仅 pairing:true 时出现,故不列入 required。"
+    }
+  },
+  "required": [
+    "app_version",
+    "proto_min",
+    "proto_max",
+    "client_id"
+  ],
+  "additionalProperties": false
+}

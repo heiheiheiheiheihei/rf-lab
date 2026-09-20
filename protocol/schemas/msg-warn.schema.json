@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-warn.schema.json",
+  "title": "WARN (0x7E)",
+  "description": "方向:设备→App · 文档 §3.1 · 协议 v1。非致命告警,不中断当前任务。",
+  "type": "object",
+  "properties": {
+    "code": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/warnCode"
+        }
+      ],
+      "description": "告警码:§6 标注 (WARN) 的 band_clipped(频段被裁剪)、throttled(限流丢数据)、edge_clamped(max_edges 被钳制);以及 §5 规则 3 正文使用的 preempted(任务被隐式中止)。"
+    },
+    "msg": {
+      "type": "string",
+      "description": "人类可读的告警描述,自由文本。"
+    }
+  },
+  "required": [
+    "code",
+    "msg"
+  ],
+  "additionalProperties": false
+}

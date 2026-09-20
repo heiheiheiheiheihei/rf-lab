@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-get_status.schema.json",
+  "title": "GET_STATUS (0x52)",
+  "description": "方向:双向 · 文档 §3.8 · 协议 v1。请求设备状态。文档 §3.8 与 STATUS 同行,只描述响应内容,请求本身未给字段,按空对象建模;见 README §7。",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

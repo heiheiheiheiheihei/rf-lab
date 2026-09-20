@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-scan_progress.schema.json",
+  "title": "SCAN_PROGRESS (0xA1)",
+  "description": "方向:设备→App · 文档 §3.3 · 协议 v1。扫频进度上报。",
+  "type": "object",
+  "properties": {
+    "f_cur_hz": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/frequencyHz"
+        }
+      ],
+      "description": "当前扫描到的频率,单位 Hz(整数)。"
+    },
+    "pct": {
+      "type": "number",
+      "description": "完成百分比,单位 %。文档未给上下界,按百分比语义取 0..100(判断,见 README §7)。",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "elapsed_ms": {
+      "type": "number",
+      "description": "已耗时,单位 ms。"
+    },
+    "hits": {
+      "type": "integer",
+      "description": "累计命中数。",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "f_cur_hz",
+    "pct",
+    "elapsed_ms",
+    "hits"
+  ],
+  "additionalProperties": false
+}

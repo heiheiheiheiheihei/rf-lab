@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-scan_hits.schema.json",
+  "title": "SCAN_HITS (0xA4)",
+  "description": "方向:设备→App · 文档 §3.3 · 协议 v1。GET_SCAN_HITS 的分页应答。hits 数组元素不含 scan_id(scan_id 在本报文根上)。",
+  "type": "object",
+  "properties": {
+    "scan_id": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/scanId"
+        }
+      ],
+      "description": "本次分页数据所属的扫描会话标识。"
+    },
+    "total": {
+      "type": "integer",
+      "description": "该 scan_id 在设备端缓存的命中总数,用于分页计算。",
+      "minimum": 0
+    },
+    "offset": {
+      "type": "integer",
+      "description": "本页数据在完整命中列表中的起始偏移(命中序号)。",
+      "minimum": 0
+    },
+    "hits": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/hitPoint"
+      },
+      "description": "本页命中点数组,元素见 common.schema.json#/$defs/hitPoint。文档 §3.3 示例:[{f_hz,rssi_dbm,t_ms}...]。"
+    }
+  },
+  "required": [
+    "scan_id",
+    "total",
+    "offset",
+    "hits"
+  ],
+  "additionalProperties": false
+}

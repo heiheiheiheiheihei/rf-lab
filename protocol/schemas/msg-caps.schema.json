@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "msg-caps.schema.json",
+  "title": "CAPS (0x82)",
+  "description": "方向:设备→App · 文档 §4 · 协议 v1。能力集,App 启动后必须首先获取并作为唯一真实来源。modules 元素按 §4 用 tx_allowed 且不含 driver_version/spi/ant;limits 含 §2.2.1 新增的 ble_frame_max。",
+  "type": "object",
+  "properties": {
+    "proto": {
+      "type": "integer",
+      "description": "协议版本号(文档 §4 示例 1)。"
+    },
+    "fw": {
+      "type": "string",
+      "description": "固件版本号,自由文本(文档 §4 示例 \"0.1.0\")。"
+    },
+    "device_id": {
+      "type": "string",
+      "description": "设备唯一标识(文档 §4 示例 \"RFLAB-A1B2\")。"
+    },
+    "active_slot": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/slot"
+        }
+      ],
+      "description": "当前活动模块槽位 1..3(文档 §4 示例 1)。"
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/capsModule"
+      },
+      "description": "模块能力数组,元素见 common.schema.json#/$defs/capsModule。"
+    },
+    "policy": {
+      "$ref": "common.schema.json#/$defs/policy"
+    },
+    "limits": {
+      "$ref": "common.schema.json#/$defs/limits"
+    },
+    "deprecated": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "被弃用的字段名。"
+      },
+      "description": "已弃用字段清单。文档 §8 规定「移除字段前必须先在 CAPS 中标记 deprecated:[...],保留至少一个小版本」,但 §4 的示例与 limits 表都没有它的形状——本 schema 按 §8 展示的数组语法建模为可选字段(string 元素属推断),见 README §7。"
+    }
+  },
+  "required": [
+    "proto",
+    "fw",
+    "device_id",
+    "active_slot",
+    "modules",
+    "policy",
+    "limits"
+  ],
+  "additionalProperties": false
+}
