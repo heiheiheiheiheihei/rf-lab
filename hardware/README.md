@@ -1,6 +1,7 @@
 # 硬件(占位)
 
 - 系统架构设计见 [`../docs/10-hardware/010-system-architecture.md`](../docs/10-hardware/010-system-architecture.md)
+- **接线图见 [`wiring/`](wiring/)(SVG + 引脚表,由 `tools/gen_wiring_diagram.py` 生成)**
 - 频段覆盖空白分析见 [`../docs/adr/0001-frequency-coverage-gap.md`](../docs/adr/0001-frequency-coverage-gap.md)
 - BOM 表见 [`bom/`](bom/)
 

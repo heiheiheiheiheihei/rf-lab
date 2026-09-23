@@ -99,7 +99,9 @@ rf-lab/
 ├── firmware/              ESP-IDF 工程位置(仅占位,未实现)
 ├── app/                   手机 App 位置(仅占位)
 ├── hardware/bom/          物料清单
-└── tools/                 辅助脚本
+├── hardware/wiring/       接线图(SVG,由 tools/gen_wiring_diagram.py 生成)
+├── hardware/datasheets/   厂商官方手册存档(让频率/功率结论可复核)
+└── tools/                 辅助脚本(接线图生成器 / schema 校验器)
 ```
 
 ## 4. 阅读顺序

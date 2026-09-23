@@ -17,7 +17,7 @@
 
 ### 我要改什么
 
-- **改硬件** → `adr/0001-frequency-coverage-gap.md` → `10-hardware/010-system-architecture.md` → `hardware/bom/`
+- **改硬件** → `adr/0001-frequency-coverage-gap.md` → `10-hardware/010-system-architecture.md` → [`hardware/bom/`](../hardware/bom/) → **接线图 [`hardware/wiring/`](../hardware/wiring/)(改引脚后必须重跑 `tools/gen_wiring_diagram.py`)**
 - **改协议** → `30-protocol/010-device-app-protocol.md`(权威)**v1.1** → `protocol/schemas/`(机器可读镜像)→ 跑 `python3 tools/validate_schemas.py` → 同步通知固件与 App 两侧
 - **改发射相关行为** → **必须**先读 `60-compliance/010-spectrum-compliance.md`(四道发射门、红线)与 `adr/0002-ai-analysis-in-app.md` §4.3,以及契约 §7.1(令牌定义)
 
