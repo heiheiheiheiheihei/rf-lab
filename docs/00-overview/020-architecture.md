@@ -88,11 +88,11 @@ App 收到 features
 
 ```
 用户看到 AI 建议 → 人工确认(不可跳过)
-  └─► App 计算短时 HMAC 令牌(30s)
+  └─► App 计算 HMAC 令牌(绑定 seq/f/mod/power,**无时间窗**)
         └─► TX_REQUEST{f, mod, payload_rle, repeats, power_dbm, auth_token}
               └─► 设备四道门禁:①白名单 ②功率上限 ③令牌 ④模块在位
                     ├─ 任一失败 → TX_STATUS{state:"denied"} + 审计记录
-                    └─ 全通过 → TX_STATUS{state:"sent"} + 审计记录
+                    └─ 全通过 → TX_STATUS{state:"sent", granted_power_dbm} + 审计记录
 ```
 
 ## 4. 职责边界(谁拥有什么)

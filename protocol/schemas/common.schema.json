@@ -15,7 +15,7 @@
     },
     "powerDbm": {
       "type": "number",
-      "description": "发射功率,单位 dBm(可为小数)。文档 §4 示例 tx_max_dbm 20/10;policy.tx_power_cap_dbm 出厂取 20(2.4GHz 满功率,C-11/2026-09-21,原示例为 10)。"
+      "description": "发射功率,单位 dBm(可为小数)。文档 §4 示例 tx_max_dbm 20/10(M1=20 / M2=10 / M3=20);policy.tx_power_cap_dbm 是**设备级全局最大值**,出厂 20(2026-09-21 C-11 + NQ-03:所有模块各自满功率,且可由 App 调节,C-12)。**某次发射的实际生效上限 = min(请求值, 该值, 模块 tx_max_dbm)**,并由 TX_STATUS.granted_power_dbm 回报。"
     },
     "confidence": {
       "type": [
@@ -48,7 +48,7 @@
     },
     "pairError": {
       "type": "string",
-      "description": "配对失败原因(§7.1(1.1)):bad_code = 配对码不匹配(让用户重看设备端码的载体,连续失败应限速);no_display = 设备当前没有 pair_code 的搬运通道(2026-09-21 新增,OLED 延期到下一批 ⇒ 不得静默降级为免码配对,应引导改用 USB 配对);already_bound = 设备已绑定其他 client_id(需设备端按键改绑,不是反复重试);ble_only = 在不被信任的链路上尝试配对(见 §7.1(5):USB 与 BLE 是可信配对信道,纯 Wi-Fi 不是);rng_failed = 设备侧 RNG 初始化失败(拒绝配对,不得降级为弱随机)。",
+      "description": "配对失败原因(§7.1(1.1)):bad_code = 配对码不匹配(**本批为保留值,无活路径**:USB 不校验码、BLE 在取码前即回 no_display;下一批 OLED 到位后启用);no_display = 设备当前没有 pair_code 的搬运通道(**本批 BLE 上必然如此**,2026-09-21 定稿)⇒ 不得静默降级为免码配对,应引导改用 **USB** 配对;already_bound = 设备已绑定其他 client_id(需设备端按键改绑,不是反复重试;⚠️ 插 USB 不能替代按键);ble_only = 在 Wi-Fi 链路上尝试配对(**本批语义 = 改用 USB**,因为 BLE 在本批同样不能配对);rng_failed = 设备侧 RNG 初始化失败(拒绝配对,不得降级为弱随机)。",
       "enum": [
         "bad_code",
         "no_display",
@@ -587,11 +587,11 @@
               "$ref": "common.schema.json#/$defs/powerDbm"
             }
           ],
-          "description": "全局发射功率上限,单位 dBm。文档 §4 示例 20(2026-09-21 起:2.4GHz 按模块上限满功率出厂,C-11;原示例为 10)。⚠️ 它是全局单值,不是按频段的表 —— 某次发射的有效上限 = min(请求值, 本字段, 该模块 tx_max_dbm, 该频段策略上限),Sub-GHz 是否放开未决(NQ-03)。"
+          "description": "**设备级全局**发射功率上限,单位 dBm,出厂取 20(2026-09-21:C-11 扩围至全部模块 + NQ-03 关闭)。⚠️ 它是全局单值,**不是按频段的表**;某次发射的有效上限 = **min(请求值, 本字段, 该模块 tx_max_dbm)**。原表述里的'该频段策略上限'一层已废止(来自合规折算值,屏蔽室用途下非设计输入)。注意 M2(AS07)的 tx_max_dbm=10,达不到 20 是**模块硬件真顶**,不是策略限幅。"
         },
         "tx_requires_token": {
           "type": "boolean",
-          "description": "为真时 TX_REQUEST/REPLAY_SIGNAL 必须携带 App 计算的短时令牌(HMAC-SHA256,30s 有效,文档 §7/§7.1)。"
+          "description": "为真时 TX_REQUEST/REPLAY_SIGNAL 必须携带 App 计算的授权令牌(HMAC-SHA256,**绑定 seq/f_hz/mod/power_dbm_x10**;⚠️ **没有'有效期'概念** —— 设备无 RTC,防重放靠单调 seq,见文档 §7.1(2)(3))。"
         }
       },
       "description": "发射策略(文档 §4 CAPS.policy)。发射默认拒绝:白名单为空即禁止一切发射。",

@@ -44,7 +44,7 @@
     },
     "pairing_secret": {
       "type": "string",
-      "description": "32B 长期配对密钥的 base64url 文本(§7.1(1))。**只经 BLE 加密链路在 HELLO_ACK 里下发一次;Wi-Fi 路径绝不下发**;设备侧存 NVS 不可读回。这决定了纯 Wi-Fi 设备永久不可发射(§7.1(5))。仅配对成功时出现,故不列入 required。"
+      "description": "32B 长期配对密钥的 base64url 文本(§7.1(1))。**只经 USB 链路在 HELLO_ACK 里下发一次**(2026-09-21 定稿:本批配对只走 USB,原表述'BLE 加密链路或 USB'已收窄);**Wi-Fi 与 BLE 路径均不下发**;设备侧存 NVS 不可读回。这决定了纯 Wi-Fi(且不插线)的设备永久不可发射(§7.1(5))。仅配对成功时出现,故不列入 required。"
     },
     "pair_error": {
       "allOf": [

@@ -20,6 +20,14 @@
     "detail": {
       "type": "string",
       "description": "补充说明,自由文本。文档未声明何时必须出现,故不列入 required。"
+    },
+    "granted_power_dbm": {
+      "allOf": [
+        {
+          "$ref": "common.schema.json#/$defs/powerDbm"
+        }
+      ],
+      "description": "本次发射**实际生效**的功率 = min(TX_REQUEST.power_dbm, policy.tx_power_cap_dbm, 该模块 tx_max_dbm)。文档 §3.7(2026-09-21 新增):state ∈ {armed,sent,failed} 时必须给出,denied 时可省略(不发就不存在生效值)。⚠️ App 必须用它而非请求值做显示与审计:例如 M2(AS07)的 tx_max_dbm=10,请求 20 时实际只发 10——若界面显示 20 即为静默谎报。"
     }
   },
   "required": [

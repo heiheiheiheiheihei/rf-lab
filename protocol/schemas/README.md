@@ -1,8 +1,8 @@
 # RF-Lab 协议 JSON Schema(机器可读镜像)
 
-状态:`draft` · 契约版本:`v1.1` · 镜像的协议文档修订:`sha256:d33d5e8b2d0c3ebc3bfcf08268e620788088ae0e03ca9e091473679f013dae35`
+状态:`draft` · 契约版本:`v1.1` · 镜像的协议文档修订:`sha256:9659d6be34c49e3c2295ebf0ce55c062b06554f61bbba282edd089b6002089ef`
 
-> **镜像修订变更记录**:上一版镜像 `1afe4f02…`(2026-09-20 v1.1 收口)。本次镜像 `d33d5e8b…`,对应契约的两处非破坏性增补:**① §7.1(1.1) 新增 `pair_error="no_display"`**(OLED 延期到下一批 ⇒ 无 `pair_code` 搬运通道时不得静默降级为免码配对);**② §4 的 `policy.tx_power_cap_dbm` 示例由 `10` 改为 `20`**(C-11:2.4GHz 按模块上限满功率出厂)。字段与枚举的权威仍是契约,本次未改动帧格式,故 `VER` 不变。
+> **镜像修订变更记录**:上一版镜像 `d33d5e8b…`(2026-09-21 C-11 + OLED 延期)。本次镜像 `9659d6be…`,对应契约 2026-09-21 的追加修订(**NQ-01/NQ-03 定稿**):**① §7.1(1) 首次配对定稿为「只走 USB」** —— `pair_code` 在 USB 上不校验,BLE 配对一律回 `pair_error:"no_display"`;`pairing_secret` 的下发信道由「BLE 或 USB」收窄为**仅 USB**;**② §4 功率口径改为「所有模块各自满功率出厂 + 可由 App 调节」**(C-11 修订 + C-12),`policy.tx_power_cap_dbm` 明确为**设备级全局最大值**,有效上限 = `min(请求, cap, 模块 tx_max_dbm)`;**③ §3.7 新增可选字段 `TX_STATUS.granted_power_dbm`**(唯一一处**字段集合变化**;原契约要求审计记"实际生效功率"却无承载字段,而 schema 为 `additionalProperties:false` ⇒ 固件照契约实现反而回报不了)。帧格式未变、`VER` 不变,仍为 36 消息 + 30 `$defs`;新增字段为**可选**,对既有实现向后兼容。
 
 > **权威关系**:[`docs/30-protocol/010-device-app-protocol.md`](../../docs/30-protocol/010-device-app-protocol.md) 是唯一权威来源。
 > 本目录只是它的**机器可读镜像**,用于开发期校验。**schema 与文档冲突时,以文档为准,并应当立刻修正 schema。**
@@ -172,9 +172,10 @@ check-jsonschema --schemafile protocol/schemas/msg-hello.schema.json payload.jso
    | `REPLAY_SIGNAL.auth_token` | 同上 | §7 |
    | `TX_REQUEST.armed_ack` | 仅两段式发射的第二段出现 | §3.7 |
    | `TX_STATUS.code` / `TX_STATUS.detail` | 仅 `denied`/`failed` 时有意义 | §3.7(未明说,判断) |
+   | `TX_STATUS.granted_power_dbm` | **`armed`/`sent`/`failed` 时必须给出;`denied` 时可省略**(未发射即无"生效值") | §3.7(2026-09-21 新增明文) |
    | `MODULE_STATE.detail` | 仅 `error` 等状态需要 | §3.2(未明说,判断) |
-   | `HELLO.pairing` / `HELLO.pair_code` | 仅首次配对握手出现 | §3.1「配对时另带」、§7.1(1) |
-   | `HELLO_ACK.pair_ok` / `first_bond` / `pairing_secret` / `pair_error` | 仅配对握手出现(`pairing_secret` 仅 BLE 链路) | §7.1(1)(1.1) |
+   | `HELLO.pairing` / `HELLO.pair_code` | 仅首次配对握手出现。⚠️ **本批 `pair_code` 无活路径**(USB 不校验、BLE 在取码前即回 `no_display`)—— 字段保留但**不要为它实现校验分支** | §3.1「配对时另带」、§7.1(1) |
+   | `HELLO_ACK.pair_ok` / `first_bond` / `pairing_secret` / `pair_error` | 仅配对握手出现。⚠️ `pairing_secret` **仅 USB 链路**(2026-09-21 定稿,原为「BLE 或 USB」) | §7.1(1)(1.1) |
    | `HELLO_ACK.last_accepted_seq` | **文档 §7.1(1.2) 称其为"必须字段"**,但 schema 按协调者决策登记为可选(向后兼容) | §7.1(1.2) —— 张力见 §7.1 第 2 条 |
    | `CAPS.deprecated` | 仅存在弃用字段时出现 | §8 |
    | `features` 的 8 个 v1.1 字段 | 见下条规则 | §3.6 规则 5 |
@@ -340,4 +341,5 @@ check-jsonschema --schemafile protocol/schemas/msg-hello.schema.json payload.jso
 | 2026-09-20 | 首版:覆盖协议 v1 §3 全部 34 个消息类型 + `common.schema.json` 共享定义;随附 `tools/validate_schemas.py` |
 | 2026-09-20 | **v1.1 同步**:新增 `msg-get_scan_hits`(0x23)/`msg-scan_hits`(0xA4);`SCAN_HIT` 加 `scan_id`;`SCAN_DONE` 改为 `hits_total`/`hits_pushed`/`hits_dropped`(删除旧 `hits`);`common` 新增 `scanId`/`hitPoint`/`confidence`/`rawSemantics`/`txMod`,`features` 按 §3.6 重写,`limits` 增 `ble_frame_max`(1..4096),`errorCode` 增 `frame_too_large`,`warnCode` 增 `edge_clamped`;`HELLO.pair_code`/`HELLO_ACK.pair_ok`/`CAPS.deprecated` 补为可选 |
 | 2026-09-20 | **v1.1 收口**(镜像 `1afe4f02…`,按协调者定稿 delta):`errorCode` 增 `arm_timeout`(12 项);`rawSemantics` 增第三值 `unknown`;新增 `$defs.pairError`;`msg-hello` 增可选 `pairing`+`pair_code`;`msg-hello_ack` 增 `last_accepted_seq` 与配对字段(`pair_ok`/`first_bond`/`pairing_secret`/`pair_error`,均可选);`msg-tx_request` 增可选 `armed_ack`,`txMod` 描述按 §3.7 正文改写;`confidence` 改为可空(`["number","null"]`);**`features.required` 收缩为 v1 的 14 项**(§3.6 规则 5)。共 36 消息 + 29 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
+| 2026-09-21 | **NQ-01(A 方案)+ NQ-03 的镜像同步**(镜像 `9659d6be…`):`msg-tx_status` 新增**可选** `granted_power_dbm`(`$ref` → `$defs.powerDbm`);`msg-hello` / `msg-hello_ack` 的配对字段语义改为「配对只走 USB、`pair_code` 不校验」;**未新增/删除消息,未改帧格式**,`VER` 不变,仍为 36 消息 + 30 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
 | 2026-09-21 | **C-11 + OLED 延期的镜像同步**(镜像 `d33d5e8b…`;该值随契约文档头日期同步更新,见上):`$defs.pairError` 增第 5 值 **`no_display`**;`powerDbm` / `policy.tx_power_cap_dbm` 的描述改为出厂 **20**(原 10);`$defs.powerDbm` 与 README 的枚举对照表同步。**未新增/删除消息,未改帧格式**,故 `VER` 不变,仍为 36 消息 + 30 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
