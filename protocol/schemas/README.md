@@ -1,6 +1,8 @@
 # RF-Lab 协议 JSON Schema(机器可读镜像)
 
-状态:`draft` · 契约版本:`v1.1` · 镜像的协议文档修订:`sha256:1afe4f02bb1cd22484039e69a49cb63da0fe5d2e5c154da7e45dc5bddde9fcdf`
+状态:`draft` · 契约版本:`v1.1` · 镜像的协议文档修订:`sha256:abbee3a067c6065f091ba56a8c34b0e30386bf24da394b084408caf07aefdaf8`
+
+> **镜像修订变更记录**:上一版镜像 `1afe4f02…`(2026-09-20 v1.1 收口)。本次镜像 `abbee3a0…`,对应契约的两处非破坏性增补:**① §7.1(1.1) 新增 `pair_error="no_display"`**(OLED 延期到下一批 ⇒ 无 `pair_code` 搬运通道时不得静默降级为免码配对);**② §4 的 `policy.tx_power_cap_dbm` 示例由 `10` 改为 `20`**(C-11:2.4GHz 按模块上限满功率出厂)。字段与枚举的权威仍是契约,本次未改动帧格式,故 `VER` 不变。
 
 > **权威关系**:[`docs/30-protocol/010-device-app-protocol.md`](../../docs/30-protocol/010-device-app-protocol.md) 是唯一权威来源。
 > 本目录只是它的**机器可读镜像**,用于开发期校验。**schema 与文档冲突时,以文档为准,并应当立刻修正 schema。**
@@ -147,7 +149,7 @@ check-jsonschema --schemafile protocol/schemas/msg-hello.schema.json payload.jso
 |---|---|---|
 | 频率(`*_hz`、`sample_clock_hz`) | `integer`,`minimum: 0` | 一律整数 Hz。换算提示写在 `description` 里(如 433920000 = 433.92MHz) |
 | RSSI / 门限 / 噪声底(`*_dbm`) | `number`(`$defs.rssi`) | 文档 §3.6 示例带小数(-62.5) |
-| 发射功率(`power_dbm`/`tx_max_dbm`/`tx_power_cap_dbm`) | `number`(`$defs.powerDbm`) | 与 RSSI 分开定义,避免把"发射功率"误标成"接收强度" |
+| 发射功率(`power_dbm`/`tx_max_dbm`/`tx_power_cap_dbm`) | `number`(`$defs.powerDbm`) | 与 RSSI 分开定义,避免把"发射功率"误标成"接收强度"。**出厂 `tx_power_cap_dbm` = 20**(2.4GHz 满功率,C-11) |
 | 置信度(`*_confidence`) | `["number","null"]`,`0.0–1.0`(`$defs.confidence`) | §3.6 规则 1:取值 0.0–1.0 **或 null**;null ≠ 字段缺失 |
 | 猜测量(可为 null) | `$defs.guessString` / `$defs.guessInt` | §3.6 规则 2:证据不足时必须置 `null` |
 | 时间(`*_ms`) | `number` | 文档 §3.6 `duration_ms = 41.2` 证明存在小数;`number` 同时接受整数 |
@@ -236,7 +238,7 @@ check-jsonschema --schemafile protocol/schemas/msg-hello.schema.json payload.jso
 | `$defs.mod` | `ook` `2fsk` `auto` | §3.4(`CAPTURE_START`,接收侧) |
 | `$defs.txMod` | `ook` `2fsk` | §3.7(载荷行已明写"不含 auto") |
 | `$defs.rawSemantics` | `undecided` `decided` `unknown` | §3.5 `FLAGS` bit1 / §3.6 规则 4 |
-| `$defs.pairError` | `bad_code` `already_bound` `ble_only` `rng_failed` | §7.1(1.1) |
+| `$defs.pairError` | `bad_code` `no_display` `already_bound` `ble_only` `rng_failed` | §7.1(1.1);`no_display` 为 2026-09-21 新增(OLED 延期,见下) |
 | `$defs.moduleState` | `ready` `busy` `absent` `error` | §3.2 |
 | `$defs.txState` | `denied` `armed` `sent` `failed` | §3.7 |
 | `$defs.scanMode` | `peak` `sweep` | §3.3 |
@@ -338,3 +340,4 @@ check-jsonschema --schemafile protocol/schemas/msg-hello.schema.json payload.jso
 | 2026-09-20 | 首版:覆盖协议 v1 §3 全部 34 个消息类型 + `common.schema.json` 共享定义;随附 `tools/validate_schemas.py` |
 | 2026-09-20 | **v1.1 同步**:新增 `msg-get_scan_hits`(0x23)/`msg-scan_hits`(0xA4);`SCAN_HIT` 加 `scan_id`;`SCAN_DONE` 改为 `hits_total`/`hits_pushed`/`hits_dropped`(删除旧 `hits`);`common` 新增 `scanId`/`hitPoint`/`confidence`/`rawSemantics`/`txMod`,`features` 按 §3.6 重写,`limits` 增 `ble_frame_max`(1..4096),`errorCode` 增 `frame_too_large`,`warnCode` 增 `edge_clamped`;`HELLO.pair_code`/`HELLO_ACK.pair_ok`/`CAPS.deprecated` 补为可选 |
 | 2026-09-20 | **v1.1 收口**(镜像 `1afe4f02…`,按协调者定稿 delta):`errorCode` 增 `arm_timeout`(12 项);`rawSemantics` 增第三值 `unknown`;新增 `$defs.pairError`;`msg-hello` 增可选 `pairing`+`pair_code`;`msg-hello_ack` 增 `last_accepted_seq` 与配对字段(`pair_ok`/`first_bond`/`pairing_secret`/`pair_error`,均可选);`msg-tx_request` 增可选 `armed_ack`,`txMod` 描述按 §3.7 正文改写;`confidence` 改为可空(`["number","null"]`);**`features.required` 收缩为 v1 的 14 项**(§3.6 规则 5)。共 36 消息 + 29 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
+| 2026-09-21 | **C-11 + OLED 延期的镜像同步**(镜像 `abbee3a0…`;该值随契约文档头日期同步更新,见上):`$defs.pairError` 增第 5 值 **`no_display`**;`powerDbm` / `policy.tx_power_cap_dbm` 的描述改为出厂 **20**(原 10);`$defs.powerDbm` 与 README 的枚举对照表同步。**未新增/删除消息,未改帧格式**,故 `VER` 不变,仍为 36 消息 + 30 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |

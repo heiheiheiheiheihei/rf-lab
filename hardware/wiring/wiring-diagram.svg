@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1240" height="2816" viewBox="0 0 1240 2816">
 <rect width="1240" height="2816" fill="#f8fafc"/>
 <text x="40" y="46" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="26" font-weight="bold" fill="#0f172a">RF 扫频 / 捕获设备 — 接线图</text>
-<text x="40" y="72" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="13.5" fill="#475569">ESP32-S3N16R8 + 三射频模块 + OLED + USB 有线控制通道 · 三模块全部经免焊排针/母座(约束 C-03)</text>
+<text x="40" y="72" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="13.5" fill="#475569">ESP32-S3N16R8 + 三射频模块 + USB 有线控制通道 · OLED 预留(下一批) · 三模块全部经免焊排针/母座(约束 C-03)</text>
 <rect x="40" y="88" width="1160" height="46" rx="8" fill="#fffbeb" stroke="#fcd34d"/>
 <text x="56" y="107" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="12.5" fill="#92400e">⚠️ 本图是【建议】布线的可执行镜像,不是最终板图;引脚以 docs/10-hardware/010-system-architecture.md §2.3 为准。</text>
 <text x="56" y="125" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="12.5" fill="#92400e">改动纪律:①改 §2.3 文档 → ②改 tools/gen_wiring_diagram.py 的 PINS → ③重跑生成器。三处一致性由脚本强制。</text>
@@ -150,20 +150,20 @@
 <text x="600" y="586" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#475569" text-anchor="start" font-weight="normal">PWM 驱动</text>
 <rect x="12" y="593" width="1136" height="22" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
 <rect x="12" y="593" width="3.5" height="22" rx="1.5" fill="#0e7490" stroke="#cbd5e1" stroke-width="1.2"/>
-<text x="26" y="608" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#0e7490" text-anchor="start" font-weight="bold">OLED I²C</text>
+<text x="26" y="608" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#0e7490" text-anchor="start" font-weight="bold">OLED I²C ⏸</text>
 <text x="1138" y="608" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#64748b" text-anchor="end" font-weight="normal">2 根</text>
 <rect x="24" y="616.5" width="44" height="17" rx="3.5" fill="#0e7490" stroke="#cbd5e1" stroke-width="1.2"/>
 <text x="46" y="629" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#fff" text-anchor="middle" font-weight="bold">40</text>
 <text x="232" y="630" font-family="Noto Sans Mono CJK SC, DejaVu Sans Mono, monospace" font-size="12" fill="#0f172a" text-anchor="start" font-weight="normal">OLED SDA</text>
 <text x="368" y="630" font-family="Noto Sans Mono CJK SC, DejaVu Sans Mono, monospace" font-size="11" fill="#64748b" text-anchor="start" font-weight="normal">io</text>
-<text x="440" y="630" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#0e7490" text-anchor="start" font-weight="normal">OLED I²C</text>
-<text x="600" y="630" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#475569" text-anchor="start" font-weight="normal">I²C 数据,4.7kΩ 上拉 3.3V</text>
+<text x="440" y="630" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#0e7490" text-anchor="start" font-weight="normal">OLED I²C ⏸</text>
+<text x="600" y="630" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#475569" text-anchor="start" font-weight="normal">⏸ 下一批(I²C 预留,本批不装)</text>
 <rect x="24" y="638.5" width="44" height="17" rx="3.5" fill="#0e7490" stroke="#cbd5e1" stroke-width="1.2"/>
 <text x="46" y="651" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#fff" text-anchor="middle" font-weight="bold">41</text>
 <text x="232" y="652" font-family="Noto Sans Mono CJK SC, DejaVu Sans Mono, monospace" font-size="12" fill="#0f172a" text-anchor="start" font-weight="normal">OLED SCL</text>
 <text x="368" y="652" font-family="Noto Sans Mono CJK SC, DejaVu Sans Mono, monospace" font-size="11" fill="#64748b" text-anchor="start" font-weight="normal">io</text>
-<text x="440" y="652" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#0e7490" text-anchor="start" font-weight="normal">OLED I²C</text>
-<text x="600" y="652" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#475569" text-anchor="start" font-weight="normal">I²C 时钟,4.7kΩ 上拉 3.3V</text>
+<text x="440" y="652" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#0e7490" text-anchor="start" font-weight="normal">OLED I²C ⏸</text>
+<text x="600" y="652" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#475569" text-anchor="start" font-weight="normal">⏸ 下一批(I²C 预留,本批不装)</text>
 <rect x="12" y="659" width="1136" height="22" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
 <rect x="12" y="659" width="3.5" height="22" rx="1.5" fill="#a16207" stroke="#cbd5e1" stroke-width="1.2"/>
 <text x="26" y="674" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#a16207" text-anchor="start" font-weight="bold">按键</text>
@@ -189,8 +189,8 @@
 <text x="440" y="762" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#7c3aed" text-anchor="start" font-weight="normal">USB Serial/JTAG</text>
 <text x="600" y="762" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#475569" text-anchor="start" font-weight="normal">⚠️ 不可配成 USB-OTG 外设用途</text>
 <rect x="12" y="790" width="1136" height="42" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.2"/>
-<text x="26" y="808" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#1e40af" text-anchor="start" font-weight="normal">占用 21 = 射频 14(SCK/MOSI/MISO + CS×3 + 中断×3 + EN×3 + 总闸 + KILL) + 系统 4 + OLED 2 + 按键 1;USB 计 0(复用内建控制器)。</text>
-<text x="26" y="826" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#64748b" text-anchor="start" font-weight="normal">余量 +4:够用,但不足以再加一条 SPI 主机(需 3 根且只能走 GPIO Matrix)—— 这是「单总线 + 3 CS」的成立边界。</text>
+<text x="26" y="808" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#1e40af" text-anchor="start" font-weight="normal">占用 21 = 射频 14(SCK/MOSI/MISO + CS×3 + 中断×3 + EN×3 + 总闸 + KILL) + 系统 4 + OLED 2(⏸ 下一批,预留)+ 按键 1;USB 计 0(复用内建控制器)。</text>
+<text x="26" y="826" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#64748b" text-anchor="start" font-weight="normal">余量 +4(含 OLED 预留)= 本批实装 19 根 ⇒ 当前 +6:够用,但不足以再加一条 SPI 主机(需 3 根且只能走 GPIO Matrix)—— 这是「单总线 + 3 CS」的成立边界。</text>
 </g>
 <rect x="40" y="986" width="560" height="270" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.2"/>
 <path d="M 50 986 h 540 a 10 10 0 0 1 10 10 v 24 h -560 a 10 10 0 0 1 -10 -10 z" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1.2"/>
@@ -296,11 +296,11 @@
 <rect x="40" y="1842" width="468" height="266" rx="10" fill="#fff" stroke="#e2e8f0" stroke-width="1.2"/>
 <path d="M 50 1842 h 448 a 10 10 0 0 1 10 10 v 24 h -468 a 10 10 0 0 1 -10 -10 z" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1.2"/>
 <rect x="40" y="1842" width="4" height="34" rx="2" fill="#0e7490"/>
-<text x="56" y="1864" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="15" fill="#0f172a" font-weight="bold">⑤ 外设:OLED / 按键 / 指示</text>
+<text x="56" y="1864" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="15" fill="#0f172a" font-weight="bold">⑤ 外设:OLED(⏸ 下一批)/ 按键 / 指示</text>
 <g transform="translate(40,1842)">
-<rect x="24" y="52" width="200" height="62" rx="6" fill="#ecfeff" stroke="#67e8f9" stroke-width="1.2"/>
-<text x="124" y="76" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#0e7490" text-anchor="middle" font-weight="bold">OLED · SSD1306</text>
-<text x="124" y="95" font-family="Noto Sans Mono CJK SC, DejaVu Sans Mono, monospace" font-size="10.5" fill="#475569" text-anchor="middle" font-weight="normal">0.96寸 128×64 · 4 针 I²C</text>
+<rect x="24" y="52" width="200" height="62" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="124" y="76" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11.5" fill="#64748b" text-anchor="middle" font-weight="bold">OLED · SSD1306 ⏸</text>
+<text x="124" y="95" font-family="Noto Sans Mono CJK SC, DejaVu Sans Mono, monospace" font-size="10.5" fill="#475569" text-anchor="middle" font-weight="normal">0.96寸 128×64 · 4 针 I²C · 下一批</text>
 <text x="30" y="132" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#0e7490" text-anchor="start" font-weight="normal">SDA → GPIO 40    SCL → GPIO 41</text>
 <text x="30" y="148" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#475569" text-anchor="start" font-weight="normal">4.7kΩ 上拉到 3.3V(模块常已自带上拉)</text>
 <text x="30" y="164" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#b91c1c" text-anchor="start" font-weight="normal">供电取主 3.3V —— 不挂 M3 键控 PA 轨(R-11)</text>
@@ -326,7 +326,7 @@
 <text x="82" y="160" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#b91c1c" text-anchor="middle" font-weight="bold">DC-DC 3.3V</text>
 <text x="82" y="179" font-family="Noto Sans Mono CJK SC, DejaVu Sans Mono, monospace" font-size="10.5" fill="#475569" text-anchor="middle" font-weight="normal">≥2A</text>
 <line x1="82" y1="124" x2="82" y2="144" stroke="#b91c1c" stroke-width="2.4" stroke-linecap="round"/>
-<text x="24" y="44" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10" fill="#b91c1c" text-anchor="start" font-weight="normal">3.3V 主轨 → 主控 / OLED / 按键 / LED</text>
+<text x="24" y="44" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10" fill="#b91c1c" text-anchor="start" font-weight="normal">3.3V 主轨 → 主控 / 按键 / LED(OLED 下一批)</text>
 <line x1="140" y1="182" x2="164" y2="182" stroke="#b91c1c" stroke-width="2.4" stroke-linecap="round"/>
 <rect x="178" y="48" width="138" height="46" rx="6" fill="#fff" stroke="#1d4ed8" stroke-width="1.2"/>
 <text x="247" y="64" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="11" fill="#1d4ed8" text-anchor="middle" font-weight="bold">LDO-A</text>
@@ -373,35 +373,39 @@
 <text x="36" y="99" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">上电/复位期间可能意外允许发射</text>
 <circle cx="20" cy="110" r="7.5" fill="#b45309"/>
 <text x="20" y="113" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">3</text>
-<text x="36" y="113" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">OLED 必须 I²C 4 针版</text>
-<text x="36" y="127" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">SPI 版吃掉全部 4 根余量</text>
+<text x="36" y="113" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">OLED ⏸ 下一批,引脚 40/41 预留</text>
+<text x="36" y="127" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">本批不装;挪用了下一批就要改板</text>
 <circle cx="20" cy="138" r="7.5" fill="#b45309"/>
 <text x="20" y="141" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">4</text>
-<text x="36" y="141" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">OLED 不挂 M3 键控 PA 轨</text>
-<text x="36" y="155" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">否则关模块时屏幕一起灭</text>
+<text x="36" y="141" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">OLED 必须 I²C 4 针版(下一批)</text>
+<text x="36" y="155" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">SPI 版吃掉全部 4 根余量</text>
 <circle cx="20" cy="166" r="7.5" fill="#b45309"/>
 <text x="20" y="169" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">5</text>
-<text x="36" y="169" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">USB 19/20 不配成 OTG</text>
-<text x="36" y="183" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">会同时破坏控制通道与 JTAG</text>
+<text x="36" y="169" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">OLED 不挂 M3 键控 PA 轨(下一批)</text>
+<text x="36" y="183" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">否则关模块时屏幕一起灭</text>
 <circle cx="20" cy="194" r="7.5" fill="#b45309"/>
 <text x="20" y="197" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">6</text>
-<text x="36" y="197" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">M3 天线拉远 + 正交极化</text>
-<text x="36" y="211" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">20dBm 会压掉本机 Wi-Fi/BLE</text>
+<text x="36" y="197" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">USB 19/20 不配成 OTG</text>
+<text x="36" y="211" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">会同时破坏控制通道与 JTAG</text>
 <circle cx="20" cy="222" r="7.5" fill="#b45309"/>
 <text x="20" y="225" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">7</text>
-<text x="36" y="225" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">每模块独立 LDO + 就近 100µF</text>
-<text x="36" y="239" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">µs 级电流阶跃导致复位</text>
+<text x="36" y="225" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">M3 天线拉远 + 正交极化</text>
+<text x="36" y="239" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">20dBm 会压掉本机 Wi-Fi/BLE</text>
 <circle cx="20" cy="250" r="7.5" fill="#b45309"/>
 <text x="20" y="253" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">8</text>
-<text x="36" y="253" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">三根天线不可并联 / 合路</text>
-<text x="36" y="267" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">失配 + 违背 C-02</text>
+<text x="36" y="253" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">每模块独立 LDO + 就近 100µF</text>
+<text x="36" y="267" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">µs 级电流阶跃导致复位</text>
 <circle cx="20" cy="278" r="7.5" fill="#b45309"/>
 <text x="20" y="281" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">9</text>
-<text x="36" y="281" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">strapping 0/3/45/46 一律不用</text>
-<text x="36" y="295" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">上电模式误判</text>
+<text x="36" y="281" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">三根天线不可并联 / 合路</text>
+<text x="36" y="295" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">失配 + 违背 C-02</text>
 <circle cx="20" cy="306" r="7.5" fill="#b45309"/>
 <text x="20" y="309" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">10</text>
-<text x="36" y="309" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">USB 线必须是数据线</text>
-<text x="36" y="323" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">充电线无 D+/D−,插上不通</text>
+<text x="36" y="309" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">strapping 0/3/45/46 一律不用</text>
+<text x="36" y="323" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">上电模式误判</text>
+<circle cx="20" cy="334" r="7.5" fill="#b45309"/>
+<text x="20" y="337" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#fff" text-anchor="middle" font-weight="bold">11</text>
+<text x="36" y="337" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="10.5" fill="#0f172a" text-anchor="start" font-weight="bold">USB 线必须是数据线</text>
+<text x="36" y="351" font-family="Noto Sans CJK SC, WenQuanYi Zen Hei, Source Han Sans SC, sans-serif" font-size="9.5" fill="#64748b" text-anchor="start" font-weight="normal">充电线无 D+/D−,插上不通</text>
 </g>
 </svg>

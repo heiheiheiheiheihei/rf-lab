@@ -1,6 +1,6 @@
 # 手机 App 设计(Wi-Fi / BLE / USB 三通道)
 
-状态: draft · 最后更新:2026-09-20 · 上游依据:
+状态: draft · 最后更新:2026-09-21 · 上游依据:
 
 - `README.md`(项目定位、开发环境现状)
 - `docs/README.md`(文档索引、阅读路线、**待决问题编号表**)
@@ -30,7 +30,7 @@
 | 三通道 | **有线优先(USB) > 近距 BLE > 远距 Wi-Fi**;扫频/捕获进行中**不切换**(§2.3);**USB 可抢占无线**(契约 §2.2,是硬性优先级例外) |
 | 保活 | 心跳 PING/PONG 5s(契约 §3.1);**前后台切换后必须整页重载重建连接**,不能只重连 socket(§2.4)。⚠️ 有线模式下整页重载**会丢失 WebUSB 授权**,处置见 §2.6 |
 | 规模纪律 | 请求规模**必须**读 `CAPS.limits.ble_frame_max` / **`usb_frame_max`** 与 `max_edges`,不得硬编码 4096/3669(契约 §2.2.1、§2.2.2、§3.4) |
-| 配对 | 设备端有 **OLED(C-07)**,显示 6 位一次性 `pair_code`;App 经 **BLE 或 USB**(两者皆可信信道)完成首次配对并取回 `pairing_secret`(契约 §7.1)。**纯 Wi-Fi 不是可信配对信道** |
+| 配对 | App 经 **BLE 或 USB**(两者皆可信信道)完成首次配对并取回 `pairing_secret`(契约 §7.1)。**纯 Wi-Fi 不是可信配对信道**。⚠️ **2026-09-21**:设备端 **OLED 已延期**,本批**没有 `pair_code` 的显示载体** ⇒ **本批以 USB 配对为设计路径**(USB 是物理端口,结构上不需要 `pair_code`);BLE 配对在无搬运通道时须回 `pair_error:"no_display"`,**不得静默降级为免码配对**。详见 §3.1 与产品定义 §8 |
 | 离线 | **屏蔽室内手机可能无网** ⇒ DeepSeek 不可用,§5.3 的本地规则库降级**必须真的可用**,不能只是文档上的一句话 |
 | AI | 分析在 App 侧调用 DeepSeek,设备只回传 `features`(ADR-0002);链路细节见 [`../50-ai/010-deepseek-analysis.md`](../50-ai/010-deepseek-analysis.md) |
 
@@ -264,18 +264,30 @@ USB 不只是一条"更快更稳"的通道。它同时关闭了本项目此前**
 ```
 设备开机若未配对:生成 32B 随机 pairing_secret(硬件 RNG)
   → 存 NVS(不可读回)
-  → 同时生成 6 位一次性配对码 pair_code,显示在设备 OLED 上(C-07)
+  → 同时生成 6 位一次性配对码 pair_code  ⏸ 本批无显示载体(OLED 延期,见产品定义 §8)
 App   → HELLO{client_id, pairing:true, pair_code}
-设备  → HELLO_ACK{device_id, pair_ok:true, first_bond:true, pairing_secret:"<32B base64url>"}   # 仅 BLE
-   或  HELLO_ACK{pair_ok:false, pair_error:"bad_code"|"already_bound"|"ble_only"|"rng_failed"}
+设备  → HELLO_ACK{device_id, pair_ok:true, first_bond:true, pairing_secret:"<32B base64url>"}   # 仅 BLE 或 USB
+   或  HELLO_ACK{pair_ok:false, pair_error:"bad_code"|"no_display"|"already_bound"|"ble_only"|"rng_failed"}
 ```
 
-**路径 A(推荐):BLE 配对 + 配网**(Android PWA 全支持,§1.2)
+> **⏸ 2026-09-21:OLED 延期 ⇒ 本批以「路径 U(USB)」为推荐的首次配对路径。** 原因:`pair_code` 需要一条**与 BLE 不同源**的搬运通道,而本批没有任何屏/标签/灯光协议可用;USB 是物理端口,连接行为本身就是"在场证明",**结构上不需要 `pair_code`**。BLE 路径(下面路径 A)在本批**保留设计但不宣称可用**——无搬运通道时设备应回 `pair_error:"no_display"`。
+
+**路径 U(本批推荐):USB 有线配对**
+
+1. 用户用 **OTG 数据线**把手机与设备连起来(设备自行供电,不依赖手机 OTG 供电)。
+2. App 经 **WebUSB** 拿到 CDC-ACM 接口(`navigator.usb.requestDevice()`,须用户手势)。
+   ⚠️ **WebUSB 能否访问 CDC-ACM 是整条有线路径的唯一技术未知**(USB-R1),**实现阶段第一项真机实测**(TC-074a);失败则降级为原生 Android USB Host 小壳。
+3. App 发 `HELLO{app_version, proto_min, proto_max, client_id, pairing:true}`(**不带 `pair_code`**)。
+4. 设备在 **USB 链路**上回 `HELLO_ACK{..., pair_ok:true, first_bond:true, pairing_secret}` —— 待确认项 **Q-09**(须用户/安全评审确认"USB 可作为可信配对信道")。
+5. 其余步骤与路径 A 第 5–9 步相同(`GET_CAPS` / 对齐 `last_accepted_seq` / `SET_NET` / 写设备档案)。
+6. **本路径同时解决配网**:USB 是线,不必猜 AP 的 SSID 与 IP(这原本是 OLED 的第二项职责)。
+
+**路径 A(设计保留,本批因无屏不可用):BLE 配对 + 配网**(Android PWA 全支持,§1.2)
 
 1. 用户点「添加设备」→ 点**「扫描」**(Web Bluetooth 必须由用户手势触发,§1.2)。
 2. 浏览器弹出设备选择器;用户选中设备(设备名含 `RFLAB-xxxx`)。
-3. App 建立 GATT 连接 → 读 **设备 OLED 上的 6 位一次性配对码**(C-07) → 发 `HELLO{app_version, proto_min, proto_max, client_id, pairing:true, pair_code}`。
-4. 收 `HELLO_ACK{fw_version, proto, device_id, chip, uptime_ms, pair_ok:true, first_bond, pairing_secret}`;App 经 BLE 加密链路接收 `pairing_secret` 并只存本地。配对码的作用是**防中间人**(BLE 配对若被截获,攻击者拿不到 OLED 上的码)。
+3. App 建立 GATT 连接 → 读**设备端的 6 位一次性配对码**(⏸ 本批无载体;下一批为 OLED 屏)→ 发 `HELLO{app_version, proto_min, proto_max, client_id, pairing:true, pair_code}`。
+4. 收 `HELLO_ACK{fw_version, proto, device_id, chip, uptime_ms, pair_ok:true, first_bond, pairing_secret}`;App 经 BLE 加密链路接收 `pairing_secret` 并只存本地。配对码的作用是**防中间人**(BLE 配对若被截获,攻击者拿不到设备端的码)。
 5. `GET_CAPS` 拿 `CAPS`,校验 `proto` 与 `proto_min/max` 有交集;无交集 → 提示升级并终止(契约 §8)。
 6. **对齐令牌基线**:把 `HELLO_ACK.last_accepted_seq` 存入设备档案,本地 `seq := max(本地值, last_accepted_seq)`(**这是防止 App 重装后被永久拒绝发射的关键**,契约 §7.1(1.2))。
 7. 展示 Wi-Fi 表单 → 发 `SET_NET{ssid, pass}`。
@@ -287,20 +299,23 @@ App   → HELLO{client_id, pairing:true, pair_code}
 
 | `pair_error` | App 文案与动作 |
 |---|---|
-| `bad_code` | 「配对码不匹配,请核对设备 OLED 上的 6 位数字后重试」;连续失败 3 次后限速并提示检查是否选错了设备 |
+| `bad_code` | 「配对码不匹配,请核对设备端的 6 位数字后重试」(下一批为屏幕;本批若改用标签则指向标签);连续失败 3 次后限速并提示检查是否选错了设备 |
+| `no_display` | 「**本设备当前没有可显示配对码的屏幕,请改用 USB 数据线连接完成配对**」——**不要**提示重试;附带"下一步该插哪根线"的引导 |
 | `already_bound` | 「该设备已与另一部手机绑定。如需改绑,请在**设备端按键**确认后重新配对」——**不要**提示重试 |
 | `ble_only` | 「首次配对必须通过蓝牙完成,请改用蓝牙连接」 |
 | `rng_failed` | 「设备安全模块异常,拒绝配对」;不得降级为弱随机,引导联系维护 |
 
-**路径 B(备选):Wi-Fi AP 直连** —— 当 BLE 不可用(Web Bluetooth 被浏览器策略禁用、权限被拒、或设备 BLE 故障)时使用
+**路径 B(备选):Wi-Fi AP 直连** —— 当 BLE 与 USB 都不可用时使用
 
-1. 用户按设备说明把设备切到 AP 模式(硬件按键/上电窗口);**OLED 上显示 SSID 与默认地址**(C-07),省去猜 IP。
+1. 用户按设备说明把设备切到 AP 模式(硬件按键/上电窗口);⏸ **本批无屏,SSID 与地址必须靠固定规则**(SSID 含 `device_id`,地址固定 `192.168.4.1`),写进用户文档;下一批由 OLED 显示。
 2. 在**系统设置**里连上设备 AP(浏览器无法代劳,此路径不涉及 `SET_NET`)。
-3. App 里手输/确认设备地址(OLED 给出的地址,如 `192.168.4.1`)→ `wss` 握手。
+3. App 里手输/确认设备地址(默认 `192.168.4.1`)→ `wss` 握手。
 4. 证书不受信任时,Android 会直接失败 → 需要「用户安装设备 CA」的一次性引导页(§1.3 第 3 条);或改走原生载体做证书固定。
-5. ⚠️ **此路径下 `pairing_secret` 无法建立**(契约 §7.1 明确**只经 BLE 加密链路下发一次**,Wi-Fi 路径不下发)→ 该设备**不具备发射授权能力**(`tx_requires_token=true` 时 `TX_REQUEST` 必然 `tx_bad_token`)。届时应把发射页设计为**只读**,并在 UI 上说明原因,而不是让用户反复失败。
+5. ⚠️ **此路径下 `pairing_secret` 无法建立**(契约 §7.1 明确**只经 BLE 或 USB 加密/物理链路下发一次**,Wi-Fi 路径不下发)→ 该设备**不具备发射授权能力**(`tx_requires_token=true` 时 `TX_REQUEST` 必然 `tx_bad_token`)。届时应把发射页设计为**只读**,并在 UI 上说明原因,而不是让用户反复失败。**本批的引导话术应直接指向"插 USB 线"**,因为那是本批确实可用的路径。
 
-> **不要用 OLED 传密钥。** 一个看起来诱人的做法是"让 OLED 显示配对码/二维码,用户输入后 Wi-Fi 路径也能拿到 `pairing_secret`"。**在当前合规前提下这不成立**:`pairing_secret` 一旦能经"人眼看屏"这条带外信道传递,就意味着**不在设备旁边的人也能拿到它**(照片、录屏、远程视频),而本项目的红线之一是"远程可控但发射必须受在场约束"。因此 §7.1 的"只经 BLE"不是实现偷懒,而是**有意的信任边界**:BLE 需要物理在场。若将来确实要开放 Wi-Fi 配对,必须先在合规文档中重新评估这条红线是否仍然成立。
+> **不要用屏幕/标签传密钥。** 一个看起来诱人的做法是"让设备显示配对码/二维码,用户输入后 Wi-Fi 路径也能拿到 `pairing_secret`"。**这不成立**:`pairing_secret` 一旦能经"人眼可读"这条带外信道传递,就意味着**不在设备旁边的人也能拿到它**(照片、录屏、远程视频),而本项目的红线之一是"远程可控但发射必须受在场约束"。因此 §7.1 的"只经 BLE/USB"不是实现偷懒,而是**有意的信任边界**:两者都要求物理在场。若将来确实要开放 Wi-Fi 配对,必须先在合规文档中重新评估这条红线是否仍然成立。
+>
+> ⏸ **对"标签静态码"方案(B)的同一批评**:若采纳"出厂随机码印在机身标签",它虽然是带外信道,但**码是静态的**——设备被拍照/被短暂接触即永久泄露该码,防中间人强度显著下降。它**只能作为临时兜底**,且应在文档中标注这一弱点(见产品定义 §8)。
 
 ### 3.2 之后的重连
 
@@ -314,7 +329,7 @@ App   → HELLO{client_id, pairing:true, pair_code}
 
 | 页面 | 主要元素 | 关键交互 |
 |---|---|---|
-| **① 设备连接 / 配网** | 设备卡片(展示名、`device_id`、通道徽章、RTT)、添加设备、忘记设备、证书状态、配对状态 | 点击连接;BLE 扫描需用户手势;证书不受信任时给引导;`pair_code` 输入框 |
+| **① 设备连接 / 配网** | 设备卡片(展示名、`device_id`、通道徽章、RTT)、添加设备、忘记设备、证书状态、配对状态 | 点击连接;BLE 扫描需用户手势;证书不受信任时给引导;`pair_code` 输入框(⏸ **仅下一批 OLED 到位后才需要**;本批主入口是**「用 USB 线配对」按钮**,失败时按 `pair_error` 分支引导) |
 | **② 模块管理(S4)** | 模块列表(`slot`/`chip`/`present`/`bands`/`tx_max_dbm`/`tx_allowed`/`driver_version`/`spi`/`ant`)、活动模块高亮 | 点选 → `SELECT_MODULE`;`present=false` 置灰;切模块前警告「会中止当前任务」(契约 §3.2)。**`spi.bus` 三模块相同是正常的**(单 SPI2 + 独立 CS),**只有 `cs` 冲突才是配置错误** —— 不得把「bus 相同」当异常报警(契约 §3.2) |
 | **③ 扫频(F-01/F-02)** | 起止频率(受 `CAPS.bands` 夹取)、步进、驻留、`max_edges`、阈值滑杆、**频谱条 + 瀑布图**、命中列表、进度、**真实覆盖区间**、命中完整性提示 | 开始/停止;点命中项 → 捕获页;`WARN{band_clipped}` 时把未扫区间画灰;**`hits_dropped > 0` 必须提示「本次明细不完整」并给「取回全部命中」按钮**(`GET_SCAN_HITS` 分页) |
 | **④ 捕获与波形(F-03/F-04)** | 波形(RLE 展开)、`edges`/`duration_ms`/`truncated` 徽章、**特征面板**(§3.6 全字段,**含 `*_confidence`、`raw_semantics`、`incomplete`**)、解码结论 | 捕获/中止;波形缩放;`truncated=true` 提示「已达 max_edges 上限」;`incomplete=true` 时必须**显眼标注「数据不完整」** |
@@ -520,7 +535,7 @@ App 侧实现要点:
 | # | 严重度 | 对象 | 问题 | 建议 |
 |---|---|---|---|---|
 | 1 | ~~高~~ ⚠️ **部分关闭** | §7 | ✅ 契约 §9.1 已把它写成"**不是本契约能补齐的字段,而是载体选型的直接约束**",并说明 PWA 只能靠用户装 CA 或内网域名+受信 CA、证书固定只有原生能做。**但 §7 表格正文仍写"自签证书 + 指纹校验"**,未按载体分列 —— 保留为待办(低风险,因 §9.1 已给出正确口径)。原问题:`wss://` 的**信任模型在浏览器中不可实现**:浏览器没有证书指纹固定 API,§7 写的「自签证书 + 指纹校验」只有原生代码能做;而 `ws://` 又在规范上被 HTTPS 页面按混合内容拦截。§7 把两种载体的信任方案写成了一个笼统的「指纹校验」 | 按载体分列:PWA 路径 = 用户安装设备 CA,或内网域名 + 受信 CA 签发证书;原生路径 = 证书固定 |
-| 2 | ~~高~~ ✅ **已关闭** | §7.1(1) | ~~**Wi-Fi-only 的设备无法获得 `pairing_secret`**,因此纯 Wi-Fi 路径用户**永远无法发射**~~ | **契约 v1.1 §7.1(5) 已把该推论写成显式结论**,并给出三个处置选项(A 接受 / B 设备端本地授权 / C 带外传密钥),同时说明"不要用 OLED 传密钥"的理由(会破坏"在场约束")。App 侧按方案 A 处理:Wi-Fi-only 时发射页只读并说明原因(§3.1 路径 B)。**iOS 已放弃(C-06),该限制现在只影响"BLE 不可用"的降级场景** |
+| 2 | ~~高~~ ✅ **已关闭** | §7.1(1) | ~~**Wi-Fi-only 的设备无法获得 `pairing_secret`**,因此纯 Wi-Fi 路径用户**永远无法发射**~~ | **契约 v1.1 §7.1(5) 已把该推论写成显式结论**,并给出处置选项(A 接受 / B 设备端本地授权 / C 带外传密钥 / **D USB 作为可信信道**,2026-09-21 新增),同时说明"不要用屏幕或标签传密钥"的理由(会破坏"在场约束")。App 侧按 **A+D** 处理:Wi-Fi-only 时发射页只读,并**把引导直接指向"插 USB 线"**(本批确实可用的路径,§3.1 路径 B)。**iOS 已放弃(C-06)**,该限制现在只影响"BLE 与 USB 都不可用"的降级场景 |
 | 3 | **高** | §3.8 | `SET_NET{ssid,pass}` **没有对应的结果回报**,App 无法知道配网成败(§3 路径 A 第 7 步只能靠轮询猜测) | 增加 `NET_STATUS{ok, ip, ssid, err}` |
 | 4 | ~~中~~ ✅ **已关闭** | §3.7 | ✅ 契约 v1.1 §3.7 已定义完整的 `armed` 语义(两段式:第一阶段带完整参数+令牌 → `armed`;第二阶段**只带** `{armed_ack:true}` → `sent`;`CAPS.limits.arm_timeout_ms` 窗口内未确认则回落 `failed`/`arm_timeout`),并明确 **`armed` 期间射频必须零输出**。原问题:`TX_STATUS.state` 已列出 `armed`,但**未定义** `armed` 的触发条件、有效期、以及是否需要第二次 `TX_REQUEST` 才到 `sent` | 补充两段式发射的状态机,或删掉 `armed` 取值 |
 | 5 | **中** | §7 / §3.8 | 审计写在设备侧环形日志,但**没有读取审计的消息类型**,App 无法做镜像与导出(A-05 的回执) | 增加 `GET_AUDIT` / `AUDIT_LOG` |

@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "common.schema.json",
   "title": "RF-Lab 协议共享定义 (v1)",
-  "description": "设备↔App 协议的公共 $defs 集合,镜像 docs/30-protocol/010-device-app-protocol.md(契约 v1.1,sha256 1afe4f02bb1cd22484039e69a49cb63da0fe5d2e5c154da7e45dc5bddde9fcdf)。本文件不描述任何具体消息载荷,只被 msg-*.schema.json 通过相对路径 $ref 引用。字段与枚举值以协议文档为唯一权威。",
+  "description": "设备↔App 协议的公共 $defs 集合,镜像 docs/30-protocol/010-device-app-protocol.md(契约 v1.1,sha256 abbee3a067c6065f091ba56a8c34b0e30386bf24da394b084408caf07aefdaf8)。本文件不描述任何具体消息载荷,只被 msg-*.schema.json 通过相对路径 $ref 引用。字段与枚举值以协议文档为唯一权威。",
   "$defs": {
     "frequencyHz": {
       "type": "integer",
@@ -15,7 +15,7 @@
     },
     "powerDbm": {
       "type": "number",
-      "description": "发射功率,单位 dBm(可为小数)。文档 §4 示例 tx_max_dbm 20/10、policy.tx_power_cap_dbm 10。"
+      "description": "发射功率,单位 dBm(可为小数)。文档 §4 示例 tx_max_dbm 20/10;policy.tx_power_cap_dbm 出厂取 20(2.4GHz 满功率,C-11/2026-09-21,原示例为 10)。"
     },
     "confidence": {
       "type": [
@@ -48,9 +48,10 @@
     },
     "pairError": {
       "type": "string",
-      "description": "配对失败原因(§7.1(1.1)):bad_code = 配对码不匹配(让用户重看设备屏幕,连续失败应限速);already_bound = 设备已绑定其他 client_id(需设备端按键改绑,不是反复重试);ble_only = 在不被信任的链路上尝试配对(见 §7.1(5):USB 与 BLE 是可信配对信道,纯 Wi-Fi 不是);rng_failed = 设备侧 RNG 初始化失败(拒绝配对,不得降级为弱随机)。",
+      "description": "配对失败原因(§7.1(1.1)):bad_code = 配对码不匹配(让用户重看设备端码的载体,连续失败应限速);no_display = 设备当前没有 pair_code 的搬运通道(2026-09-21 新增,OLED 延期到下一批 ⇒ 不得静默降级为免码配对,应引导改用 USB 配对);already_bound = 设备已绑定其他 client_id(需设备端按键改绑,不是反复重试);ble_only = 在不被信任的链路上尝试配对(见 §7.1(5):USB 与 BLE 是可信配对信道,纯 Wi-Fi 不是);rng_failed = 设备侧 RNG 初始化失败(拒绝配对,不得降级为弱随机)。",
       "enum": [
         "bad_code",
+        "no_display",
         "already_bound",
         "ble_only",
         "rng_failed"
@@ -586,7 +587,7 @@
               "$ref": "common.schema.json#/$defs/powerDbm"
             }
           ],
-          "description": "全局发射功率上限,单位 dBm。文档 §4 示例 10。"
+          "description": "全局发射功率上限,单位 dBm。文档 §4 示例 20(2026-09-21 起:2.4GHz 按模块上限满功率出厂,C-11;原示例为 10)。⚠️ 它是全局单值,不是按频段的表 —— 某次发射的有效上限 = min(请求值, 本字段, 该模块 tx_max_dbm, 该频段策略上限),Sub-GHz 是否放开未决(NQ-03)。"
         },
         "tx_requires_token": {
           "type": "boolean",

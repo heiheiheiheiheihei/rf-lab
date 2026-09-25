@@ -1,6 +1,6 @@
 # 固件架构(ESP-IDF)
 
-状态: draft · 最后更新:2026-09-20 · 上游依据: [`docs/00-overview/010-product-definition.md`](../00-overview/010-product-definition.md)、[`docs/00-overview/020-architecture.md`](../00-overview/020-architecture.md)、[`docs/00-overview/040-verified-platform-facts.md`](../00-overview/040-verified-platform-facts.md)、[`docs/30-protocol/010-device-app-protocol.md`](../30-protocol/010-device-app-protocol.md)、[`docs/adr/0001-frequency-coverage-gap.md`](../adr/0001-frequency-coverage-gap.md)、[`docs/10-hardware/010-system-architecture.md`](../10-hardware/010-system-architecture.md)、[`README.md`](../../README.md)
+状态: draft · 最后更新:2026-09-21 · 上游依据: [`docs/00-overview/010-product-definition.md`](../00-overview/010-product-definition.md)、[`docs/00-overview/020-architecture.md`](../00-overview/020-architecture.md)、[`docs/00-overview/040-verified-platform-facts.md`](../00-overview/040-verified-platform-facts.md)、[`docs/30-protocol/010-device-app-protocol.md`](../30-protocol/010-device-app-protocol.md)、[`docs/adr/0001-frequency-coverage-gap.md`](../adr/0001-frequency-coverage-gap.md)、[`docs/10-hardware/010-system-architecture.md`](../10-hardware/010-system-architecture.md)、[`README.md`](../../README.md)
 
 > 标注约定:【核实】= 有公开资料支撑;【建议】= 本仓库设计判断;【待确认】= 实现前须核对芯片数据手册/ESP-IDF 版本。
 > **本文件是设计文档,不含实现。** 所有代码片段仅表达**接口形状与职责边界**。
@@ -250,6 +250,10 @@ OOK/ASK 信号在解调器输出端就是**数字电平跳变序列**,而 ESP32-
 | `features_task` | 中低 | Core 1 | 8KB | 捕获结束后算特征(可抢占采集) | 队列 |
 | `monitor_task` | 低 | Core 0 | 4KB | 温度/供电/看门狗喂狗/Wi-Fi 恢复 | 定时器 |
 
+> ⏸ **OLED 刷新任务:本批不实现(2026-09-21,C-07 延期)。** 下一批加入时须遵守两条纪律,现在先记在此处以免遗忘:①OLED 走**独立低优先级任务**,**不得**在 `rf_hal` 临界区内做任何 I²C 传输(与 R-09 同源);②**不要**把 I²C 初始化塞进 `rf_capture_task` / `rf_scan_task` 的启动路径——这两个任务对时序最敏感。
+>
+> ⚠️ **延期带来一条本批反而更重要的要求**:`monitor_task` 现在**必须**承担"用已有 LED ×2 + 蜂鸣器表达设备状态"的职责(配网中 / 已入网 / `ARMED` / 故障),因为屏幕没了之后,**设备侧唯一还能被现场的人察觉的反馈就是这两个器件**(产品定义 §7.1 与 NQ-02)。同时 `RF_KILL` 门控状态必须经 `STATUS` 可查 —— 它至今没有契约字段,而 OLED 延期使它从"屏幕能看"变成"完全不可观测"。
+
 ### 为什么这样分【建议】
 
 1. **射频时序必须在 Core 1 独占。** Wi-Fi/BLE 协议栈由 ESP-IDF 固定占用 **Core 0**(【核实】ESP-IDF 默认 `CONFIG_ESP_WIFI_TASK_CORE_ID=0`),其任务会在任意时刻抢占并长时间占用 Core 0(协议栈内部有大量临界区与中断)。把 RMT 停止/重启、SPI 调谐、TX 序列写入放在 Core 1,可避免"协议栈抖动导致 RMT 符号池被覆盖"这类**只在压力下出现**的错帧。
@@ -349,6 +353,12 @@ rf_tx_request(src) ──► [1] 状态检查 ──► [2] 模块在位/活动�
 | **[2] 模块在位** | 发射前**重新 `probe()`**一次,而非依赖缓存的 `present` | 模块可热插拔/接触不良;缓存会撒谎 |
 | **[3] 频段白名单** | 白名单表定义为 **`const` 数组,位于 `.rodata`**,并有独立校验:请求频率必须落在白名单区间 ∪ 模块 `caps.bands` | 运行时没有任何 API 能写 `.rodata`;NVS 里**不存在**白名单配置项,所以"改配置放开"这条路不存在 |
 | **[4] 功率上限** | `policy.tx_power_cap_dbm` 由编译期常量**取 min** 后生效;驱动层 `tx_raw` 前再断言一次 | 即使 App 传 `power_dbm: 20`,最终值是 **min(App, cap, caps.tx_max_dbm)** |
+
+> **⚠️ 2026-09-21:`[4]` 的语义变了,但它必须继续存在。**
+> 产品决定 **2.4GHz 按满功率 20dBm 出厂**(C-11),因此对槽位 3 而言 `cap = tx_max_dbm = 20`,**这一门不再夹取任何东西**。三条纪律随之调整:
+> - **不得把这个门删掉或短路**。它的职责从"法规限幅"变成"**挡住无效参数**":`power_dbm: 25`、负数、`NaN` 之类仍必须被拒,因为模块物理上做不到 25dBm——**放过去就等于给用户一个"设了 25 却只发 20"的静默谎报**,而审计里会记成 25。**审计记录的功率必须是实际生效值**,不是请求值(见 §合规文档 4.5 的 `granted_power_dbm` 字段)。
+> - **按频段分别夹取**:`tx_power_cap_dbm` 是**全局单值**,但各频段策略上限不同(Sub-GHz 侧 Q-10 未决,当前仍按合规折算值;M2 的 `tx_max_dbm` 是 10)。因此**有效上限 = min(请求, 全局 cap, 模块 `tx_max_dbm`, 该频段策略上限)**,`[4]` 必须按这四项一起算,不能只比全局 cap。
+> - **审计仍要记录"是否被夹取"**:即使 2.4GHz 不再夹取,`granted_power_dbm` 字段必须照写,否则将来 Q-10 放开/收紧时无法从历史审计里看出来。
 | **[5] 令牌** | `HMAC-SHA256(pairing_secret, device_id \| seq_be32 \| f_hz_be64 \| mod \| power_dbm_x10_be16)` 取前 16B 的 base64url(契约 §7.1(2));校验**常数时间比较** + `seq` 必须**严格大于**已接受最大值 | 设备持有密钥,但**不持有任何"关闭校验"的开关**;校验失败回 `tx_bad_token`,**不允许无限重试**(契约 §6) |
 
 > ⚠️ **本行已于 2026-09-20 按契约 §7.1 更正**。此前写的是 `HMAC(…, {nonce, f_hz, power_dbm, mod, exp})` + `exp` 30 秒窗口 + nonce 重放表——**那是不可实现的**:
@@ -445,6 +455,9 @@ rf_tx_request(src) ──► [1] 状态检查 ──► [2] 模块在位/活动�
 | F-Q7 | ~~低阈值 + 大范围扫描时 `SCAN_HIT` 被限流截断,缺批量取回消息~~ | ✅ **已关闭(契约 v1.1 §2.4/§3.3)**:新增 `0x23 GET_SCAN_HITS` / `0xA4 SCAN_HITS` 分页取回;`SCAN_DONE` 拆为 `hits_total`/`hits_pushed`/`hits_dropped` 并加 `scan_id` |
 | F-Q8 | ~~`CAPS.limits.max_edges` 与 `CAPTURE_START.max_edges` 冲突语义未定义~~ | ✅ **已关闭(契约 v1.1 §3.4)**:明确为**钳制 + `truncated:true` + `WARN{edge_clamped}`**,不得报错拒绝 |
 | F-Q9 | ~~BLE 分片上限 15 × ~244B ≈ 3.6KB < 契约 `LEN` 上限 4096~~ | ✅ **已关闭(契约 v1.1 §2.2.1)**:已推导真实上界,并**纠正了原估算的两处口径错误**——原估算用的 `244B` 既偏小又自相矛盾。正确逐项推导:`LL 251 − L2CAP 4 = ATT 载荷 247`;`每片占用 = ATT 操作码 1 + FRAG 头 1 = 2`,故每片净载 **245B**(原 `244` 是按 2B FRAG 头算的,而 §2.3 的 `[FRAG_IDX:4bit \| FRAG_TOTAL:4bit]` 实际只占 **1B**);`× 15 = 3675B`;`− 帧头 6 = LEN 上界 3669B`。新增 `CAPS.limits.ble_frame_max` 作为唯一动态来源,并新增 `ERROR{frame_too_large}` |
+| **F-Q10** | **`[4] 功率上限` 在 2.4GHz 已不再夹取(C-11),它是否变成了死代码?** | 🔧 **本批已给出处置(见 §8 的 2026-09-21 注)**:保留此门,职责改为①挡无效参数(25dBm/负数/NaN)②按频段分别夹取③审计仍记 `granted_power_dbm`。**待实现的确认**:是否已有测试覆盖"无效功率被拒"——已补 **TC-104 / TC-104a** |
+| **F-Q11** | **无屏条件下 `pair_code` 的来源(NQ-01)** | ⏳ **阻塞**:决定本批首次配对能否验收。建议 USB 链路免校验 `pair_code` 并作为主路径(ADR-0003 §5),**待用户确认**;固件侧在此之前**不得**为 BLE 实现"免码配对" |
+| **F-Q12** | **`RF_KILL` 门控状态没有契约字段(既有归属缺口,延期后升级)** | ⚠️ **本批应补**:无屏后 App 是唯一的状态出口,而 `STATUS` 无处承载门控状态 ⇒ 用户无法确认"硬件发射门是否已释放"。建议在契约 `STATUS` 增字段,或经 `CAPS.policy` 暴露(见接线文档 §6) |
 
 > **F-Q5…F-Q9 的处置说明(协调者,契约 v1.1)**:上述五项均由协调者直接修订 `docs/30-protocol/010-device-app-protocol.md` 关闭,`protocol/schemas/` 已同步(新增 `$defs.confidence` / `$defs.guessString` / `$defs.rawSemantics`,features 增 6 个 `*_confidence` + `raw_semantics` + `incomplete`,`limits` 增 `ble_frame_max`,`errorCode` 增 `frame_too_large`,`warnCode` 增 `edge_clamped`;校验 `python3 tools/validate_schemas.py` 退出码 0)。
 >
