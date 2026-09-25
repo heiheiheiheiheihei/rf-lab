@@ -206,6 +206,39 @@
 
 ---
 
+## F-4d 开发板的 USB 拓扑:同一 Type-C 口下有**两个** USB 设备(2026-09-21 核实)⚠️ 承重
+
+**核实依据**:用户告知"串口模块是 CH343" → 据此定位到 **Waveshare ESP32-S3-DEV-KIT-N8R8**,抓取其官方文档与 FAQ 原文核对。**以下每行都有官方来源,不是推断。**
+
+| 项 | 核实结果 |
+|---|---|
+| 板载 USB HUB | **CH334**。官方 FAQ 原文:*"开发板板载 CH334 USB HUB,同一个 Type-C 接口下会枚举出两个独立的 COM 口"* |
+| **设备 1:ESP32-S3 原生 USB** | 内建 USB 控制器;**GPIO20 = D+,GPIO19 = D−**;设备名含 `Espressif` 或 `USB JTAG/serial debug unit` |
+| **设备 2:CH343 桥** | **CH343 USB 转 UART**,接的是 **UART0(GPIO43 = TX,GPIO44 = RX)**;设备名含 `USB-Enhanced-SERIAL CH343` |
+| 两者能否同时用 | **可以**。官方:*"两者都可以用于烧录程序"*、*"开发板的两路 USB 口本身都可以正常使用"* |
+
+**来源**(均为 2026-09-21 抓取):
+- [Waveshare ESP32-S3-DEV-KIT-N8R8 — Arduino 开发](https://docs.waveshare.net/ESP32-S3-DEV-KIT-N8R8/Arduino/):含"连接方式 / 主要用途 / 设备管理器中的名称 / RESET 后端口是否消失"四行对照表
+- [Waveshare ESP32-S3-DEV-KIT-N8R8 — 产品 FAQ](https://docs.waveshare.net/ESP32-S3-DEV-KIT-N8R8/FAQ/):CH334 HUB 原文与两个 COM 口的区分方法
+- [ESP-IDF — USB Serial/JTAG Controller Console (ESP32-S3)](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-guides/usb-serial-jtag-console.html):`GPIO20 = D+`、`GPIO19 = D−`,及*"fixed-function USB device that is implemented entirely in hardware"*
+
+### F-4d-1 ⚠️ 对产品的三条直接后果
+
+1. **"USB 口"其实是两个设备,不是一个。** 手机插上这块板的 Type-C 口后,Browser 的 USB 选择器里**会出现两个设备**,`navigator.usb.getDevices()` 也会同时看到它们。**这是一个会给用户造成真实困惑的坑** —— 选错就是选了 CH343 那条路,而已授权的设备在后续会话里会一直被列出。
+2. **因此设备过滤器不允许只用"通用 CDC"这一条。** WebUSB 的 `requestDevice({filters:[{classCode:2}]})` 会把 CH343 一并选中,弹出一个"两个都像是对的"的选择框。**必须用精确的 `vendorId`/`productId`**(原生 USB = Espressif `0x303a`;CH343 = WCH `0x1a86`),否则用户在设备选择界面里**没有可靠依据**做判断。
+   > 原生 USB 的**确切 PID**,以及"CDC 设备标识是否稳定到可依赖",**不在本次核实范围内**,实现阶段实测(已列入 F-6 的 V-12)。
+3. **走 CH343 等于每台产品多一颗桥。** CH343 是**独立芯片**,量产时要在载板上为它留位置与成本;而原生 USB **零额外器件**且**不占 UART0**(GPIO43/44 可留给调试)。
+
+### F-4d-2 板载 LED(**仅部分核实**)
+
+| 项 | 状态 |
+|---|---|
+| 板上**有**板载 LED | **【核实】** 属该板标配(用户亦确认"开发板上有板载 LED") |
+| **该 LED 的 GPIO 与类型(WS2812 单线 / 分立三色 / 单色)** | **【待确认 —— 未能从官方页面核实】** 官方 Arduino 与 FAQ 页面**均未给出该 LED 的引脚**,搜索亦无可靠一手来源。**不要因为"其他 ESP32-S3 板常用某个脚"就写进设计** —— 引脚必须实测或查原理图 |
+| 影响的决定 | 「设备侧本地状态出口」(NQ-02 剩余部分)的**唯一候选载体**。⏸ 蜂鸣器**已确定不存在**(用户 2026-09-21 告知)⇒ 该出口本批**只剩这一颗 LED** |
+
+---
+
 ## F-5 本机开发环境(2026-09-20 实测)
 
 | 组件 | 状态 | 影响 |
@@ -216,7 +249,7 @@
 | Flutter / Dart | ❌ **未安装** | 选原生 App 需先装 SDK(数 GB) |
 | Node / npm | ✅ v22.22.1 / 已装 | PWA 路径零额外安装 |
 | Python | ✅ 3.14.4,**无 pip** | 工具脚本只能用标准库 |
-| git | `/home/myf/DSH/Dev` **不是 git 仓库** | 本目录尚未纳入版本控制 |
+| git | ⚠️ **原文为"`/home/myf/DSH/Dev` 不是 git 仓库 —— 尚未纳入版本控制",该条已过时(2026-09-21 更正)** | 本仓库**已是 git 仓库**,位于 **`/home/myf/DSH/Dev/rf-lab`**(注意是 `rf-lab`,**不是** `Dev` 本身);文档变更现已按提交管理 |
 
 ---
 
@@ -230,7 +263,9 @@
 | V-04 | ~~DeepSeek JSON 输出模式的确切触发条件~~ ✅ **已完成** | — | 见 F-1b(三条件 + 空内容缺陷) |
 | V-05 | 三个模块的实测 SPI 时序上限与 RSSI 读取时延 | 决定扫频速度 | 拿样机实测,不查手册 |
 | V-06 | **局域网 `ws://` 在 HTTPS 页面下是否真被拦**(取决于浏览器对"same network"的宽容度) | 决定 PWA 能否连设备 | 实机实测 Android/桌面 Chrome,见 F-3 |
-| V-07 | ESP32-S3 在 **Wi-Fi + BLE 双跑**下的可用内部 RAM 余量 | 决定捕获缓冲上限与分包大小 | 实现阶段以 `esp_get_free_heap_size()` 实测 |
+| V-07 | ~~ESP32-S3 在 **Wi-Fi + BLE 双跑**下的可用内部 RAM 余量~~ | — | ⏸ **本批不适用(2026-09-21)**:Wi-Fi/BLE 已移出本批范围,本批无协议栈争用内部 SRAM。**该实测推迟到无线能力重新纳入时**;届时"捕获缓冲上限"的余量口径需重算 |
+| **V-12** | **走原生 USB 时,WebUSB 侧看到的 `vendorId`/`productId` 具体值**,以及该 CDC 设备标识是否**稳定可依赖** | **决定设备过滤器的写法**(F-4d-1 第 2 条)。而"过滤器写错"会让用户在**两个 USB 设备**之间盲选 —— 这是**本批唯一的配对通道**,选错即配对失败 | 真机枚举一次即可:插上后用 `navigator.usb.getDevices()` 打印 `vendorId/productId/productName`,与 CH343 那条并列对比。**与 TC-074a 同一次实测完成** |
+| **V-13** | **板载 LED 的 GPIO 与类型**(WS2812 单线 / 分立 / 单色) | NQ-02 剩余部分("设备侧本地状态出口")**唯一候选载体**的引脚;写错则该出口不工作(F-4d-2) | 查原理图或直接点灯实测;**不要从其他开发板的惯例推断引脚** |
 
 ---
 
