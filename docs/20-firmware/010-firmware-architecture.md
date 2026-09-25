@@ -426,7 +426,7 @@ rf_tx_request(src) ──► [1] 状态检查 ──► [2] 模块在位/活动�
 | 组件 | `transport_usb`:把 CDC 字节流按 §2 帧切分/拼接 | 与 `transport_ws`/`transport_ble` **完全等价**,不含业务语义。⚠️ 后两者**本批不实现**(ADR-0005),但**接口契约保持等价** —— 这样后续批次加入无线时 `proto_task` 无需改动 |
 | 控制器 | **USB Serial/JTAG**(非 USB-OTG) | 硬件 CDC、零额外 BOM、保留 JTAG(ADR-0003 §3.2) |
 | 分片 | **不需要 FRAG 头**——USB 是包边界明确的字节流,无 BLE 的 20–244B 限制 | 简化实现;上限取 `CAPS.limits.usb_frame_max` |
-| ⚠️ 设备枚举 | 控制通道走**原生 USB**,**不是**板载 CH343 | 见 **F-4d**:板上同一个 Type-C 口下**有两个 USB 设备**。选原生 USB = 零额外器件、不占 UART0、保留 JTAG(ADR-0005 §2.4) |
+| ⚠️ 设备枚举 | 控制通道走**原生 USB**,**不是**板载 CH343P | 见 **F-4d**:板上有**两个物理 Type-C 口**(原生 USB + CH343P);⚠️ 原文写"同一个 Type-C 口下有两个 USB 设备"**是错的**,已更正(F-4d-0)。选原生 USB = 零额外器件、不占 UART0、保留 JTAG(ADR-0005 §2.4) |
 
 **⚠️ 必须处理的三个实现要点:**
 

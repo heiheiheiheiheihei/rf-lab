@@ -91,7 +91,7 @@
 
 #### 2.5.4 本批暴露给手机的 USB 是**两个设备**,不是"一个 USB 口"
 
-⚠️ 这是本次核实出的硬件事实(见 [`040-verified-platform-facts.md`](040-verified-platform-facts.md) **F-4d**):开发板板载 **CH334 HUB**,同一个 Type-C 口下枚举出**两个独立 USB 设备** —— ESP32-S3 **原生 USB**(GPIO20/19)与 **CH343 USB 转 UART**(接 UART0:GPIO43/44)。
+⚠️ 这是核实出的硬件事实(见 [`040-verified-platform-facts.md`](040-verified-platform-facts.md) **F-4d**):开发板(**VCC-GND `YD-ESP32-S3`**,丝印 `HW678`)有**两个物理 Type-C 口** —— 一个直连 ESP32-S3 **原生 USB**(GPIO20/19),一个经 **CH343P USB 转 UART**(接 UART0:GPIO43/44)。<br>🔴 **本段上一版写"板载 CH334 HUB,同一个 Type-C 口下枚举出两个独立 USB 设备"是错的**(那是另一块 Waveshare 板的事实,已撤销,见 **F-4d-0**)。**下文第 2 条结论不受影响。**
 
 - 控制通道选定**原生 USB**(ADR-0005 §2.4):零额外器件、不占 UART0、保留 JTAG。
 - ⚠️ **由此产生一条实现要求**:WebUSB 的设备过滤器**不能只用"通用 CDC"**(`classCode:2`),否则 CH343 会一并被选中,用户在设备选择界面里**没有可靠依据判断该选哪个**。**必须用精确的 `vendorId`/`productId`**(原生 USB = Espressif `0x303a`;CH343 = WCH `0x1a86`)。确切 PID **待实测**(F-6 的 V-12)。
