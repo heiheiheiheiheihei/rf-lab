@@ -169,7 +169,7 @@
 
 | 项 | ~~Wi-Fi(WebSocket)~~ ⏸ | ~~BLE(GATT)~~ ⏸ | **USB(CDC-ACM)** ✅ 本批 |
 |---|---|---|---|
-| 地址 | `wss://<host>:8266/v1`(PWA 必须 `wss`;原生可用 `ws`) | 自定义 Service + Notify/Write | `navigator.usb.requestDevice()` 选设备 + `claimInterface`。⚠️ **板上同一 Type-C 口下有 2 个 USB 设备**(原生 USB + CH343,F-4d)⇒ 过滤器**必须用精确 VID/PID**,不能用 `classCode:2`,否则用户在两个设备间盲选 |
+| 地址 | `wss://<host>:8266/v1`(PWA 必须 `wss`;原生可用 `ws`) | 自定义 Service + Notify/Write | `navigator.usb.requestDevice()` 选设备 + `claimInterface`。⚠️ **板上有两个 USB 通路**(原生 USB + CH343P;**两个物理 Type-C 口**,F-4d)⇒ 过滤器**必须用精确 VID/PID**,不能用 `classCode:2`,否则 CH343P 通路会被一并匹配;⚠️ **产品外壳必须标出哪个口是控制口**(两个口外形相同,插错的唯一症状是"App 找不到设备")。⚠️ 本格上一版写"**同一 Type-C 口下有 2 个 USB 设备(CH334 HUB)**"**是错的**,已更正(见 040 **F-4d-0**) |
 | 单帧上限 | `LEN` ≤ 65535 | **以 `CAPS.limits.ble_frame_max` 为准**(理论上界 3669B,建议 3600B) | **以 `CAPS.limits.usb_frame_max` 为准**(示例 16384;**无 FRAG 头**) |
 | 吞吐 | 高(`SCAN_HIT`/`DATA_CHUNK` 受 §2.4 令牌桶限流,`stream_rate_hz` 默认 50) | 低,分片重组缺片 500ms 即弃整帧 | **高且稳定**(USB 2.0 全速;不受射频干扰) |
 | 抗本机 2.4GHz 自扰 | ❌ 会被压掉 | ❌ 会被压掉 | ✅ **不受影响**(有线) |
