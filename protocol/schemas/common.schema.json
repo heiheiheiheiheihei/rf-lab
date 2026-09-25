@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "common.schema.json",
   "title": "RF-Lab 协议共享定义 (v1)",
-  "description": "设备↔App 协议的公共 $defs 集合,镜像 docs/30-protocol/010-device-app-protocol.md(契约 v1.1,sha256 abbee3a067c6065f091ba56a8c34b0e30386bf24da394b084408caf07aefdaf8)。本文件不描述任何具体消息载荷,只被 msg-*.schema.json 通过相对路径 $ref 引用。字段与枚举值以协议文档为唯一权威。",
+  "description": "设备↔App 协议的公共 $defs 集合,镜像 docs/30-protocol/010-device-app-protocol.md(契约 v1.1,sha256 d33d5e8b2d0c3ebc3bfcf08268e620788088ae0e03ca9e091473679f013dae35)。本文件不描述任何具体消息载荷,只被 msg-*.schema.json 通过相对路径 $ref 引用。字段与枚举值以协议文档为唯一权威。",
   "$defs": {
     "frequencyHz": {
       "type": "integer",
