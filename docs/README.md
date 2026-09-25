@@ -20,6 +20,7 @@
 - **改硬件** → `adr/0001-frequency-coverage-gap.md` → `10-hardware/010-system-architecture.md` → [`hardware/bom/`](../hardware/bom/) → **接线图 [`hardware/wiring/`](../hardware/wiring/)(改引脚后必须重跑 `tools/gen_wiring_diagram.py`)**
 - **改协议** → `30-protocol/010-device-app-protocol.md`(权威)**v1.1** → `protocol/schemas/`(机器可读镜像)→ 跑 `python3 tools/validate_schemas.py` → 同步通知固件与 App 两侧
 - **改发射相关行为** → **必须**先读 `60-compliance/010-spectrum-compliance.md`(四道发射门、红线)与 `adr/0002-ai-analysis-in-app.md` §4.3,以及契约 §7.1(令牌定义)
+- **开始实现 / 排期** → `80-plan/010-development-plan.md`(⚠️ **阶段 0 是阻塞门禁:WebUSB 实测未过之前,不要写任何依赖 USB 载体或硬件的代码**;但纯逻辑组件可立即开工,见该文件 §4.0)
 
 > **协议改动自检(强制)**:任何字段改动必须在**同一批**里改完 `30-protocol/` + `protocol/schemas/`,并跑通 `python3 tools/validate_schemas.py`(退出码 0)。schema 目录的 README §5 有完整清单。
 
@@ -38,10 +39,13 @@
 | `50-ai/010-deepseek-analysis.md` | DeepSeek 调用链、提示词契约、结构化输出、威胁判据 | draft |
 | `60-compliance/010-spectrum-compliance.md` | 法规依据、频段矩阵、软件约束、免责声明 —— ⚠️ **已降级为参考设计**(屏蔽室用途,不再是验收门) | reference |
 | `70-test/010-verification-plan.md` | 测试层次、用例表、验收步骤、合规负向测试 | draft |
+| `80-plan/010-development-plan.md` | **开发计划**:本批范围、**阶段 0 门禁**、阶段 1–6 出口判据、验收、风险、非目标 | **draft** |
 | `adr/0001-frequency-coverage-gap.md` | **119–1050MHz 覆盖空白**:已决策**接受空白、不增补模块**(结论 + 强制义务 A-06) | **accepted** |
 | `adr/0002-ai-analysis-in-app.md` | AI 分析放 App 侧的决策与理由 | accepted |
 | `adr/0003-usb-wired-control-channel.md` | **USB 有线控制通道**决策(并据此**不采用 USB-OTG 外设**) | **accepted** |
 | `adr/0004-cancel-unattended-operation.md` | **取消「无人值守远程部署」(`S1`)**,并**保留其全部安全网**(C-05 取消 ≠ 看门狗/超时可删) | **accepted** |
+| `adr/0005-usb-only-batch-and-deferred-wireless.md` | **本批只做 USB**,BLE/Wi-Fi 移出本批但**能力定义保留** | **accepted** |
+| `adr/0006-control-carrier-webusb-with-serial-polyfill.md` | **控制载体 = WebUSB 基线 + `web-serial-polyfill`**(非 Web Serial 基线;因 Android 的 Web Serial 迟至 Chrome 148) | **accepted** |
 
 ## 状态定义
 
@@ -68,9 +72,10 @@
 | ~~Q-08~~ | ~~设备端是否需要显示屏?~~ | 契约 §7.1(1) | ⚠️ **2026-09-21 部分重开**:2026-09-20 曾关闭为"需要,设备端设 I²C OLED"(C-07);随后决定 **OLED 延期到下一批开发**,故其首要职责(显示一次性 `pair_code`)**本批无载体**。收窄为 **NQ-01** |
 | ~~Q-09~~ | ~~是否要求"设备侧离线记录→回读"能力?~~ | 契约 §9.1 | ✅ **已关闭(2026-09-21,用户取消无人值守)**:该能力的前提是 `S1 远程部署`(**App 不在场**时设备独自记录),而 `S1` 已被取消(产品定义 §2.4)⇒ **明确转为非目标**(契约 §9 已登记),**不新增**"记录会话→回读"消息对 |
 | ~~NQ-04~~ | ~~取消无人值守后,Wi-Fi/WebSocket 通道是否仍需要保留?~~ | 产品定义 §2.5 | ✅ **已关闭(2026-09-21,用户决定"本批只做 USB")**:BLE 与 Wi-Fi **移出本批** ⇒ `wss` 信任模型、设备 AP、`SET_NET` 配网在本批**根本不会出现**。⚠️ **但能力定义与契约承载章节一律保留**(延后 ≠ 取消),见产品定义 §2.5 与 [ADR-0005](adr/0005-usb-only-batch-and-deferred-wireless.md)。**派生新问题 NQ-05** |
-| **NQ-05** | **控制通道走原生 USB 还是板载 CH343?** | ADR-0005 §2.4 | **按判据选定为原生 USB,可复议(2026-09-21)**:核实出开发板**有两个 USB 通路**(原生 USB + CH343P,**两个物理 Type-C 口**,见 040 **F-4d**;⚠️ 原文写"同一个 Type-C 口下有两个 USB 设备/CH334 HUB"**是错的**,已更正)后,原生 USB 在"零额外器件 / 不占 UART0 / 保留 JTAG"三项上单向占优。⚠️ **提问时用户未选此项**,故记为"按判据选定"。两条路**都是 USB**,切换不影响本批范围结论 |
+| ~~NQ-05~~ | ~~控制通道走原生 USB 还是板载 CH343?~~ | ADR-0005 §2.4 | ✅ **已关闭(2026-09-21)**:**原生 USB**。核实出开发板**有两个 USB 通路**(原生 USB + CH343P,**两个物理 Type-C 口**,见 040 **F-4d**;⚠️ 原文写"同一个 Type-C 口下有两个 USB 设备/CH334 HUB"**是错的**,已更正,且 **V-14 已经用户确认本板无 CH334 HUB**)。原生 USB 在"零额外器件 / 不占 UART0 / 保留 JTAG"三项上单向占优;且 **CH343P 同样是 CDC-ACM,换通路不解决任何问题**(ADR-0006 §4.3)。详见 [ADR-0006](adr/0006-control-carrier-webusb-with-serial-polyfill.md) §4.3 |
 | ~~C-05~~ | ~~设备放置远处时无人值守~~ | 产品定义 §4 | ✅ **已取消(2026-09-21,用户)**:`S1 远程部署`取消 ⇒ 无人值守不再是场景。⚠️ **看门狗 / 状态恢复 / 超时保护一条都没删** —— 其真实职责被重新表述为"**防止设备在无控制链路时滞留在发射态**",并升为必过项 **TC-054**(产品定义 §2.4) |
-| **Q-12** | **WebUSB 能否在 Android 上访问 CDC-ACM 设备?**(风险 USB-R1) | ADR-0003 §6 / App §2.5 | **实现阶段第一项实测**。不通过则 F-11 降级为原生 Android USB Host 小壳 |
+| ~~Q-12~~ | ~~WebUSB 能否在 Android 上访问 CDC-ACM 设备?~~(风险 USB-R1) | ADR-0003 §6 / App §2.5 | ✅ **平台层面已关闭(2026-09-21,核实)**:① **规范层**——CDC(`0x02`)/CDC-Data(`0x0A`)**不在** WebUSB 的受保护接口类清单内;② **系统层**——Chrome 官方文档原文:*"Android 上可访问的设备更多,因为默认包含的驱动程序更少。例如,一个值得注意的遗漏是 USB 转串行适配器通常实现的 **USB CDC-ACM 类**"*。⇒ 从"未知"变为"**官方明确预期可用**"。🔴 **但"本设备实测"仍未做** ⇒ 残留为 **V-17 / TC-074a**(**阶段 0 阻塞门禁**)。完整证据见 040 **F-7**,决策见 [ADR-0006](adr/0006-control-carrier-webusb-with-serial-polyfill.md) |
+| **NQ-06** | **控制载体用 WebUSB 还是 Web Serial?** | App §1.2.1 | ✅ **已定(2026-09-21,用户授权"选择最合适的方案")**:**WebUSB 为基线 + `web-serial-polyfill`**。关键依据:**Android 的 Web Serial 迟至 Chrome 148(2026-04)才引入**,若作基线会把最低系统要求人为抬高到 148+,且失败表现与设备故障**无法区分**;而 Google 的 polyfill **就是 Web Serial 规范的原型实现**,故"覆盖面"与"易用性"不必二选一。见 [ADR-0006](adr/0006-control-carrier-webusb-with-serial-polyfill.md) |
 | ~~C-11~~ | ~~2.4GHz 按满功率 20dBm 发射~~ | 产品定义 §4 | ✅ **已决策并于 2026-09-21 扩围(用户)**:不再只覆盖 2.4GHz —— **所有模块按各自模块上限满功率出厂**(NQ-03 关闭),且**可由 App 调节**(C-12)。屏蔽室内法规限幅非设计输入。⚠️ 边界:`policy.tx_power_cap_dbm` 是**设备级全局最大值 20dBm**,逐次上限 = `min(请求, 20, 模块 tx_max_dbm)`,**M2 的 10dBm 是硬件真顶** |
 | ~~NQ-01~~ | ~~本批首次配对的 `pair_code` 载体~~ | 产品定义 §8 | ✅ **已关闭(2026-09-21,用户选方案 A)**:本批**首次配对只走 USB** —— USB 是物理端口,在场性由连接行为本身证明,**结构上不需要 `pair_code`**。BLE 配对一律回 `pair_error:"no_display"`,**禁止**静默降级为免码配对。验收见 **TC-104b/TC-104f**;连带关闭 Q-08 与"USB 是否可信配对信道" |
 | **NQ-02** | **本批是否接受"无本地状态出口"** | 产品定义 §7.1 | ⚠️ **2026-09-21 范围缩小**:① "AP 地址需靠猜"这一半**随 Wi-Fi 移出本批而整体消失**;② 本地状态出口的载体**只剩板载 WS2812** —— 用户已告知**硬件没有蜂鸣器**(原表述"已在 BOM"**是错的**)。**剩余部分仍未决**:用**板载 WS2812** 做 `ARMED`/`KILL`/链路/故障指示。✅ **2026-09-21:引脚与类型已核实(WS2812 / GPIO48,F-4d-3)**,已写入硬件文档 §2.3 与接线图;⚠️ 但它是**可寻址灯**,"停更即保持最后颜色",故 `KILL` 必须显式写黑(V-15)。指示语见硬件文档 §2.7,验收 TC-105/105a/105b/106 |

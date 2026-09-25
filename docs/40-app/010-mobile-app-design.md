@@ -77,9 +77,10 @@
 
 工程推论:Web Bluetooth **只能在安全上下文(secure context)中使用**,受 `Permissions-Policy: bluetooth` 管控(默认 allowlist `self`),权限弹窗由 `requestDevice()` 触发且需要 [transient activation](https://developer.mozilla.org/en-US/docs/Glossary/Transient_activation)(用户手势)([MDN — Web Bluetooth API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API))。后果:**不能后台静默扫描**,每次连新设备都需要用户点击。**这一条与平台无关,仅 Android 也照样成立** —— 它决定了 §3.1 的配对流程必须由用户手势发起。
 
-### 1.2.1 已核实的平台事实(WebUSB,新增)
+### 1.2.1 已核实的平台事实(USB 载体:WebUSB + Web Serial)
 
-来源:[caniuse — WebUSB](https://caniuse.com/webusb)(2026-09-20 抓取)。
+来源:[WebUSB 规范](https://wicg.github.io/webusb/)、[Chrome for Developers — 构建支持 WebUSB 的设备](https://developer.chrome.com/docs/capabilities/build-for-webusb)、[caniuse — WebUSB](https://caniuse.com/webusb)、[google/web-serial-polyfill](https://github.com/google/web-serial-polyfill)。
+✅ **2026-09-21 完成载体核实,完整证据链见 [`040-verified-platform-facts.md` F-7](../00-overview/040-verified-platform-facts.md);决策见 [ADR-0006](../adr/0006-control-carrier-webusb-with-serial-polyfill.md)。**
 
 | 浏览器 | WebUSB 支持 |
 |---|---|
@@ -94,23 +95,47 @@
 | **Safari / iOS 全平台** | ❌ 不支持 |
 | 全球使用率 | **77.89%** |
 
-**与本期(仅 Android)相关的结论:Android Chrome 支持 WebUSB**,故 F-11 在 PWA 路径上**理论可行**。
+#### 载体已定:WebUSB 为基线 + web-serial-polyfill(ADR-0006)
 
-⚠️ **但这不等于"已验证"**,必须区分三件事:
+**原先"桶里只有 WebUSB"的判断已细化。** USB CDC-ACM 设备在浏览器里有**两个**入口,现已核实如何取舍:
 
-| 层级 | 状态 |
-|---|---|
-| 浏览器**声称支持** WebUSB | ✅ caniuse 与 Chrome 官方文档证实 |
-| WebUSB 能在 Android 上**访问 CDC-ACM 设备** | ⚠️ **未验证**。社区有在 Android 上用 WebUSB 跑 CH340 串口的实践,但也有"移动端对部分设备类受限"的报告。**列为必须真机实测的第一项**(风险 USB-R1) |
-| 我们的设备**(USB Serial/JTAG CDC)能被识别** | ⚠️ 未验证。设备侧是固定功能 CDC-ACM,VID/PID 为 Espressif;需确认 `navigator.usb.requestDevice()` 能枚举到它、且能 `claimInterface` |
+| 入口 | Android 可用性 | 结论 |
+|---|---|---|
+| **Web Serial**(`navigator.serial`) | ⚠️ **Chrome 148(2026-04)才引入** —— 非常新 | ⭕ **优先探测**,但**不得作为基线**(会把最低系统要求钉在 148+) |
+| **WebUSB**(`navigator.usb`) | ✅ 自 Chrome 61 级长期可用 | ✅ **基线** |
 
-**两个工程约束(与 Web Bluetooth 同源,必须遵守)**:
+🔑 **决定性事实(Chrome 官方文档原文)**:Android 平台*"**不需要对系统配置进行任何修改**……**Android 上可访问的设备更多,因为默认包含的驱动程序更少**。例如,一个值得注意的遗漏是 USB 转串行适配器通常实现的 **USB CDC-ACM 类**"*。
+⇒ 桌面 Linux/macOS 常因 `cdc_acm` 占用而**不能**用 WebUSB,**Android 恰恰因为"没有这个驱动"而能用** —— 本项目"放弃 iOS、仅 Android"的决定在这里**再次受益**。
+
+**并已验证规范层面无阻碍**:WebUSB 的**受保护接口类**清单只有 `0x01 Audio / 0x03 HID / 0x08 Mass Storage / 0x09 Hub / 0x0B Smart Card / 0x0E Video / 0x10 A/V / 0xE0 Wireless` —— **CDC(`0x02`)与 CDC-Data(`0x0A`)都不在其中**。
+
+**实现姿势(唯一需要写一次的代码)**:
+
+```
+App 传输层(上层只见这一个接口)
+   ├─ 后端 A(优先):navigator.serial           ← 探测成功才用
+   └─ 后端 B(基线):navigator.usb + web-serial-polyfill
+```
+
+- **两个后端同形** —— 因为 Google 的 polyfill **实现的就是 Web Serial API**,且它就是该规范的**原型实现**;⚠️ **不得**为两个后端写两套业务逻辑。
+- ⚠️ **不得把 Web Serial 写成硬依赖** —— 在 Chrome < 148 的 Android 上那等于自伤(失败表现是"找不到设备",与设备故障**无法区分**)。
+
+**⚠️ 仍需真机实测(V-17 / TC-074a)**:官方文档给的是"**预期**可用",**不是**"本设备已验证"。
+须实测:`requestDevice` 枚举 → `claimInterface` 成功 → 字节回环,并**记录确切 PID**(在此之前**不得把 PID 硬编码**)。
+
+**⚠️ 两个工程约束(与 Web Bluetooth 同源,必须遵守)**:
 
 1. **安全上下文**:WebUSB 同样要求 secure context ⇒ 页面必须 `https://`。**这加重了 §1.3 的问题**:局域网 HTTP 页面不仅连不了 `ws://`,**也用不了 WebUSB**。
 2. **用户手势 + 授权持久化**:`navigator.usb.requestDevice()` 必须由用户手势触发,且**授权与"页面会话/设备插入状态"绑定**。后果:
    - **不能后台静默连接**;
    - **整页重载(`location.reload()`)会丢失 WebUSB 授权** ⇒ §2.4 的"回前台整页重载"策略在有线模式下**代价更高**(需重新授权,若设备已插着通常一次点击即可)。
    - 因此 §2.6 给出有线模式下的**重连优先级**:先尝试复用既有 `USBDevice` 对象 → 失败再重授权 → 最后才整页重载。
+   - 🔴 **2026-09-21 新增官方依据**:Android 上**已授权设备再次 `open()` 时,系统仍会再弹一次授权框**(Chrome 官方原文:*"如果用户返回已获权连接到设备的网站,并且该网站调用 `open()`,系统也会再次显示此提示"*)。
+     ⇒ **"重新打开设备"在 Android 上不是可静默完成的操作**。UI **必须预先说明会弹两次框**(`requestDevice` 后 + `open()` 时),⚠️ **不得向用户承诺"自动重连、无需交互"** —— 那是不可能兑现的。
+
+> ⚠️ **桌面自测的坑(开发者必读,V-18)**:USB Serial/JTAG 在 **Windows** 上由系统串口驱动占用,而 WebUSB 在 Windows 还需 WinUSB 驱动 ⇒ **桌面 Windows 上 WebUSB 大概率不可用,但 Web Serial 可用**。
+> ⇒ **不要用 Windows 浏览器做 WebUSB 自测** —— 失败率极高且会被**误判为固件缺陷**。桌面自测走 **Linux/macOS**(走 WebUSB),或显式走 Web Serial 路径。**这不影响 Android 的产品路径。**
+
 
 ### 1.3 HTTPS 页面 → `ws://` 局域网地址(F-3 / V-06)
 

@@ -331,9 +331,118 @@ VCC-GND 在其官方 README 里专门列了**山寨/翻新板的危害**,其中�
 | V-07 | ~~ESP32-S3 在 **Wi-Fi + BLE 双跑**下的可用内部 RAM 余量~~ | — | ⏸ **本批不适用(2026-09-21)**:Wi-Fi/BLE 已移出本批范围,本批无协议栈争用内部 SRAM。**该实测推迟到无线能力重新纳入时**;届时"捕获缓冲上限"的余量口径需重算 |
 | **V-12** | **走原生 USB 时,WebUSB 侧看到的 `vendorId`/`productId` 具体值**,以及该 CDC 设备标识是否**稳定可依赖** | **决定设备过滤器的写法**(F-4d-1 第 2 条)。而"过滤器写错"会让用户在**两个 USB 设备**之间盲选 —— 这是**本批唯一的配对通道**,选错即配对失败 | 真机枚举一次即可:插上后用 `navigator.usb.getDevices()` 打印 `vendorId/productId/productName`,与 CH343 那条并列对比。**与 TC-074a 同一次实测完成** |
 | ~~V-13~~ | ~~板载 LED 的 GPIO 与类型~~ | — | ✅ **已关闭(2026-09-21 二次核实)**:板载 RGB LED = **WS2812,GPIO48**。见 **F-4d-3**;该节同时关闭了"类型不明"这一半 |
-| **V-14** | 本板**是否真有** CH334 HUB(上一版据 Waveshare 另一块板断言有) | 若真有 HUB,则"一个口两个设备"成立,TC-074a 的断言 (a) 需改写;若没有(官方 README 与实物照片均无),则该断言作废 | 查[官方原理图](http://124.222.62.86/yd-data/YD-ESP32-S3/)(README 给出的资料包链接)或**实机插一个口再列一遍 USB 设备**。⚠️ 与 TC-074a 同一次实测完成 |
+| ~~V-14~~ | ~~本板**是否真有** CH334 HUB(上一版据 Waveshare 另一块板断言有)~~ | — | ✅ **已关闭(2026-09-21,用户确认)**:本板**确认没有 CH334 HUB**。与官方 README(只列**两个物理 Type-C 口**)及实物照片(F-4d-0)一致。⇒ 上一版的"同一个 Type-C 口下枚举出两个 COM 口"**确定作废**,TC-074a 断言按"两个物理口各挂一个设备"写 |
 | **V-15** | **WS2812 的驱动占用(RMT channel)与刷新期间的时序纪律**,以及"数据线停更时保持最后颜色"这一行为在**本板**上是否如预期 | 直接决定 **`KILL` 指示能否可信** —— 若依赖"不写就会灭",就会把"设备崩了"显示成"一切正常" | 实测:写入某种颜色后**挂起驱动任务 / 触发看门狗复位**,观察 LED 是否保持颜色。见硬件文档 §2.7 |
 | **V-16** | **载板是否为正品 YD 板**(山寨特征:`WS2812 信号未焊接`、丝印抄错、无原理图,官方 README 明示) | 🔴 山寨板上**指示灯可能根本不亮** ⇒ 本地状态出口静默失效,且操作者会把"灯不亮"误读为"未在发射" | 实机点灯 + 丝印/版本号核对(正版为 1.4 版)。见 **R-18** 与 **TC-106** |
+| **V-17** | **WebUSB 在真机 Android 上能否 `claimInterface()`**(规范与官方文档均已确认可行,但**本设备**未实测) | 🔴 **本批唯一控制通道与唯一配对路径**;失败即设备完全不可指挥(含无法中止发射)。⚠️ 注意:官方文档已给出"Android 没有 CDC-ACM 驱动"这一**有利**事实,但它**推不出**"本设备一定成功" | **TC-074a**(现已按 F-7 重写):`requestDevice` → `claimInterface` → 字节回环,并**记录确切 PID**。见 F-7 与 ADR-0006 |
+| **V-18** | **Windows 桌面被系统串口驱动占用**(WebUSB 能否用于桌面开发自测) | ⚠️ 影响**开发工作流**:USB Serial/JTAG 在 Windows 上由系统串口驱动占用 ⇒ **Windows 桌面上 WebUSB 大概率不可用**(Web Serial 可用)。若开发者用 Windows 浏览器做自测,会误判为"设备/固件有问题" | 桌面自测请用 **Linux/macOS**,或改用 **Web Serial** 路径(见 F-7 §7.4) |
+| **V-19** | 🔴 **正面/背面那组 `USB-OTG` 焊桥的出厂状态与作用** —— 它是否**必须闭合**原生 USB 才通到 Type-C 口? | 🔴 **可能让整个控制通道"插上没反应"**:若该桥出厂**断开**,则裸板插线**不会枚举任何设备**,而现象与"固件没起来""线是坏的""驱动问题"**完全无法区分**。这会在阶段 0 被误归因,浪费大量排查时间。⚠️ 注意**术语撞车**:此处的 `USB-OTG` 焊桥是**板级走线选择**,与 ADR-0003 里"**不采用 USB-OTG 外设**"(那是**芯片外设**选择)是**两件完全不同的事**,不可互相引用 | **阶段 0 第一件事**:裸板插原生 Type-C 口,**先用 `lsusb`/设备管理器确认能否枚举到 `0x303a`**。① 若枚举不到,**先怀疑该焊桥**再怀疑固件;② 查[官方原理图](http://124.222.62.86/yd-data/YD-ESP32-S3/)确认焊桥语义与出厂状态;③ 结论写入硬件文档 §2.6(两个口的标识一节) |
+
+> ⚠️ **编号冲突(2026-09-21 发现,登记未修)**:本文件的 **V-12**(WebUSB 设备 PID 实测,见 F-4d-1 第 2 条)与
+> [`../70-test/010-verification-plan.md`](../70-test/010-verification-plan.md) §11 的 **V-12**(`additionalProperties:false` 与"未知字段忽略"的张力)**同号不同事**。
+> 本文件此前 5 处引用("F-6 的 V-12")都指**前者**。**本次不重排**(重排会破坏既有引用且收益仅为编号美观),
+> 但**新增项一律改用独立前缀**:本文件的待核实项改用 **`V-17`/`V-18`**,避开测试计划已占用的号段。
+> **这是"两套编号在漂移"这一既有文档缺陷的又一实例**(与 `docs/README.md` 待决问题表已登记的同类问题同源)。
+
+---
+
+## F-7 USB 控制载体的平台事实(2026-09-21 核实,⚠️ 承重)
+
+> **为什么必须单独核实**:`ADR-0005` 把 USB 定为**本批唯一控制通道**,而 App 侧怎么访问这个 USB 设备**此前从未核实过** —— 原文档只写了"caniuse 显示 Chrome for Android 支持 WebUSB",据此推断"理论可行"。**"浏览器支持 WebUSB"与"本设备能被 WebUSB 访问"是两件事**(App 设计文档 §1.2.1 已把这条区分写出来,但当时无证据)。
+> 本节把结论落到**规范原文**与**Chrome 官方文档原文**上。
+
+### F-7-1 ✅ WebUSB 规范:CDC 不是受保护类 ⇒ 规范层面允许访问
+
+WebUSB 规范定义了**"受保护接口类"**(protected interface class)—— 属于这些类的接口**不允许**被网页声明(`claimInterface`),因为已有更高层的 Web API 覆盖它们。
+
+规范原文表(**Protected interface classes**)逐项:
+
+| Code | Description |
+|---|---|
+| `0x01` | Audio |
+| `0x03` | HID (Human Interface Device) |
+| `0x08` | Mass Storage |
+| `0x09` | Hub |
+| `0x0B` | Smart Card |
+| `0x0E` | Video |
+| `0x10` | Audio/Video Devices |
+| `0xE0` | Wireless Controller |
+
+🔑 **`0x02`(CDC / Communications)与 `0x0A`(CDC Data)都不在这张表里** ⇒ 规范**没有**禁止 WebUSB 访问 CDC-ACM 设备。
+
+> 规范注原文:*"This specification attempts to strike a balance between protecting users from malicious content by limiting access to sensitive devices while enabling support for as many devices as possible… The list above includes interface classes for which such high level APIs exist…"*
+> —— 即**只有"已有更高层 Web API"的类才受保护**。CDC 没有对应的 Web API(Web Serial 是**同一层**的替代入口,不是更高层),故不在保护名单。
+
+**来源**:[WebUSB Draft Community Group Report — Protected interface classes](https://wicg.github.io/webusb/)(规范源 `WICG/webusb` `index.bs`,2026-09-21 抓取)
+
+> ⚠️ **这仍不等于"能访问"**:"不在受保护类"**只是"不被规范禁止"**。真正决定成败的是**操作系统驱动有没有先占用接口** —— 见下条。
+
+### F-7-2 ✅ Chrome 官方文档:Android 上 CDC-ACM 恰恰是**可用**的(关键依据)
+
+Chrome 开发者文档《构建支持 WebUSB 的设备》在"针对具体平台的注意事项 → Android"一节写明(**原文,中文版**):
+
+> *"Android 平台基于 Linux,但**不需要对系统配置进行任何修改**。默认情况下,**任何未在操作系统中内置驱动程序的设备都可以供浏览器使用**。……
+> 此外,与桌面版 Linux 相比,**Android 上可访问的设备更多,因为默认包含的驱动程序更少**。例如,一个值得注意的遗漏是 **USB 转串行适配器通常实现的 USB CDC-ACM 类,因为 Android SDK 中没有用于与串行设备通信的 API**。"*
+
+🔑 **这条把"Android 上能不能用 WebUSB 访问 CDC"从"未知"翻转为"官方明确预期可用"**:
+
+| 平台 | 系统是否内置 CDC-ACM 驱动 | 对 WebUSB 的含义 |
+|---|---|---|
+| **Android** | ❌ **没有**(官方原文明示"一个值得注意的遗漏") | ✅ 串口类设备**通常未被占用** ⇒ WebUSB 可用。**这正是 web-serial-polyfill 把 Android 列为主要适用平台的原因** |
+| Linux(桌面) | ✅ 有 `cdc_acm` | ⚠️ 常被占用,需 udev 规则/解绑;或改用 Web Serial |
+| macOS | ✅ 有 | ⚠️ 同上 |
+| Windows | ✅ 有(串口驱动) | ⚠️ 且还需 WinUSB 驱动 —— 见 F-7-4 |
+| ChromeOS | 看设备 | ⚠️ 官方:*"只要至少有一个未声明的接口,浏览器便可以访问"* |
+
+**同节另两条必须遵守的行为事实(原文)**:
+
+1. **Android 会弹额外的系统授权框**:*"用户在响应对 `requestDevice()` 的调用后选择设备后,Android 会显示一个提示,询问是否允许 Chrome 访问该设备。"*
+2. 🔴 **已授权设备再次 `open()` 时,**也会再次显示此提示** —— *"如果用户返回已获权连接到设备的网站,并且该网站调用 `open()`,系统也会再次显示此提示。"*
+   ⇒ **"重新打开设备"在 Android 上不是一个可以静默完成的操作**。App 任何"自动重连"都可能撞上系统级弹窗,必须把它当成**正常交互步骤**处理(与 §2.6 既有结论一致,但现在是**有官方依据**的,不再只是经验判断)。
+
+**来源**:[Chrome for Developers — 构建支持 WebUSB 的设备](https://developer.chrome.com/docs/capabilities/build-for-webusb)(2026-09-21 抓取;经 `developer.chrome.google.cn` 镜像取得中文版,内容与英文版同源)
+
+### F-7-3 ✅ Web Serial:桌面长期可用,但 **Android 到 Chrome 148(2026-04)才纳入**
+
+| 项 | 结论 |
+|---|---|
+| 桌面 Web Serial | ✅ 自 Chrome 89 起可用(长期稳定) |
+| **Chrome for Android Web Serial** | ⚠️ **Chrome 148 beta(2026-04-08 发布)才引入**;此前 **Android 完全没有** Web Serial |
+| 官方表述(原文) | *"Web Serial API support is now available on Android"*(Chrome 148 Beta 发布说明) |
+| caniuse `api.Serial` | ✅ Chrome for Android 支持(数据条目更新时间晚于 148 发布) |
+
+🔑 **这条的含义不是"可以用 Web Serial 了",而是它反过来解释了为什么必须选 WebUSB**:
+
+> **Android 上"Web Serial 可用"是 2026-04 才发生的事**,而本项目的 App 载体选型与设备固件设计在此之前已经定稿。
+> ⇒ **把 App 绑在 Web Serial 上 = 把最低系统要求钉在"Chrome 148+"**,而 WebUSB 自 **Chrome 61**(桌面)/更早的 Android 版本就可用。
+> ⇒ **WebUSB 是 Android 上覆盖面更广的那个入口**;Web Serial 只能作为**能力探测成功时的优化路径**。
+
+**来源**:[Chrome 148 Beta for Android adds Web Serial, SharedWorker support](https://www.notebookcheck.net/Chrome-148-Beta-for-Android-adds-Web-Serial-SharedWorker-support.1269721.0.html)(转述 Google 官方 Chrome 148 Beta 说明,2026-04-08) · [caniuse — api.Serial](https://caniuse.com/webusb)
+
+### F-7-4 🔴 Google 官方 polyfill 是**已存在的成熟路径**(而非需要自研的方案)
+
+Google 维护 `web-serial-polyfill`:**在 WebUSB 之上实现 Web Serial API**,面向"支持 WebUSB 但**不支持** Web Serial"的平台 —— README 原文点名 Android:
+
+> *"An implementation of the Web Serial API on top of the WebUSB API for use with USB-to-serial adapters. Use of this library is limited to hardware and platforms where the device is accessible via the WebUSB API because it has not been claimed by a built-in device driver. This project was used to prototype the design of the Web Serial API and remains useful for platforms (such as Android) which support the WebUSB API but do not support the Web Serial API."*
+
+🔑 **三条结论**:
+1. **不必自研 WebUSB 上的 CDC 封装** —— Google 已经做了,且它就是 **Web Serial 规范的原型实现**,API 形状与标准 `navigator.serial` **一致**;
+2. 它明确承认自身**边界**:*"limited to hardware and platforms where the device is… not been claimed by a built-in device driver."* ⇒ **F-7-2 的"Android 无 CDC 驱动"是这条路径成立的前提**,两者互为印证;
+3. ⇒ 正确的实现姿势是**一层传输抽象 + 两个后端**:优先原生 `navigator.serial`,失败则退到 polyfill(见 ADR-0006)。
+
+**来源**:[google/web-serial-polyfill](https://github.com/google/web-serial-polyfill) README(2026-09-21 抓取)
+
+> ⚠️ **平台差异必须写进开发文档**:Windows 上 WebUSB 需要 **WinUSB** 驱动(官方原文:*"即使未加载任何驱动程序,从用户应用打开 USB 设备的功能也**并非默认功能**"*;需 INF 或 MS OS 2.0 描述符),而 USB Serial/JTAG 走的是系统**串口**驱动 ⇒ **桌面 Windows 上 WebUSB 大概率不可用**,但 **Web Serial 可用**。⇒ 桌面自测应走 Linux/macOS,**或**显式走 Web Serial 路径。**这条不影响 Android 上的产品路径**,但**会影响开发者自测时对"失败"的归因**(V-18)。
+
+### F-7-5 对产品的净结论
+
+| 问题 | 结论 |
+|---|---|
+| WebUSB 能否访问 CDC-ACM? | ✅ **规范不禁(CDC 非受保护类)+ Chrome 官方明确说 Android 上这类设备通常可用**。⚠️ 但**本设备仍须实测**(V-17 / TC-074a) |
+| 该用 WebUSB 还是 Web Serial? | **以 WebUSB 为基线**(覆盖面更广、Android 上自 Chrome 61 级就可用),**Web Serial 作为探测成功时的优化路径**,WebUSB 上经 polyfill 复用 Web Serial 语义(ADR-0006) |
+| 这是不是"自研一套"? | ❌ 不是。Google 的 polyfill 即 Web Serial 原型实现,直接复用 |
+| 桌面开发自测怎么做? | **Linux/macOS 走 WebUSB**;**Windows 走 Web Serial**(V-18) |
+| 还需要实测什么? | 确切 `PID`、`claimInterface` 是否成功、polyfill 在本设备上是否工作(V-17) |
 
 ---
 
@@ -346,3 +455,4 @@ VCC-GND 在其官方 README 里专门列了**山寨/翻新板的危害**,其中�
 3. DeepSeek 宣布模型改名或 API 版本变更
 4. 决定增加/替换射频模块
 5. 进入实现阶段前(作为门禁)
+6. **控制载体或 USB 访问方式变更**(F-7):例如改为原生 App、改为 CH343P 通路、或把 Web Serial 提升为基线 —— 后两者会改变最低浏览器版本要求(见 F-7-3)
