@@ -1,6 +1,8 @@
 # RF-Lab 协议 JSON Schema(机器可读镜像)
 
-状态:`draft` · 契约版本:`v1.1` · 镜像的协议文档修订:`sha256:9659d6be34c49e3c2295ebf0ce55c062b06554f61bbba282edd089b6002089ef`
+状态:`draft` · 契约版本:`v1.1` · 镜像的协议文档修订:`sha256:df9b4929b1133f71b0bc66697416c99f85a17de14fe5bff16bda8149a17d1433`
+
+> **本次镜像变更记录(2026-09-21,`df9b4929…`)**:**schema 文件一个字节都没改。** 契约文档的改动是**非目标声明** —— 用户取消「无人值守远程部署」后,**"设备侧离线记录 / 回读"由"待决"转为"显式非目标"**(契约 §9),并删掉 §9.1 里那一行重复登记。由于该能力**从未定义过任何消息**(它一直是"未定义/推迟到 v1.2"),本次契约修订**不涉及任何字段、消息或 `$defs`** ⇒ **机器可读镜像保持不变**,仅重 pin 文档 sha256。⚠️ **不要**因为镜像 hash 变了就去找 schema 的 diff —— 那里没有 diff。
 
 > **镜像修订变更记录**:上一版镜像 `d33d5e8b…`(2026-09-21 C-11 + OLED 延期)。本次镜像 `9659d6be…`,对应契约 2026-09-21 的追加修订(**NQ-01/NQ-03 定稿**):**① §7.1(1) 首次配对定稿为「只走 USB」** —— `pair_code` 在 USB 上不校验,BLE 配对一律回 `pair_error:"no_display"`;`pairing_secret` 的下发信道由「BLE 或 USB」收窄为**仅 USB**;**② §4 功率口径改为「所有模块各自满功率出厂 + 可由 App 调节」**(C-11 修订 + C-12),`policy.tx_power_cap_dbm` 明确为**设备级全局最大值**,有效上限 = `min(请求, cap, 模块 tx_max_dbm)`;**③ §3.7 新增可选字段 `TX_STATUS.granted_power_dbm`**(唯一一处**字段集合变化**;原契约要求审计记"实际生效功率"却无承载字段,而 schema 为 `additionalProperties:false` ⇒ 固件照契约实现反而回报不了)。帧格式未变、`VER` 不变,仍为 36 消息 + 30 `$defs`;新增字段为**可选**,对既有实现向后兼容。
 
@@ -343,3 +345,4 @@ check-jsonschema --schemafile protocol/schemas/msg-hello.schema.json payload.jso
 | 2026-09-20 | **v1.1 收口**(镜像 `1afe4f02…`,按协调者定稿 delta):`errorCode` 增 `arm_timeout`(12 项);`rawSemantics` 增第三值 `unknown`;新增 `$defs.pairError`;`msg-hello` 增可选 `pairing`+`pair_code`;`msg-hello_ack` 增 `last_accepted_seq` 与配对字段(`pair_ok`/`first_bond`/`pairing_secret`/`pair_error`,均可选);`msg-tx_request` 增可选 `armed_ack`,`txMod` 描述按 §3.7 正文改写;`confidence` 改为可空(`["number","null"]`);**`features.required` 收缩为 v1 的 14 项**(§3.6 规则 5)。共 36 消息 + 29 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
 | 2026-09-21 | **NQ-01(A 方案)+ NQ-03 的镜像同步**(镜像 `9659d6be…`):`msg-tx_status` 新增**可选** `granted_power_dbm`(`$ref` → `$defs.powerDbm`);`msg-hello` / `msg-hello_ack` 的配对字段语义改为「配对只走 USB、`pair_code` 不校验」;**未新增/删除消息,未改帧格式**,`VER` 不变,仍为 36 消息 + 30 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
 | 2026-09-21 | **C-11 + OLED 延期的镜像同步**(镜像 `d33d5e8b…`;该值随契约文档头日期同步更新,见上):`$defs.pairError` 增第 5 值 **`no_display`**;`powerDbm` / `policy.tx_power_cap_dbm` 的描述改为出厂 **20**(原 10);`$defs.powerDbm` 与 README 的枚举对照表同步。**未新增/删除消息,未改帧格式**,故 `VER` 不变,仍为 36 消息 + 30 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
+| 2026-09-21 | **取消无人值守的镜像同步**(镜像 `df9b4929…`):**本次 schema 无任何改动** —— 契约侧只是把"设备侧离线记录/回读"从待决项写成 **§9 非目标**(该能力从未定义过消息)。仅重 pin 文档 sha256。仍为 36 消息 + 30 `$defs`。校验:`python3 tools/validate_schemas.py` 退出码 **0** |
