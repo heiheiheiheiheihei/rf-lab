@@ -5,6 +5,8 @@ build/
 .piolibdeps/
 sdkconfig
 sdkconfig.old
+# PlatformIO 按环境名生成(如 sdkconfig.esp32s3);真源是 sdkconfig.defaults
+sdkconfig.*
 *.bin
 *.elf
 *.map
