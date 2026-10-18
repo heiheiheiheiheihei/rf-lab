@@ -34,3 +34,10 @@ void led_note_link_activity(void);
 
 /* 启动指示任务(独立低优先级任务,避免挤占射频时序,见 §2.7 纪律 3)。 */
 void led_start(void);
+
+/* 上电自检:红→绿→蓝各 250ms,然后**显式写黑**。
+ *
+ * 只用于 bring-up(RFLAB_LED_SELFTEST 编译开关)。它回答的是 TC-106 / R-18:
+ * 「这块载板是不是正品 —— 2812 信号有没有焊」。⚠️ 必须写在 led_start() 之前,
+ * 否则 monitor 任务会立刻把颜色改回去。 */
+void led_selftest(void);

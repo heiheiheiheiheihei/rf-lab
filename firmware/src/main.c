@@ -358,6 +358,10 @@ void app_main(void)
 
     /* 2. 本地指示:先写黑(KILL 态),再按状态切换。 */
     led_init();
+#ifdef RFLAB_LED_SELFTEST
+    /* 载板正品检查(TC-106 / R-18):能看见红→绿→蓝 = 2812 信号已焊。 */
+    led_selftest();
+#endif
     led_set_state(LED_STATE_KILL);
     led_start();
 

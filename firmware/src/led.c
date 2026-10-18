@@ -190,3 +190,15 @@ void led_start(void)
     /* 低优先级、独立任务:不让 LED 刷新去挤射频时序(硬件文档 §2.7 纪律 3)。 */
     xTaskCreate(led_task, "led", 3072, NULL, 4, NULL);
 }
+
+void led_selftest(void)
+{
+    static const rgb_t seq[3] = {{64, 0, 0}, {0, 64, 0}, {0, 0, 64}};
+
+    for (int i = 0; i < 3; i++) {
+        ws2812_write(seq[i]);
+        vTaskDelay(pdMS_TO_TICKS(250));
+    }
+    /* ⚠️ 自检结束必须**写黑**,不能靠"不写了"—— WS2812 停更会保持最后颜色。 */
+    ws2812_write(COL_OFF);
+}

@@ -1,7 +1,18 @@
 # 固件(阶段 1 骨架)
 
-**状态:编译通过(`pio run` = SUCCESS),但尚未在实机上烧录/验证 —— USB 链路当前枚举失败(见 §5)。**
-未上机的代码不能被当作"已工作"。本文件的"已实现/未实现"两栏就是用来防这个的。
+**状态:已上机跑通(2026-10-18)。** 经 CH343P 口烧录成功、`Hash of data verified`,
+并从 UART0 抓到启动日志:
+
+```
+I (207) efuse_init: Chip rev: v0.2
+I (292) main_task: Calling app_main()
+# RF-Lab fw=0.1.0 proto=1 device=RFLAB-7AA8 boot
+# RF_KILL=asserted(禁止发射)  modules: not probed
+# ready
+```
+
+**但协议链路(原生 USB)尚未验证** —— 本板两个口的行为与预期不同,见 §5。
+"能启动"与"App 能连上"是两件事,不能用一个的通过去代替另一个。
 
 - 框架:**ESP-IDF 5.5.5**(PlatformIO,`espressif32` 55.03.311)·
   目标 ESP32-S3(**N16R8**,板 VCC-GND YD-ESP32-S3 / HW678)
@@ -48,21 +59,46 @@ export PATH="$HOME/.platformio/penv/bin:$PATH"
 cd firmware && pio run -e esp32s3          # 产物:.pio/build/esp32s3/firmware.bin
 ```
 
-## 4. 烧录
+## 4. 烧录与看日志
 
 ```bash
-pio run -e esp32s3 -t upload                       # 自动找口
-pio run -e esp32s3 -t upload --upload-port /dev/ttyACM0
-pio device monitor                                  # 看启动日志(115200)
+export PATH="$HOME/.platformio/penv/bin:$PATH"
+pio run -e esp32s3 -t upload --upload-port /dev/ttyACM0   # 实测可用(经 CH343P)
+pio device monitor --port /dev/ttyACM0                    # 115200,UART0 日志
 ```
 
-⚠️ **不要让 esptool 自动选口。** 本机在没有目标设备时会把主板自带的 `/dev/ttyS0`
-当成上传口,报一个与真正原因无关的 "Failed to connect / No serial data received"。
-排查时先看 `lsusb` 里有没有 `303a:xxxx`。
+**两个 USB 角色是分开的**(这是有意设计,见 `sdkconfig.defaults` 注释):
 
-## 5. 当前阻塞:USB 链路枚举失败
+| 外设 | 用途 | 宿主侧 |
+|---|---|---|
+| UART0(GPIO43/44)← CH343P | **日志**(控制台) | `/dev/ttyACM0` |
+| 原生 USB Serial/JTAG | **契约 §2 帧流**(给 App) | 期望 `303a:xxxx`,尚未验证 |
 
-宿主内核持续重试而**从未成功枚举过一次**:
+⚠️ 不要把两者塞进同一个外设:那样一旦固件/链路出问题,就**既拿不到日志也拿不到协议**,
+现场完全瞎掉。本板正好经历过这个状态。
+⚠️ 也**不要**让 esptool 自动选口 —— 它会挑主板自带的 `/dev/ttyS0`,报一个与真实原因无关的错。
+
+## 5. 实测:本板两个 Type-C 口的真实身份(2026-10-18)
+
+原来的假设是"标注 OTG 的口 = 原生 USB"。**实测推翻了它。**
+
+| 口 | 实测枚举结果 | 结论 |
+|---|---|---|
+| 标注 **OTG** 的那个 | `1a86:55d3 QinHeng Electronics USB Single Serial` → `/dev/ttyACM0`(cdc_acm) | **CH343P 桥**,通 UART0。**不是**原生 USB |
+| 另一个口 | 反复 `error -71`、`Device not responding to setup address`,**从未成功枚举** | 原生 USB 通路,状态未知(V-19 / V-20) |
+
+关键反证:**两次都插在同一个主机口 `1-2`**(内核日志确认),而第二次(CH343P)枚举成功 ⇒
+**线材与主机口都是好的**,失败只与板子那个口有关。
+
+这条也是 F-4d-4 已登记风险的一个实例:**丝印文字不可作为电气通路的证据**。
+接线与选口一律以枚举出的 `VID:PID` 为准。
+
+> ⚠️ 因此下面两件事**必须分开看**:
+> - "固件能跑" —— 已证实(§ 顶部日志)
+> - "App 能连上" —— **未**证实:它要求原生 USB 枚举出 `303a:xxxx`。这正是
+>   `V-17 / TC-074a` 的前置条件,也是 ADR-0003 / ADR-0006 的地基。
+
+### 5.1 当时失败的日志形态
 
 ```
 usb 1-2: new full-speed USB device number 85 using xhci_hcd
@@ -72,13 +108,15 @@ usb usb1-port2: attempt power cycle
 ```
 
 判读:**设备在电气上确实被检测到**(D+ 上拉 → 主机看到 full-speed 设备),
-但**从不回应地址 0 的描述符请求**。这排除了两件事:
+但**从不回应地址 0 的描述符请求**。据此可排除:
 
 - ❌ 纯充电线 —— 那会**完全检测不到设备**
-- ❌ 板上 `USB-OTG` 焊桥断开(V-19)—— 连接不通时同样**检测不到**
+- ❌ 板上 `USB-OTG` 焊桥**断开**(V-19)—— 连接不通时同样**检测不到**
 
-⇒ 剩下的方向是:线材/接触不良、供电不足、或芯片在枚举期间反复复位。
-`old_scheme_first=1` 与延长 `initial_descriptor_timeout` 均无效(已回退),符合物理层判断。
+⇒ 剩下:连接器虚焊/接触不良、供电不足、或芯片在该状态下未使能 USB PHY。
+
+`old_scheme_first=1` 与延长 `initial_descriptor_timeout` 均无效(已回退内核参数),
+符合"物理层"而非"枚举策略"的判断。
 
 ## 6. 上机后要跑的自检
 
