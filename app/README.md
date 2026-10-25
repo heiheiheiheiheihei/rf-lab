@@ -1,19 +1,17 @@
-# 手机 App(占位)
+# 手机 App(占位,本批不实现)
 
-**本目录当前是占位,不含任何实现。** 设计阶段只产出设计文档。
+本目录当前只有说明,不含实现。App 侧设计(载体、连接/配对、UI、AI 链路)见:
 
-- App 设计见 [`../docs/40-app/010-mobile-app-design.md`](../docs/40-app/010-mobile-app-design.md)
-- AI 链路见 [`../docs/50-ai/010-deepseek-analysis.md`](../docs/50-ai/010-deepseek-analysis.md)
-- 协议契约见 [`../docs/30-protocol/010-device-app-protocol.md`](../docs/30-protocol/010-device-app-protocol.md)
+- [`../docs/05-app-ai.md`](../docs/05-app-ai.md) — App + DeepSeek 分析
+- [`../docs/04-protocol.md`](../docs/04-protocol.md) — 设备 ↔ App 协议契约
 
-## 关键决策待办
+## 已定结论
 
-载体选型(PWA / Flutter / RN)受一个硬事实影响:**iOS 全平台不支持 Web Bluetooth**。
-若必须覆盖 iPhone 的 BLE 近距控制,则纯 PWA 不可行。详见 App 设计文档的载体选型章节。
-
-**本机环境**:Flutter/Dart 未安装;Node v22 + npm 已装。
+- **仅 Android**,载体为 PWA;**WebUSB 基线 + `web-serial-polyfill`**(不是 Web Serial 基线)。
+- **本批唯一控制通道是 USB(CH343P,VID:PID = `1a86:55d3`)**;BLE / Wi-Fi 已移出本批(能力定义保留)。
+- 首次配对只走 USB,不需要一次性 `pair_code`。
 
 ## 安全红线
 
-- DeepSeek API Key **只存于 App**,绝不写入设备或本仓库
-- 发射必须经用户二次确认 + 短时 HMAC 令牌,禁止自动发射
+- DeepSeek API Key **只存于 App**,绝不写入设备或本仓库。
+- 发射必须经用户二次确认 + 短时 HMAC 令牌,禁止自动发射。

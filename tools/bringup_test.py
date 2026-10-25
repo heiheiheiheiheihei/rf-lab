@@ -23,7 +23,7 @@
     python3 tools/bringup_test.py --raw           # 打印收到的每一帧
     python3 tools/bringup_test.py --no-reset      # 不复位(设备已在跑时用)
 
-协议权威:docs/30-protocol/010-device-app-protocol.md §2/§3.1/§4
+协议权威:docs/04-protocol.md §2/§3.1/§4
 """
 
 from __future__ import annotations

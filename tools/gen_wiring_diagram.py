@@ -3,7 +3,7 @@
 """
 接线图生成器 —— 单一数据源。
 
-目的:让「引脚分配」只有一处定义。docs/10-hardware/010-system-architecture.md §2.3 的
+目的:让「引脚分配」只有一处定义。docs/02-hardware.md §3 的
 引脚表 → 本文件的 PINS → 生成 SVG 接线图 与 Markdown 接线说明。**三者不必手工对齐**,
 因为后两者都是从 PINS 派生的;改一处而忘另一处这种错在本流程里不可能发生。
 
@@ -25,16 +25,16 @@ import sys
 
 # ============================================================================
 # 单一数据源
-# 依据:docs/10-hardware/010-system-architecture.md §2.3(【建议】,尚未冻结为最终板图)
-# 纪律:改这里之前先改 §2.3 文档;文档是权威,本表是它的可执行镜像。
+# 依据:docs/02-hardware.md §3(引脚分配)
+# 纪律:改这里之前先改 docs/02-hardware.md §3;文档是权威,本表是它的可执行镜像。
 # ============================================================================
 
-# (GPIO, 方向, 信号, 分组, 备注)  —— 这些是**计入 21 根占用**的引脚
+# (GPIO, 方向, 信号, 分组, 备注)  —— 这些是**计入 20 根占用**的引脚
 PINS = [
-    # 共享 SPI2 总线(IO_MUX 直连)
+    # 共享 SPI2 总线:GPIO12 是 IO_MUX 的 FSPICLK;13/14 不是 IO_MUX 默认脚,走 GPIO 矩阵
     (12, "out", "SPI2 FSPICLK → SCK",  "spi", "IO_MUX 直连,时序最优"),
-    (13, "out", "SPI2 FSPID → MOSI",   "spi", "IO_MUX 直连"),
-    (14, "in",  "SPI2 FSPIQ → MISO",   "spi", "IO_MUX 直连"),
+    (13, "out", "SPI2 FSPID → MOSI",   "spi", "GPIO 矩阵路由"),
+    (14, "in",  "SPI2 FSPIQ → MISO",   "spi", "GPIO 矩阵路由"),
     # M1 · AS10-M4463D-SMA(Si4463)
     (15, "out", "M1 CS",   "m1", "片选,低有效"),
     (18, "in",  "M1 GDO0", "m1", "中断输入(GDO1/nIRQ 可留空)"),
@@ -63,7 +63,7 @@ PINS = [
     (38, "in",  "配对按键", "btn", "内部上拉,低有效;外并 100nF 去抖"),
 ]
 
-# USB 复用内建控制器,**不新增占用**(见 §2.3)
+# USB 复用内建控制器,**不新增占用**(见 docs/02-hardware.md §3.3)
 USB_PINS = [
     (19, "io", "USB D−", "usb", "USB Serial/JTAG,内部 PHY"),
     (20, "io", "USB D+", "usb", "⚠️ 不可配成 USB-OTG 外设用途"),
@@ -218,11 +218,11 @@ def build_svg():
                     'fill="#fffbeb" stroke="#fcd34d"/>')
     s.chrome.append(
         '<text x="56" y="107" font-family="%s" font-size="12.5" fill="#92400e">'
-        '⚠️ 本图是【建议】布线的可执行镜像,不是最终板图;引脚以 '
-        'docs/10-hardware/010-system-architecture.md §2.3 为准。</text>' % CJK)
+        '⚠️ 本图是布线的可执行镜像,不是最终板图;引脚以 '
+        'docs/02-hardware.md §3 为准。</text>' % CJK)
     s.chrome.append(
         '<text x="56" y="125" font-family="%s" font-size="12.5" fill="#92400e">'
-        '改动纪律:①改 §2.3 文档 → ②改 tools/gen_wiring_diagram.py 的 PINS → '
+        '改动纪律:①改 docs/02-hardware.md §3 → ②改 tools/gen_wiring_diagram.py 的 PINS → '
         '③重跑生成器。三处一致性由脚本强制。</text>' % CJK)
 
     # ---------------- ① 引脚分配 ----------------
@@ -256,7 +256,7 @@ def build_svg():
                 y += ROWH
         gcol = GROUPS["usb"][1]
         s.rect(12, y - 15, 1136, ROWH * 2, fill="#faf5ff", stroke="#e9d5ff", rx=4)
-        s.text(26, y, "USB 复用内建控制器(不新增占用,见 §2.3)", size=11.5,
+        s.text(26, y, "USB 复用内建控制器(不新增占用,见 docs/02-hardware.md §3.3)", size=11.5,
                weight="bold", fill=gcol)
         y += ROWH
         for pin, direction, sig, _g, note in USB_PINS:
@@ -455,14 +455,14 @@ def build_markdown():
     A = L.append
     A("# 接线图与引脚分配")
     A("")
-    A("状态:`draft` · 最后更新:2026-09-20 · 上游依据:"
-      "[`docs/10-hardware/010-system-architecture.md`](../../docs/10-hardware/010-system-architecture.md) §2.3、"
-      "[`docs/adr/0003-usb-wired-control-channel.md`](../../docs/adr/0003-usb-wired-control-channel.md)")
+    A("状态:`draft` · 最后更新:2026-10-25 · 上游依据:"
+      "[`docs/02-hardware.md`](../../docs/02-hardware.md) §3、"
+      "[`docs/01-product.md`](../../docs/01-product.md) §8")
     A("")
     A("> ⚠️ **本文件与 [`wiring-diagram.svg`](wiring-diagram.svg) 均由 "
       "[`tools/gen_wiring_diagram.py`](../../tools/gen_wiring_diagram.py) 生成,不要手工编辑。**")
-    A("> 引脚分配的权威是 `docs/10-hardware/010-system-architecture.md` §2.3;"
-      "本文件是它的可执行镜像。要改引脚:**先改 §2.3 文档 → 再改生成器的 `PINS` → 重跑生成器**。")
+    A("> 引脚分配的权威是 `docs/02-hardware.md` §3;"
+      "本文件是它的可执行镜像。要改引脚:**先改 `docs/02-hardware.md` §3 → 再改生成器的 `PINS` → 重跑生成器**。")
     A("> 生成器的自检会在「占用根数 ≠ 20」或「同一 GPIO 被分配两次」时退出 1,"
       "所以图、表与文档不可能悄悄漂移。")
     A("")
@@ -584,15 +584,15 @@ def build_markdown():
     A("> ⚠️ **图中把 2.4G 模块轨串在 GPIO8 的使能链上,而文档表格只写了 `EN ← GPIO6`**。"
       "两者不矛盾,但必须按本图读:GPIO6 是**软件**使能,AND 输出才是 **LDO-C 的 EN**(见下方依据)。")
     A("")
-    A("- **门控的是「PA 轨的 LDO 使能」,不是模块单独的 PA 脚** —— 这一点由固件文档写死,不是我选的:"
-      "[`docs/20-firmware/010-firmware-architecture.md`](../../docs/20-firmware/010-firmware-architecture.md) §6 的发射链 `[7] 硬件门控` 写明"
+    A("- **门控的是「PA 轨的 LDO 使能」,不是模块单独的 PA 脚** —— 这一点由硬件文档写死,不是我选的:"
+      "[`docs/02-hardware.md`](../../docs/02-hardware.md) §4 的发射门控写明"
       "「`KILL` 引脚 + 2.4GHz 总闸,**软件两路都置位才可能发射**」,理由是"
       "「即使固件被换成恶意版本,**KILL 未释放时 PA 轨仍无电**」。**PA 轨无电**这个措辞只在「门控 LDO EN」下成立。")
     A("- **为什么 M3 要单独一条门控链**:RFX2401C 是 20dBm PA,会压掉本机 Wi-Fi/BLE(R-01)。"
       "因此使能**必须**是「软件想开」**且**「硬件 KILL 未拉低」的逻辑与 —— 单靠软件置位不足以称为门控。")
     A("- **KILL 必须外部下拉**:上电、复位、MCU 崩溃期间 KILL 悬空会被读成高 ⇒ 意外允许发射。")
-    A("- ⚠️ **`RF_KILL` 在协议契约里根本没有定义** —— 它只存在于硬件文档 §2.3(GPIO8)"
-      "与固件文档(§6 步骤 [7]、§9 中止路径)。"
+    A("- ⚠️ **`RF_KILL` 在协议契约里根本没有定义** —— 它只存在于硬件文档 §3.3/§4(GPIO8)"
+      "与固件文档(启动顺序与已知缺口)。"
       "**这是一处归属缺口**:一个安全相关信号没有任何契约字段或状态可观测,"
       "App 无法查询门控是否处于 `KILL`;OLED 本要显示它,而 OLED 又延期 ⇒ 本批完全不可观测。"
       "建议补进契约的 `STATUS`/`CAPS`,否则「显示门控状态」这条需求没有数据来源。")
@@ -662,9 +662,9 @@ def self_check():
     occupied = len(PINS)
     margin = len(POOL) - occupied
     if occupied != EXPECT_OCCUPIED:
-        errs.append("占用根数 %d ≠ 文档 §2.3 的 %d" % (occupied, EXPECT_OCCUPIED))
+        errs.append("占用根数 %d ≠ docs/02-hardware.md §3 的 %d" % (occupied, EXPECT_OCCUPIED))
     if margin != EXPECT_MARGIN:
-        errs.append("余量 %d ≠ 文档 §2.3 的 +%d" % (margin, EXPECT_MARGIN))
+        errs.append("余量 %d ≠ docs/02-hardware.md §3 的 +%d" % (margin, EXPECT_MARGIN))
     for m in MODULES:
         for k in ("cs", "irq", "en"):
             if m[k] not in seen:
@@ -740,7 +740,7 @@ def main():
         for e in errs:
             print("  ✗ " + e, file=sys.stderr)
         return 1
-    print("✓ 数据自检通过:占用 %d / 可用池 %d / 余量 +%d(与文档 §2.3 一致)"
+    print("✓ 数据自检通过:占用 %d / 可用池 %d / 余量 +%d(与 docs/02-hardware.md §3 一致)"
           % (occupied, len(POOL), margin))
 
     # 几何自检也纳入 --check,这样改完布局不必再手工验一遍(压字在缩略图上看不出来)

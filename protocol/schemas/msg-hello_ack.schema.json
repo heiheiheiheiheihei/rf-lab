@@ -30,7 +30,7 @@
     },
     "last_accepted_seq": {
       "type": "integer",
-      "description": "设备已接受的最大发射 seq(§7.1(1.2);令牌里以 seq_be32 参与 HMAC)。App 每次成功 HELLO 后须把本地计数器置为 max(本地值, last_accepted_seq),否则重装/换机后本地 seq 从 0 重新开始会被设备**永久拒绝**(tx_bad_token)且用户无法自救;重新配对会把该基线归零。文档 §7.1(1.2) 称其为**必须字段**,本 schema 出于向后兼容登记为可选——二者张力见 protocol/schemas/README.md §7。",
+      "description": "设备已接受的最大发射 seq(§7.1(1.2);令牌里以 seq_be32 参与 HMAC)。App 每次成功 HELLO 后须把本地计数器置为 max(本地值, last_accepted_seq),否则重装/换机后本地 seq 从 0 重新开始会被设备**永久拒绝**(tx_bad_token)且用户无法自救;重新配对会把该基线归零。契约 §7.1(1.2) 表述为设备**应**回传(SHOULD),本 schema 登记为可选。",
       "minimum": 0,
       "maximum": 4294967295
     },

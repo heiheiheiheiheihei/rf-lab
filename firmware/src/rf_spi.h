@@ -1,9 +1,9 @@
 /*
- * rf_spi.h — 三模块共享的 SPI2 总线(硬件文档 §2.3 / 接线文档 §4)
+ * rf_spi.h — 三模块共享的 SPI2 总线(硬件文档 §3.2 / 接线文档)
  *
  * 事实来源:
- *   docs/10-hardware/010-system-architecture.md §2.3(引脚表)
- *   hardware/wiring/README.md §4(共享 SPI2 总线)
+ *   docs/02-hardware.md §3(引脚表)
+ *   hardware/wiring/README.md(共享 SPI2 总线)
  *
  * ⚠️ 为什么 CS 用软件(不是硬件 CS):
  *   射频侧是**一条总线 + 3 个片选**。用硬件 CS 需要每个设备一份 spi_device,
@@ -22,7 +22,7 @@
 #define RF_SLOT_M2 2 /* CC1101 */
 #define RF_SLOT_M3 3 /* nRF24L01P */
 
-/* 共享 SPI2(硬件文档 §2.3,IO_MUX 直连) */
+/* 共享 SPI2(docs/02-hardware.md §3.2;仅 SCK12 走 IO_MUX,13/14 走 GPIO 矩阵) */
 #define PIN_SPI_SCK  12
 #define PIN_SPI_MOSI 13
 #define PIN_SPI_MISO 14
