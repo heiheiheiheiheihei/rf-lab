@@ -46,6 +46,12 @@ esp_err_t rf_spi_init(void);
  * rx 可为 NULL(只发不收);tx 可为 NULL(只收,发 0x00)。 */
 esp_err_t rf_spi_xfer(int slot, const uint8_t *tx, uint8_t *rx, size_t len);
 
+/* 同上,但可指定 CS 拉低到第一个 SCLK 之间的建立时间。
+ * ⚠️ CC1101 要求 CSn 拉低后等 SO 变低(CHIP_RDYn)再给时钟;数据手册 Table 22
+ *    在"不读 CHIP_RDYn"时给的最小 tSP,pd 是 **150µs**。普通事务 1µs 不够。 */
+esp_err_t rf_spi_xfer_setup(int slot, const uint8_t *tx, uint8_t *rx, size_t len,
+                            uint32_t cs_setup_us);
+
 /* --- 接线诊断(在任何 SPI 初始化之前调用)--------------------------------
  * 三块模块同时读回 `0xFF` 时,无法区分三种原因:
  *   ① MISO 根本没接到模块   ② 模块没供电(高阻)   ③ 有东西把 MISO 硬拉高
@@ -66,3 +72,10 @@ void rf_wire_check(rf_wire_t *out);
 void rf_cs_set(int slot, int level);   /* 1 = 释放(高), 0 = 选中(低) */
 void rf_miso_pull(int mode);           /* 0=浮空 1=上拉 2=下拉 */
 int  rf_miso_level(void);
+
+/* --- 收尾自检 ---
+ * 释放 SPI 外设并把 MOSI/MISO 当普通 GPIO 用。
+ * 现场用一根短接线把 GPIO13(MOSI)–GPIO14(MISO) 短接后,期望 hi=1、lo=0。
+ * 不需要保留 SPI 总线:探测在启动时一次性完成。 */
+void rf_spi_deinit(void);
+void rf_loopback_test(int *hi, int *lo);

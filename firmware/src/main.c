@@ -385,25 +385,10 @@ static void rf_kill_assert_at_boot(void)
 }
 
 
-/* ⚠️ 现场接线偏离设计(2026-10-25 实测):
- *   AS10-M4463D 的 SDN(模块第 2 脚)被接到了 **GPIO18**,而设计里 GPIO18 是 M1 的 IRQ。
- *   手册要求 SDN **工作时为低电平**;GPIO18 不驱动时悬空 ⇒ 芯片 shutdown ⇒ SPI 全 0xFF。
- *   这里先把 GPIO18 驱动为低,让模块上电,以便完成探测/联调。
- * 🔴 正式接线必须把 SDN **直接接 GND**,把 GPIO18 腾出来给 IRQ —— 否则中断功能永远不可用。 */
-#define PIN_SDN_WORKAROUND 18
-static void sdn_workaround(void)
-{
-    gpio_config_t io = {
-        .pin_bit_mask = (1ULL << PIN_SDN_WORKAROUND),
-        .mode         = GPIO_MODE_OUTPUT,
-        .pull_up_en   = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type    = GPIO_INTR_DISABLE,
-    };
-    gpio_config(&io);
-    gpio_set_level(PIN_SDN_WORKAROUND, 0);
-    esp_rom_delay_us(3000);
-}
+/* 2026-10-25 现场已按接线文档把 AS10 的 SDN(模块第 2 脚)直接接到 **GND**,
+ *   GPIO18 归还给 M1 IRQ(本阶段探测用不到中断,先不配置)。
+ *   上一版的 GPIO18→SDN workaround 已删除 —— SDN 接地后若再把 GPIO18 驱动为输出低,
+ *   会与模块的 nIRQ 输出顶牛。 */
 
 static void make_device_id(void)
 {
@@ -491,7 +476,8 @@ static void send_banner(bool pairing_ok)
                      "# spi   M1 pullup=0x%02X pulldown=0x%02X -> %s\r\n"
                      "# spi   M2 pullup=0x%02X pulldown=0x%02X -> %s\r\n"
                      "# probe M2 cc1101   partnum=0x%02X version=0x%02X present=%d\r\n"
-                     "# probe M3 nrf24l01 config=0x%02X status=0x%02X present=%d\r\n",
+                     "# probe M3 nrf24l01 config=0x%02X status=0x%02X present=%d\r\n"
+                     "# loop  MOSI13->MISO14 hi=%d lo=%d -> %s\r\n",
                      RFLAB_FW_VERSION, RFLAB_VER, s_device_id,
                      (int)RFLAB_UART_BAUD,
                      s_wire.miso_pd, s_wire.miso_pu, wire_v,
@@ -502,17 +488,19 @@ static void send_banner(bool pairing_ok)
                      s_probe.m[0].cs_pu, s_probe.m[0].cs_pd, drive_verdict(&s_probe.m[0]),
                      s_probe.m[1].cs_pu, s_probe.m[1].cs_pd, drive_verdict(&s_probe.m[1]),
                      s_probe.m[0].spi_up, s_probe.m[0].spi_down,
-                     (s_probe.m[0].spi_up != s_probe.m[0].spi_down)
-                         ? "SPI采样正常(读回跟着上下拉走=线上无人驱动)"
-                         : "SPI采样异常(读回不随上下拉变)",
+                     (s_probe.m[0].spi_up != s_probe.m[0].spi_down) ? "读回随上下拉变"
+                                                                    : "读回不随上下拉变",
                      s_probe.m[1].spi_up, s_probe.m[1].spi_down,
-                     (s_probe.m[1].spi_up != s_probe.m[1].spi_down)
-                         ? "SPI采样正常(读回跟着上下拉走=线上无人驱动)"
-                         : "SPI采样异常(读回不随上下拉变)",
+                     (s_probe.m[1].spi_up != s_probe.m[1].spi_down) ? "读回随上下拉变"
+                                                                    : "读回不随上下拉变",
                      s_probe.m[1].id0, s_probe.m[1].id1,
                      (int)s_probe.m[1].present,
                      s_probe.m[2].id0, s_probe.m[2].id1,
-                     (int)s_probe.m[2].present);
+                     (int)s_probe.m[2].present,
+                     s_probe.loop_hi, s_probe.loop_lo,
+                     (s_probe.loop_hi == 1 && s_probe.loop_lo == 0)
+                         ? "PASS(13-14 已短接,ESP32 侧 SPI 正常)"
+                         : "FAIL(未短接 13-14,或 GPIO13/14 损坏)");
     if (n <= 0) {
         return;
     }
@@ -596,7 +584,7 @@ void app_main(void)
     /* 5. 射频总线 + 三模块探测(阶段 2 第一步:先证明接线通,再谈驱动)。
      *    ⚠️ 探测全程只读、不发射;未连接的模块报 present=false 是预期。 */
     mark0("[2]pairing\r\n");
-    sdn_workaround();
+    /* SDN 已于 2026-10-25 接到 GND,这里不再驱动 GPIO18(见上面的说明)。 */
     /* 先判 MISO 有没有接到东西,再做 SPI —— 否则三块全 0xFF 时无从分辨原因。 */
     rf_wire_check(&s_wire);
     esp_err_t rf_err = rf_spi_init();

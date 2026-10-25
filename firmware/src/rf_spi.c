@@ -107,14 +107,15 @@ void rf_wire_check(rf_wire_t *out)
     /* 该脚随后由 spi_bus_initialize 接管 */
 }
 
-esp_err_t rf_spi_xfer(int slot, const uint8_t *tx, uint8_t *rx, size_t len)
+esp_err_t rf_spi_xfer_setup(int slot, const uint8_t *tx, uint8_t *rx, size_t len,
+                            uint32_t cs_setup_us)
 {
     if (slot < RF_SLOT_M1 || slot > RF_SLOT_M3 || len == 0 || len > 32) {
         return ESP_ERR_INVALID_ARG;
     }
     const int cs = s_cs_pin[slot - 1];
     gpio_set_level(cs, 0);
-    esp_rom_delay_us(1); /* tCS 建立时间 */
+    esp_rom_delay_us(cs_setup_us); /* tCS 建立时间 */
 
     spi_transaction_t t = {
         .length    = len * 8,
@@ -126,6 +127,11 @@ esp_err_t rf_spi_xfer(int slot, const uint8_t *tx, uint8_t *rx, size_t len)
     esp_rom_delay_us(1); /* tCS 保持时间 */
     gpio_set_level(cs, 1);
     return err;
+}
+
+esp_err_t rf_spi_xfer(int slot, const uint8_t *tx, uint8_t *rx, size_t len)
+{
+    return rf_spi_xfer_setup(slot, tx, rx, len, 1);
 }
 
 void rf_cs_set(int slot, int level)
@@ -147,4 +153,39 @@ void rf_miso_pull(int mode)
 int rf_miso_level(void)
 {
     return gpio_get_level(PIN_SPI_MISO);
+}
+
+void rf_spi_deinit(void)
+{
+    (void)spi_bus_free(SPI2_HOST);
+}
+
+void rf_loopback_test(int *hi, int *lo)
+{
+    /* MOSI 推挽输出、MISO 输入 + 内部下拉:没有短接时 hi 读到 0(区分于悬空)。 */
+    gpio_config_t out = {
+        .pin_bit_mask = (1ULL << PIN_SPI_MOSI),
+        .mode         = GPIO_MODE_OUTPUT,
+        .pull_up_en   = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&out);
+    gpio_config_t in = {
+        .pin_bit_mask = (1ULL << PIN_SPI_MISO),
+        .mode         = GPIO_MODE_INPUT,
+        .pull_up_en   = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&in);
+    esp_rom_delay_us(200);
+
+    gpio_set_level(PIN_SPI_MOSI, 1);
+    esp_rom_delay_us(200);
+    *hi = gpio_get_level(PIN_SPI_MISO);
+
+    gpio_set_level(PIN_SPI_MOSI, 0);
+    esp_rom_delay_us(200);
+    *lo = gpio_get_level(PIN_SPI_MISO);
 }

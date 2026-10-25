@@ -45,6 +45,11 @@ typedef struct {
 
 typedef struct {
     rf_mod_t m[3]; /* 0=M1(Si4463) 1=M2(CC1101) 2=M3(nRF24) */
+    /* 收尾自检:把 MOSI(13) 当输出、MISO(14) 当输入(内部下拉)。
+     * 若现场用一根短接线把 GPIO13–GPIO14 短接:hi=1 且 lo=0 ⇒ PASS,
+     * 说明 ESP32 侧 MOSI 输出 + MISO 输入 + GPIO 矩阵都正常,问题在模块/线上。 */
+    int loop_hi;
+    int loop_lo;
 } rf_probe_t;
 
 /* 跑一遍探测。总耗时约 10ms(含一次 CC1101 校准)。可重复调用。 */
