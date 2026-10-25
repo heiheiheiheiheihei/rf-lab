@@ -168,6 +168,19 @@ static void line_check(rf_mod_t *m, int slot)
     esp_rom_delay_us(100);
 }
 
+
+/* SPI 自证:换一种上下拉再发一次事务,看读回值是否跟着走。
+ * 用途是把"模块没响应"和"SPI 采样坏了"区分开 —— 两者的现象都是全 0xFF。 */
+static uint8_t line_sample(int slot, int pull)
+{
+    rf_miso_pull(pull);
+    esp_rom_delay_us(500);
+    const uint8_t tx[2] = {0xB1, 0x00}; /* 随便一个读命令,只为产生 16 个时钟 */
+    uint8_t rx[2] = {0, 0};
+    (void)rf_spi_xfer(slot, tx, rx, 2);
+    return rx[1];
+}
+
 void rf_probe_run(rf_probe_t *out)
 {
     if (out == NULL) {
@@ -180,6 +193,10 @@ void rf_probe_run(rf_probe_t *out)
     si4463_probe(&out->m[0]);
 
     rf_mod_t *m2 = &out->m[1];
+    out->m[0].spi_up   = line_sample(RF_SLOT_M1, 1);
+    out->m[0].spi_down = line_sample(RF_SLOT_M1, 2);
+    rf_miso_pull(0);
+
     line_check(m2, RF_SLOT_M2);
     cc1101_probe(m2);
     if (m2->present) {
@@ -190,6 +207,10 @@ void rf_probe_run(rf_probe_t *out)
                                                 &m2->rssi_raw[i]);
         }
     }
+
+    m2->spi_up   = line_sample(RF_SLOT_M2, 1);
+    m2->spi_down = line_sample(RF_SLOT_M2, 2);
+    rf_miso_pull(0);
 
     line_check(&out->m[2], RF_SLOT_M3);
     nrf24_probe(&out->m[2]);

@@ -26,7 +26,7 @@
 **代价(必须写在明处)**:
 
 1. **日志与控制共用 UART0** ⇒ 本版把控制台/日志整体关闭,协议独占这条流。
-   排障手段:① 复位后 **115200** 能看到 ROM/启动横幅;② 需要完整 IDF 日志时另编一版。
+   排障手段:① 复位后 **115200** 能看到 ROM bootloader 横幅;App 启动后的 `# RF-Lab` 横幅是 **921600**;② 需要完整 IDF 日志时另编一版。
 2. **失去 JTAG 调试**(原生 USB 同时是 JTAG 口)。
 3. **App 侧 WebUSB 过滤器要改**:`vendorId: 0x1a86, productId: 0x55d3`(原来是 `0x303a`)。
    ⚠️ CH343P 与原生 USB 都是 CDC-ACM —— 换的是**物理通路**,不是协议。
@@ -93,7 +93,8 @@ python3 ../tools/bringup_test.py --port /dev/ttyACM0      # 握手+能力+RTT,�
 等固件启动 → **打印启动横幅** → `HELLO` / `GET_CAPS` / `PING×3`。
 全程不发 `TX_REQUEST`、不碰 `RF_KILL`。
 
-**波特率**:横幅与协议帧**同为 921600**(本版不再有 115200 段)。
+**波特率**:App 横幅与协议帧**同为 921600**(2026-10-25 实测 ROM 输出路径也能跑 921600)。
+⚠️ 复位后 ROM bootloader 自己那几行仍是 115200,用 921600 打开会看到一小段乱码 —— 正常。
 横幅是 4 行以 `#` 开头的文本,只在启动时发一次;协议解析器只在 `MAGIC` 处开始,
 所以会把它们当噪声跳过。⚠️ 这是**刻意的**:控制台已关闭,若再没有横幅,
 设备出问题时就只剩"插上毫无反应"这一种现象,无法区分"没启动 / 启动失败 / 链路没起来"。
@@ -165,3 +166,67 @@ python3 ../tools/bringup_test.py --port /dev/ttyACM0      # 握手+能力+RTT,�
 | `# rssi ...` 三行 | CC1101 调谐 + 接收链路真的在工作 |
 
 ⚠️ 即便 `present=1`,也**只证明 SPI 读写通**,不证明射频性能(灵敏度/频偏/功率均未测)。
+
+## 9. 第二次联调记录(2026-10-25 复测,用户重接 CC1101/Si4463 后)
+
+**条件**:用户告知已按 [`../hardware/wiring/README.md`](../hardware/wiring/README.md) §3.1 重接
+AS07-M1101D(CC1101,M2)与 AS10-M4463D(Si4463,M1);M3 未接。
+固件:`0.2.0`,本次把 `transport_init()` 的波特率从 115200 改回 **921600**(见下),
+并带上一版未提交的 `spi_up/spi_down` 自证行。烧录:`pio run -t upload --upload-port /dev/ttyACM0`,Hash verified。
+
+**控制通道:✅ PASS(921600)**
+
+```
+HELLO_ACK: fw=0.2.0 proto=1 device=RFLAB-7AA8 chip=esp32s3
+CAPS: 槽1 si4463 / 槽2 cc1101 / 槽3 nrf24l01p,三个 present 均 false
+PING ×3: RTT = 1.7 / 1.9 / 3.5 ms
+```
+
+**模块探测:❌ 仍未通过(与 §8 相比,MISO 不再悬空,但读数仍不可信)**
+
+```
+# wire MISO 14: pd=0 pu=0 -> driven-LOW(被拉低)
+# probe M1 si4463   cts=0xFF part=0xFFFF present=0
+# line  M1 cs_pu=1 cs_pd=0 -> FLOATING(选中后仍无驱动:CS/MISO 没接或模块没上电)
+# line  M2 cs_pu=0 cs_pd=0 -> driven-LOW
+# spi   M1 pullup=0xFF pulldown=0x00 -> SPI采样正常(线上无人驱动)
+# spi   M2 pullup=0x0F pulldown=0x8F -> 读回随上下拉变化
+# probe M2 cc1101   partnum=0xFF version=0x34 present=0
+```
+
+**判读(证据 → 结论)**
+
+1. **M1 完全没驱动 MISO**:CS 拉低、内部上拉时读 1、下拉时读 0 ⇒ 选中后仍高阻。
+   ⇒ 要么 `NSEL` 没接到 GPIO15,要么 `SDN` 仍为高(shutdown,SPI 不可访问),
+   要么 AS10 的 **VCC(12 脚)/GND(1 脚)** 没接好。
+   ⚠️ 固件目前仍把 GPIO18 拉低当 SDN workaround(若 SDN 已按文档接 GND,这一步无害)。
+2. **M2 的 MISO 有驱动但数据不可信**:选中的瞬间 MISO 被拉低(不是悬空),
+   但读回值随 SPI 时钟/上下拉变化 —— `1MHz: 0xFF/0x34`、`100kHz: 0xE1/0x0F`、
+   (固件里临时对调 SCK/MOSI 后)`0x00/0x00`。正常 ID 响应不会这样。
+   ⇒ 更像 **共享 SPI 的 SCK/MOSI 没接对,或模块供电/地不良**,而不是帧协议解析问题。
+3. `wire ... driven-LOW` 是**在 `rf_spi_init()` 之前**(模块还没被 EN 上电)测的,
+   说明上电前 GPIO14 被钳在低电平 —— 与"模块经 SPI 引脚寄生供电/地没共好"一致。
+
+**本次做过的排除实验**(都未改变结论)
+
+| 实验 | 结果 |
+|---|---|
+| SPI 降到 100kHz + 上电后等 100ms | M2 仍为 `0xE1/0x0F`,不是 `0x00/0x14` |
+| 固件里临时对调 SCK/MOSI 引脚 | M2 变成恒 `0x00`,M1 仍全 `0xFF` ⇒ 不是"软件里反一下"就能救的接线错 |
+| 同一固件连续复位 3 次 | 读数逐字节稳定 ⇒ 不是随机噪声 |
+
+**需要的现场核对(按模块侧针脚,不要按 ESP32 排针位置数)**
+
+| 模块 | 必须核对 |
+|---|---|
+| AS10(Si4463) | 1=GND、**2=SDN→GND**、5=NSEL→GPIO15、6=MOSI→GPIO13、7=MISO→GPIO14、8=SCK→GPIO12、**12=VCC→3.3V** |
+| AS07(CC1101) | 1=GND、**2=VCC→3.3V**、4=CSN→GPIO16、5=SCK→GPIO12、6=MOSI→GPIO13、7=MISO→GPIO14 |
+| 共享/电源 | 两块模块的 GND 必须与 ESP32 **共地**;三根 SPI 分别并联到两块模块的同名脚;VCC 只能 1.8–3.6V |
+
+用万用表可一次判死:模块 VCC–GND 应为 **3.3V**,AS10 的 SDN–GND 应为 **0V**;
+GPIO12/13/14/15/16 到对应模块脚应导通。
+
+**顺带修复**:ROM 输出路径**并不限制** 115200 —— 本次把 `transport_init()` 改到 921600 后,
+`bringup_test.py` 用默认参数即 PASS(RTT 从 ~6ms 降到 ~2ms)。此前 §0 与 `sdkconfig.defaults`
+里"横幅只能 115200"的说法已更正。
+

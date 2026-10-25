@@ -36,6 +36,11 @@ typedef struct {
      * 不等 ⇒ 即使选中也悬空(CS/MISO 没接,或模块没上电)。 */
     int      cs_pu;
     int      cs_pd;
+    /* SPI 自证:MISO 加上拉 / 下拉各读一次。
+     * 0xFF / 0x00 两个极端 ⇒ SPI 采样通路正常,只是线上没人驱动;
+     * 两者相同(例如都 0xFF) ⇒ 采样没跟上,问题在 SPI 侧而不是模块侧。 */
+    uint8_t  spi_up;
+    uint8_t  spi_down;
 } rf_mod_t;
 
 typedef struct {

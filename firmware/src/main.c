@@ -425,11 +425,13 @@ static esp_err_t transport_init(void)
      *    而 ROM 的 UART 输出始终正常。为避免在根因未明时把产品堵死,本版走 ROM 路径:
      *      TX = esp_rom_output_putc()
      *      RX = esp_rom_output_rx_one_char() 轮询
-     *    代价:波特率沿用 ROM 的控制台速率(115200),高吞吐要等驱动问题查清后再提。 */
+     *    波特率:2026-10-25 实测 ROM 路径同样能跑 **921600**(此前"只能 115200"的判断是错的
+     *    —— 波特率由 uart_param_config 决定,ROM 输出不限制它)。注意复位后 ROM bootloader
+     *    自己的横幅仍是 115200,进 App 后才切到 921600。 */
     /* 配置 UART0 的引脚与格式(不安装驱动):RX 必须被显式路由到 GPIO44,
      * 否则 uart_ll 轮询读到的永远是空 FIFO。 */
     const uart_config_t cfg = {
-        .baud_rate  = 115200,
+        .baud_rate  = RFLAB_UART_BAUD, /* 2026-10-25 实测:ROM 路径也能跑 921600 */
         .data_bits  = UART_DATA_8_BITS,
         .parity     = UART_PARITY_DISABLE,
         .stop_bits  = UART_STOP_BITS_1,
@@ -486,6 +488,8 @@ static void send_banner(bool pairing_ok)
                      "# probe M1 si4463   cts=0x%02X part=0x%04X present=%d\r\n"
                      "# line  M1 cs_pu=%d cs_pd=%d -> %s\r\n"
                      "# line  M2 cs_pu=%d cs_pd=%d -> %s\r\n"
+                     "# spi   M1 pullup=0x%02X pulldown=0x%02X -> %s\r\n"
+                     "# spi   M2 pullup=0x%02X pulldown=0x%02X -> %s\r\n"
                      "# probe M2 cc1101   partnum=0x%02X version=0x%02X present=%d\r\n"
                      "# probe M3 nrf24l01 config=0x%02X status=0x%02X present=%d\r\n",
                      RFLAB_FW_VERSION, RFLAB_VER, s_device_id,
@@ -497,6 +501,14 @@ static void send_banner(bool pairing_ok)
                      (int)s_probe.m[0].present,
                      s_probe.m[0].cs_pu, s_probe.m[0].cs_pd, drive_verdict(&s_probe.m[0]),
                      s_probe.m[1].cs_pu, s_probe.m[1].cs_pd, drive_verdict(&s_probe.m[1]),
+                     s_probe.m[0].spi_up, s_probe.m[0].spi_down,
+                     (s_probe.m[0].spi_up != s_probe.m[0].spi_down)
+                         ? "SPI采样正常(读回跟着上下拉走=线上无人驱动)"
+                         : "SPI采样异常(读回不随上下拉变)",
+                     s_probe.m[1].spi_up, s_probe.m[1].spi_down,
+                     (s_probe.m[1].spi_up != s_probe.m[1].spi_down)
+                         ? "SPI采样正常(读回跟着上下拉走=线上无人驱动)"
+                         : "SPI采样异常(读回不随上下拉变)",
                      s_probe.m[1].id0, s_probe.m[1].id1,
                      (int)s_probe.m[1].present,
                      s_probe.m[2].id0, s_probe.m[2].id1,

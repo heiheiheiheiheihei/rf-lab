@@ -313,7 +313,8 @@ def main() -> int:
         fails.append("HELLO 无应答")
         print("  FAIL: 6s 内没有 HELLO_ACK")
         print("        ⇒ 先确认:① 固件是否已烧录;② 设备复位后是否正常启动;")
-        print("          ③ 用 115200 打开串口并复位,应能看到启动横幅 '# RF-Lab fw=…'。")
+        print("          ③ 用 921600 打开串口并复位,应能看到启动横幅 '# RF-Lab fw=…'")
+        print("             (复位后 ROM bootloader 的几行是 115200,会是乱码,正常)。")
     else:
         ack = _decode(got[1])
         print(f"  OK: fw={ack.get('fw_version')} proto={ack.get('proto')} "

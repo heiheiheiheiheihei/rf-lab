@@ -19,8 +19,9 @@ CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
 #
 # 代价(必须承认):控制与日志**不能再共用一条流**。这里选择让 UART0 归协议独占,
 # 控制台整体关闭 —— 日志是排障手段,协议是产品功能,不能为了日志牺牲协议。
-# 排障仍有两条路:① 启动横幅用 esp_rom_printf 在 **115200** 打一次(驱动装好后
-# 才切到协议波特率 921600);② 需要完整日志时用 -DRFLAB_DEBUG_CONSOLE 另编一版。
+# 排障仍有两条路:① 复位后 **115200** 能看到 ROM bootloader 横幅;App 启动后的
+# `# RF-Lab ...` 横幅与协议帧都在 **921600**(2026-10-25 实测:ROM 输出路径也能跑 921600)。
+# ② 需要完整 IDF 日志时用 -DRFLAB_DEBUG_CONSOLE 另编一版。
 CONFIG_ESP_CONSOLE_NONE=y
 CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_LOG_DEFAULT_LEVEL_NONE=y
@@ -28,7 +29,8 @@ CONFIG_LOG_DEFAULT_LEVEL_NONE=y
 #    它会把日志复制进原生 USB 设备,与"一个口一个角色"直接冲突(曾真实踩到)。
 
 # --- 串口监视 ----------------------------------------------------------
-CONFIG_ESPTOOLPY_MONITOR_BAUD_115200B=y
+# 与 App 的协议波特率一致;ROM bootloader 那几行是 115200,在监视器里会是乱码,属正常。
+CONFIG_ESPTOOLPY_MONITOR_BAUD_921600B=y
 
 # --- FreeRTOS ----------------------------------------------------------
 # 指示语的时序分辨率需要 ms 级 tick;1000Hz 让 WS2812 慢闪/快闪的占空比准确。
