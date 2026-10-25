@@ -127,3 +127,24 @@ esp_err_t rf_spi_xfer(int slot, const uint8_t *tx, uint8_t *rx, size_t len)
     gpio_set_level(cs, 1);
     return err;
 }
+
+void rf_cs_set(int slot, int level)
+{
+    if (slot >= RF_SLOT_M1 && slot <= RF_SLOT_M3) {
+        gpio_set_level(s_cs_pin[slot - 1], level ? 1 : 0);
+    }
+}
+
+void rf_miso_pull(int mode)
+{
+    switch (mode) {
+    case 1:  gpio_set_pull_mode(PIN_SPI_MISO, GPIO_PULLUP_ONLY);   break;
+    case 2:  gpio_set_pull_mode(PIN_SPI_MISO, GPIO_PULLDOWN_ONLY); break;
+    default: gpio_set_pull_mode(PIN_SPI_MISO, GPIO_FLOATING);      break;
+    }
+}
+
+int rf_miso_level(void)
+{
+    return gpio_get_level(PIN_SPI_MISO);
+}

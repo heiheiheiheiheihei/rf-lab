@@ -31,6 +31,11 @@ typedef struct {
     int      rssi_dbm[RF_PROBE_POINTS]; /* 仅在 rssi_ok 为真时有效 */
     uint8_t  rssi_raw[RF_PROBE_POINTS];
     bool     rssi_ok[RF_PROBE_POINTS];
+    /* 线检:CS 拉低时,MISO 用上拉/下拉各读一次。
+     * cs_pu == cs_pd ⇒ 有驱动源(模块在驱动这条线);
+     * 不等 ⇒ 即使选中也悬空(CS/MISO 没接,或模块没上电)。 */
+    int      cs_pu;
+    int      cs_pd;
 } rf_mod_t;
 
 typedef struct {

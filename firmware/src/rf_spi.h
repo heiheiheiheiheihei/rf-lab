@@ -60,3 +60,9 @@ typedef struct {
 } rf_wire_t;
 
 void rf_wire_check(rf_wire_t *out);
+
+/* 线检原语(供 rf_probe 判断"模块到底有没有驱动 MISO")。
+ * ⚠️ 只在诊断里用;正常事务一律走 rf_spi_xfer。 */
+void rf_cs_set(int slot, int level);   /* 1 = 释放(高), 0 = 选中(低) */
+void rf_miso_pull(int mode);           /* 0=浮空 1=上拉 2=下拉 */
+int  rf_miso_level(void);

@@ -9,6 +9,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "esp_rom_sys.h"
+
 #include "rf_spi.h"
 
 /* ---------------- Si4463(M1) ---------------- */
@@ -142,6 +144,30 @@ static void nrf24_probe(rf_mod_t *m)
 
 /* ---------------- 对外 ---------------- */
 
+
+/* 线检:把该槽位 CS 拉低,再用"先上拉后下拉"两次读数判断 MISO 上到底有没有驱动源。
+ * 为什么必须在 CS 低时做:芯片未被选中时 SDO/MISO 是**高阻**,悬空才是正常;
+ * 只有选中后仍悬空,才说明 CS 或 MISO 没接、或模块没上电。 */
+static void line_check(rf_mod_t *m, int slot)
+{
+    rf_cs_set(slot, 1);
+    rf_miso_pull(0);
+    esp_rom_delay_us(200);
+
+    rf_cs_set(slot, 0);              /* 选中该模块 */
+    esp_rom_delay_us(100);
+    rf_miso_pull(1);
+    esp_rom_delay_us(800);
+    m->cs_pu = rf_miso_level();
+    rf_miso_pull(2);
+    esp_rom_delay_us(800);
+    m->cs_pd = rf_miso_level();
+
+    rf_cs_set(slot, 1);
+    rf_miso_pull(0);
+    esp_rom_delay_us(100);
+}
+
 void rf_probe_run(rf_probe_t *out)
 {
     if (out == NULL) {
@@ -150,9 +176,11 @@ void rf_probe_run(rf_probe_t *out)
     memset(out, 0, sizeof(*out));
 
     out->m[0].freq_hz[0] = 0; /* M1 不做 RSSI */
+    line_check(&out->m[0], RF_SLOT_M1);
     si4463_probe(&out->m[0]);
 
     rf_mod_t *m2 = &out->m[1];
+    line_check(m2, RF_SLOT_M2);
     cc1101_probe(m2);
     if (m2->present) {
         const uint32_t pts[RF_PROBE_POINTS] = { 387000000u, 433920000u, 464000000u };
@@ -163,5 +191,6 @@ void rf_probe_run(rf_probe_t *out)
         }
     }
 
+    line_check(&out->m[2], RF_SLOT_M3);
     nrf24_probe(&out->m[2]);
 }

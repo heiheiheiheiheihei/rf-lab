@@ -384,6 +384,27 @@ static void rf_kill_assert_at_boot(void)
     gpio_config(&btn);
 }
 
+
+/* ⚠️ 现场接线偏离设计(2026-10-25 实测):
+ *   AS10-M4463D 的 SDN(模块第 2 脚)被接到了 **GPIO18**,而设计里 GPIO18 是 M1 的 IRQ。
+ *   手册要求 SDN **工作时为低电平**;GPIO18 不驱动时悬空 ⇒ 芯片 shutdown ⇒ SPI 全 0xFF。
+ *   这里先把 GPIO18 驱动为低,让模块上电,以便完成探测/联调。
+ * 🔴 正式接线必须把 SDN **直接接 GND**,把 GPIO18 腾出来给 IRQ —— 否则中断功能永远不可用。 */
+#define PIN_SDN_WORKAROUND 18
+static void sdn_workaround(void)
+{
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << PIN_SDN_WORKAROUND),
+        .mode         = GPIO_MODE_OUTPUT,
+        .pull_up_en   = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&io);
+    gpio_set_level(PIN_SDN_WORKAROUND, 0);
+    esp_rom_delay_us(3000);
+}
+
 static void make_device_id(void)
 {
     uint8_t mac[6] = {0};
@@ -441,6 +462,16 @@ static esp_err_t transport_init(void)
  * 格式与波特率都与协议一致(921600、行首 '#'):App 侧解析器只在 MAGIC 处开始,
  * 这几行会被当成噪声跳过;而人用串口工具打开就能看见。
  * ⚠️ 只允许出现在启动阶段。运行期**不得**再往这条流里写文本。 */
+
+/* 线检结论:cs_pu == cs_pd 才表示"MISO 被驱动",否则即使选中也悬空。 */
+static const char *drive_verdict(const rf_mod_t *m)
+{
+    if (m->cs_pu != m->cs_pd) {
+        return "FLOATING(选中后仍无驱动:CS/MISO 没接或模块没上电)";
+    }
+    return m->cs_pu ? "driven-HIGH" : "driven-LOW";
+}
+
 static void send_banner(bool pairing_ok)
 {
     char buf[1024];
@@ -453,6 +484,8 @@ static void send_banner(bool pairing_ok)
                      "# wire MISO 14: pd=%d pu=%d -> %s\r\n"
                      "# RF_KILL=asserted(禁止发射) pairing:%s\r\n"
                      "# probe M1 si4463   cts=0x%02X part=0x%04X present=%d\r\n"
+                     "# line  M1 cs_pu=%d cs_pd=%d -> %s\r\n"
+                     "# line  M2 cs_pu=%d cs_pd=%d -> %s\r\n"
                      "# probe M2 cc1101   partnum=0x%02X version=0x%02X present=%d\r\n"
                      "# probe M3 nrf24l01 config=0x%02X status=0x%02X present=%d\r\n",
                      RFLAB_FW_VERSION, RFLAB_VER, s_device_id,
@@ -462,6 +495,8 @@ static void send_banner(bool pairing_ok)
                      s_probe.m[0].id0,
                      (unsigned)(s_probe.m[0].id1 | (s_probe.m[0].id2 << 8)),
                      (int)s_probe.m[0].present,
+                     s_probe.m[0].cs_pu, s_probe.m[0].cs_pd, drive_verdict(&s_probe.m[0]),
+                     s_probe.m[1].cs_pu, s_probe.m[1].cs_pd, drive_verdict(&s_probe.m[1]),
                      s_probe.m[1].id0, s_probe.m[1].id1,
                      (int)s_probe.m[1].present,
                      s_probe.m[2].id0, s_probe.m[2].id1,
@@ -549,6 +584,7 @@ void app_main(void)
     /* 5. 射频总线 + 三模块探测(阶段 2 第一步:先证明接线通,再谈驱动)。
      *    ⚠️ 探测全程只读、不发射;未连接的模块报 present=false 是预期。 */
     mark0("[2]pairing\r\n");
+    sdn_workaround();
     /* 先判 MISO 有没有接到东西,再做 SPI —— 否则三块全 0xFF 时无从分辨原因。 */
     rf_wire_check(&s_wire);
     esp_err_t rf_err = rf_spi_init();
