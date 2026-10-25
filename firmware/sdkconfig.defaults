@@ -1,0 +1,43 @@
+# RF-Lab 固件默认配置(ESP-IDF 5.5.x / ESP32-S3)
+#
+# 只放"有设计依据"的项。每条后面的 ⚠️ 说明为什么不能随手改。
+
+CONFIG_IDF_TARGET="esp32s3"
+
+# --- Flash:16MB(N16R8)--------------------------------------------------
+# 板子是 N16R8;写成 4MB 会让 16MB 的模组被当成小容量,后续 OTA/存储都会受限。
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
+# --- 控制通道:CH343P → UART0(GPIO43/44),协议帧独占这条流 ---------------
+# 🔴 2026-10-21 决策变更(实测驱动):
+#   · 原生 USB Serial/JTAG 在**本板**从未枚举成功:2026-10-18 单次尝试 9.4 分钟、
+#     435 次 connect、438 次 error -71、**0 次成功**;2026-10-21 换另一 Type-C 口
+#     150s 内零事件。⇒ 它不能承担"唯一控制通道"。
+#   · 唯一已证实可用的通路是 **CH343P(1a86:55d3)→ UART0**。
+#
+# 代价(必须承认):控制与日志**不能再共用一条流**。这里选择让 UART0 归协议独占,
+# 控制台整体关闭 —— 日志是排障手段,协议是产品功能,不能为了日志牺牲协议。
+# 排障仍有两条路:① 启动横幅用 esp_rom_printf 在 **115200** 打一次(驱动装好后
+# 才切到协议波特率 921600);② 需要完整日志时用 -DRFLAB_DEBUG_CONSOLE 另编一版。
+CONFIG_ESP_CONSOLE_NONE=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+CONFIG_LOG_DEFAULT_LEVEL_NONE=y
+# ⚠️ 必须显式关掉二级 USB Serial/JTAG 控制台:IDF 5.x 在 S3 上默认把它设为 y,
+#    它会把日志复制进原生 USB 设备,与"一个口一个角色"直接冲突(曾真实踩到)。
+
+# --- 串口监视 ----------------------------------------------------------
+CONFIG_ESPTOOLPY_MONITOR_BAUD_115200B=y
+
+# --- FreeRTOS ----------------------------------------------------------
+# 指示语的时序分辨率需要 ms 级 tick;1000Hz 让 WS2812 慢闪/快闪的占空比准确。
+CONFIG_FREERTOS_HZ=1000
+
+# --- 日志 --------------------------------------------------------------
+# 见上:控制台与日志均关闭(LOG_DEFAULT_LEVEL_NONE)。协议流必须是纯二进制帧。
+
+# --- PSRAM:本批不启用 -------------------------------------------------
+# N16R8 是八线(Octal)PSRAM,占用 GPIO33-37(与引脚表"不可用"一致)。
+# 阶段 1 骨架不需要 PSRAM;留到捕获缓冲阶段再启用,避免过早引入启动风险。
+# 启用时需:CONFIG_SPIRAM=y / CONFIG_SPIRAM_MODE_OCT=y / CONFIG_SPIRAM_SPEED_80M=y

@@ -5,8 +5,12 @@ build/
 .piolibdeps/
 sdkconfig
 sdkconfig.old
-# PlatformIO 按环境名生成(如 sdkconfig.esp32s3);真源是 sdkconfig.defaults
-sdkconfig.*
+# PlatformIO 按环境名生成(如 sdkconfig.esp32s3);**真源 sdkconfig.defaults 必须入库**。
+# ⚠️ 2026-10-21 修正:原来写的是 `sdkconfig.*`,它把 sdkconfig.defaults 也一起忽略了
+#    ⇒ 仓库里从来没有这个文件,clone 下来构建会退回 IDF 默认控制台(日志与协议抢 UART0)。
+sdkconfig.esp32s3
+sdkconfig.esp32s3.old
+sdkconfig.esp32s3.bak
 *.bin
 *.elf
 *.map

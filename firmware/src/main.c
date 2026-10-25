@@ -4,8 +4,14 @@
  * 本文件只做四件事:
  *   1. 上电即把 RF_KILL 拉低(**硬件发射门控,低有效** = 默认禁止发射)
  *   2. 初始化板载 WS2812 并按硬件文档 §2.7 的指示语显示
- *   3. 在 USB Serial/JTAG 上跑契约 §2 的帧协议
+ *   3. 在 **UART0(CH343P)** 上跑契约 §2 的帧协议
  *   4. 实现 §3.1 的四条消息:HELLO / HELLO_ACK / GET_CAPS / CAPS / PING / PONG / ERROR
+ *
+ * 🔴 2026-10-21 载体变更(实测驱动):协议**不再**跑在原生 USB Serial/JTAG 上。
+ *   本板的原生 USB 从未枚举成功(2026-10-18:435 次 connect / 0 次成功;
+ *   2026-10-21 换口复测 150s 零事件),唯一可用通路是 CH343P → UART0。
+ *   因此 UART0 由协议独占、控制台与日志关闭(见 sdkconfig.defaults 注释)。
+ *   帧层(frame.c)与载体无关,本次**未改动一行**。
  *
  * 明确**没做**(写出来是为了避免"看起来做了"):
  *   - 射频模块驱动与探测 ⇒ CAPS.modules[].present 一律 false(**未探测**,不是"确认没有")
@@ -14,12 +20,15 @@
  *     见接线文档 §6)。⚠️ 不要为此自创一个消息类型 —— 那会让 App 侧错位。
  */
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "cJSON.h"
 #include "driver/gpio.h"
-#include "driver/usb_serial_jtag.h"
+#include "driver/uart.h"
+#include "esp_rom_uart.h"
+#include "hal/uart_ll.h"
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_timer.h"
@@ -27,9 +36,21 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
+/* 控制通道:CH343P ↔ UART0(GPIO43=TX / GPIO44=RX)。
+ * ⚠️ 921600 不是随手选的:本板这条通路已在 921600 上跑过连续 I/Q 传输
+ *    (esp-sdr 实测),是唯一被验证过的可用速率。 */
+#define RFLAB_UART_PORT    UART_NUM_0
+#ifndef RFLAB_UART_BAUD
+#define RFLAB_UART_BAUD    921600
+#endif
+#define PIN_UART0_TX       43
+#define PIN_UART0_RX       44
+
 #include "frame.h"
 #include "led.h"
 #include "pairing.h"
+#include "rf_probe.h"
+#include "rf_spi.h"
 
 #ifndef RFLAB_FW_VERSION
 #define RFLAB_FW_VERSION "0.1.0"
@@ -41,7 +62,16 @@
 
 static const char *TAG = "rflab";
 
+/* 临时打点(定位用):直接走 ROM 的 UART0 输出,不依赖任何驱动/控制台配置。 */
+static void mark0(const char *m)
+{
+    while (*m) {
+        esp_rom_output_putc(*m++);
+    }
+}
+
 static SemaphoreHandle_t s_tx_lock;
+static uart_dev_t       *s_uart; /* 轮询直驱用(见 transport_init) */
 
 static rflab_frame_t s_rx_frame;
 static char          s_json[RFLAB_USB_FRAME_MAX + 1];
@@ -51,8 +81,13 @@ static bool s_hello_done;
 static char s_device_id[16];
 static char s_client_id[PAIRING_CLIENT_ID_MAX + 1];
 
+/* 三模块探测结果(阶段 2 第一步)。CAPS.modules[].present 由此派生 ——
+ * ⚠️ 这是"真的探过了"的 false,与阶段 1 的"根本没探"不是一回事。 */
+static rf_probe_t s_probe;
+static rf_wire_t  s_wire;   /* MISO 空闲电平诊断,见 rf_spi.h */
+
 /* ------------------------------------------------------------------ */
-/* 输出:帧与日志共用同一条字节流。日志用 "# " 前缀,App 靠 MAGIC 重同步。 */
+/* 输出:UART0(CH343P)上**只有帧**。没有日志混流 —— 控制台已关闭。      */
 /* ------------------------------------------------------------------ */
 
 static void tx_raw(const void *buf, size_t n)
@@ -60,8 +95,13 @@ static void tx_raw(const void *buf, size_t n)
     if (n == 0) {
         return;
     }
+    /* 走 ROM 的 UART0 输出:这条路径在本板**已实测可用**(启动横幅就是它打的),
+     * 而 IDF uart 驱动在本板当前状态下 RX/TX 都不动(见 transport_init 注释)。 */
     xSemaphoreTake(s_tx_lock, portMAX_DELAY);
-    usb_serial_jtag_write_bytes(buf, n, portMAX_DELAY);
+    const uint8_t *p = (const uint8_t *)buf;
+    for (size_t i = 0; i < n; i++) {
+        esp_rom_output_putc((char)p[i]);
+    }
     xSemaphoreGive(s_tx_lock);
 }
 
@@ -209,10 +249,12 @@ static cJSON *make_module(int slot, const char *chip, double lo, double hi, int 
     cJSON *m = cJSON_CreateObject();
     cJSON_AddNumberToObject(m, "slot", slot);
     cJSON_AddStringToObject(m, "chip", chip);
-    /* ⚠️ 阶段 1 没有射频驱动,也**没有探测过**。契约 §4 要求"按实际装的前端上报",
-     *    所以这里必须报 false —— 把未探测写成 true 会让 App 及后续用例
-     *    建立在一个从未验证过的前提上。 */
-    cJSON_AddBoolToObject(m, "present", false);
+    /* ✅ 阶段 2 起 present 来自**真实探测**(读芯片 ID,见 rf_probe.c):
+     *    M1 = Si4463 GET_PART_INFO(CTS=0xFF 且 PART=0x4463)
+     *    M2 = CC1101 PARTNUM=0x00 且 VERSION=0x14/0x04
+     *    M3 = nRF24L01 CONFIG 复位值 0x08
+     *    ⚠️ false 是"探过但没探到",不再是阶段 1 的"根本没探"。 */
+    cJSON_AddBoolToObject(m, "present", s_probe.m[slot - 1].present);
 
     cJSON *bands = cJSON_CreateArray();
     add_band(bands, lo, hi); /* 模块级频段(非芯片级,§4 警示) */
@@ -349,56 +391,195 @@ static void make_device_id(void)
     snprintf(s_device_id, sizeof(s_device_id), "RFLAB-%02X%02X", mac[4], mac[5]);
 }
 
+/* 控制通道初始化:UART0(CH343P)@921600 8N1。
+ * 返回 esp_err_t 而不是 ESP_ERROR_CHECK:装配失败时设备仍要能点灯/进故障态,
+ * 不能因为一条链路的问题让"安全默认"也变得不可观测。 */
+static esp_err_t transport_init(void)
+{
+    /* 控制通道 = CH343P ↔ UART0。
+     *
+     * ⚠️ 为什么不用 IDF 的 uart 驱动(2026-10-22 实测):
+     *    `uart_driver_install` 返回 0、`uart_write_bytes` 返回字节数、`uart_wait_tx_done` 返回 0,
+     *    但**线上一个字节都没有**,RX 也收不到 —— 现象指向"驱动 ISR 没被服务",
+     *    而 ROM 的 UART 输出始终正常。为避免在根因未明时把产品堵死,本版走 ROM 路径:
+     *      TX = esp_rom_output_putc()
+     *      RX = esp_rom_output_rx_one_char() 轮询
+     *    代价:波特率沿用 ROM 的控制台速率(115200),高吞吐要等驱动问题查清后再提。 */
+    /* 配置 UART0 的引脚与格式(不安装驱动):RX 必须被显式路由到 GPIO44,
+     * 否则 uart_ll 轮询读到的永远是空 FIFO。 */
+    const uart_config_t cfg = {
+        .baud_rate  = 115200,
+        .data_bits  = UART_DATA_8_BITS,
+        .parity     = UART_PARITY_DISABLE,
+        .stop_bits  = UART_STOP_BITS_1,
+        .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+    esp_err_t err = uart_param_config(RFLAB_UART_PORT, &cfg);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = uart_set_pin(RFLAB_UART_PORT, PIN_UART0_TX, PIN_UART0_RX,
+                       UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (err != ESP_OK) {
+        return err;
+    }
+    s_uart = UART_LL_GET_HW(RFLAB_UART_PORT);
+    /* 清掉复位阶段残留的字节,保证首帧从干净边界开始。 */
+    uint8_t drop;
+    for (int i = 0; i < 256; i++) {
+        if (esp_rom_output_rx_one_char(&drop) != 0) {
+            break;
+        }
+    }
+    return ESP_OK;
+}
+
+/* 启动横幅。⚠️ 为什么必须存在:控制台与 IDF 日志在本版是关闭的
+ * (协议独占 UART0),若再没有这几行,设备出问题时就是"插上毫无反应",
+ * 无法区分"没启动 / 启动失败 / 链路没起来"。
+ * 格式与波特率都与协议一致(921600、行首 '#'):App 侧解析器只在 MAGIC 处开始,
+ * 这几行会被当成噪声跳过;而人用串口工具打开就能看见。
+ * ⚠️ 只允许出现在启动阶段。运行期**不得**再往这条流里写文本。 */
+static void send_banner(bool pairing_ok)
+{
+    char buf[1024];
+    const char *wire_v = (s_wire.miso_pd == 0 && s_wire.miso_pu == 1)
+                             ? "floating(MISO 未接到任何驱动)"
+                             : (s_wire.miso_pd ? "driven-HIGH(被强拉高)" : "driven-LOW(被拉低)");
+    int n = snprintf(buf, sizeof(buf),
+                     "\r\n# RF-Lab fw=%s proto=%d device=%s boot\r\n"
+                     "# carrier=CH343P->UART0 baud=%d (native USB: never enumerated)\r\n"
+                     "# wire MISO 14: pd=%d pu=%d -> %s\r\n"
+                     "# RF_KILL=asserted(禁止发射) pairing:%s\r\n"
+                     "# probe M1 si4463   cts=0x%02X part=0x%04X present=%d\r\n"
+                     "# probe M2 cc1101   partnum=0x%02X version=0x%02X present=%d\r\n"
+                     "# probe M3 nrf24l01 config=0x%02X status=0x%02X present=%d\r\n",
+                     RFLAB_FW_VERSION, RFLAB_VER, s_device_id,
+                     (int)RFLAB_UART_BAUD,
+                     s_wire.miso_pd, s_wire.miso_pu, wire_v,
+                     pairing_ok ? "ok" : "FAILED",
+                     s_probe.m[0].id0,
+                     (unsigned)(s_probe.m[0].id1 | (s_probe.m[0].id2 << 8)),
+                     (int)s_probe.m[0].present,
+                     s_probe.m[1].id0, s_probe.m[1].id1,
+                     (int)s_probe.m[1].present,
+                     s_probe.m[2].id0, s_probe.m[2].id1,
+                     (int)s_probe.m[2].present);
+    if (n <= 0) {
+        return;
+    }
+    size_t off = (size_t)n < sizeof(buf) ? (size_t)n : sizeof(buf) - 1;
+
+    /* M2 的三个 RSSI 采样点:证明"调谐 + 接收链路"真的在工作,不只是 SPI 通。 */
+    for (int i = 0; i < RF_PROBE_POINTS && off + 64 < sizeof(buf); i++) {
+        if (!s_probe.m[1].rssi_ok[i]) {
+            continue;
+        }
+        int k = snprintf(buf + off, sizeof(buf) - off,
+                         "# rssi %.3fMHz = %d dBm (raw=0x%02X)\r\n",
+                         (double)s_probe.m[1].freq_hz[i] / 1e6,
+                         s_probe.m[1].rssi_dbm[i], s_probe.m[1].rssi_raw[i]);
+        if (k > 0) {
+            off += (size_t)k;
+        }
+    }
+
+    if (off + 16 < sizeof(buf)) {
+        int k = snprintf(buf + off, sizeof(buf) - off, "# ready\r\n");
+        if (k > 0) {
+            off += (size_t)k;
+        }
+    }
+
+    tx_raw(buf, off);
+}
+
 void app_main(void)
 {
+    ESP_LOGI(TAG, "boot: fw=%s proto=%d", RFLAB_FW_VERSION, RFLAB_VER);
+
     /* 1. 先立安全默认:RF_KILL 拉低。放在任何可能耗时/阻塞的初始化之前。 */
     rf_kill_assert_at_boot();
+    ESP_LOGI(TAG, "step1: RF_KILL asserted");
 
     s_tx_lock = xSemaphoreCreateMutex();
 
     /* 2. 本地指示:先写黑(KILL 态),再按状态切换。 */
     led_init();
+    ESP_LOGI(TAG, "step2a: led_init ok");
 #ifdef RFLAB_LED_SELFTEST
     /* 载板正品检查(TC-106 / R-18):能看见红→绿→蓝 = 2812 信号已焊。 */
     led_selftest();
+    ESP_LOGI(TAG, "step2b: led_selftest ok");
 #endif
     led_set_state(LED_STATE_KILL);
     led_start();
+    ESP_LOGI(TAG, "step2c: led task started");
 
     make_device_id();
+    ESP_LOGI(TAG, "step2d: device_id=%s", s_device_id);
 
-    /* 3. USB Serial/JTAG:本批唯一的控制通道。
-     *    控制台也落在这个外设上(见 sdkconfig.defaults),故驱动可能已被 VFS 安装;
-     *    重复安装会返回 ESP_ERR_INVALID_STATE,那不是错误。 */
-    usb_serial_jtag_driver_config_t usb_cfg = {
-        .tx_buffer_size = 4096,
-        .rx_buffer_size = 4096,
-    };
-    esp_err_t err = usb_serial_jtag_driver_install(&usb_cfg);
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(TAG, "USB Serial/JTAG 驱动安装失败: %s", esp_err_to_name(err));
+    /* 3. 控制通道(本批唯一链路):CH343P → UART0。 */
+    mark0("[0]start\r\n");
+    {
+        /* 诊断:UART0 RX(GPIO44)空闲时应为高电平。若被外部拉低/拉高,
+         * 说明有东西接在这条线上(接线冲突)。 */
+        gpio_config_t in = {
+            .pin_bit_mask = (1ULL << PIN_UART0_RX),
+            .mode = GPIO_MODE_INPUT, .pull_up_en = GPIO_PULLUP_ENABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE, .intr_type = GPIO_INTR_DISABLE,
+        };
+        gpio_config(&in);
+        vTaskDelay(pdMS_TO_TICKS(2));
+        mark0(gpio_get_level(PIN_UART0_RX) ? "[rx-idle-high]\r\n" : "[rx-idle-LOW]\r\n");
     }
-
-    /* 4. 配对状态(内部含 NVS 初始化)。 */
-    if (pairing_init() != ESP_OK) {
-        ESP_LOGE(TAG, "配对状态初始化失败");
+    esp_err_t err = transport_init();
+    if (err != ESP_OK) {
         led_set_state(LED_STATE_FAULT);
     }
 
-    /* 启动横幅。刻意用 "# " 前缀:它与帧(MAGIC 0x52)不会混淆。 */
-    printf("\r\n# RF-Lab fw=%s proto=%d device=%s boot\r\n",
-           RFLAB_FW_VERSION, RFLAB_VER, s_device_id);
-    printf("# RF_KILL=asserted(禁止发射)  modules: not probed\r\n");
-    printf("# ready\r\n");
+    /* 4. 配对状态(内部含 NVS 初始化)。 */
+    mark0("[1]transport\r\n");
+    bool pairing_ok = (pairing_init() == ESP_OK);
+    if (!pairing_ok) {
+        led_set_state(LED_STATE_FAULT);
+    }
 
+    /* 5. 射频总线 + 三模块探测(阶段 2 第一步:先证明接线通,再谈驱动)。
+     *    ⚠️ 探测全程只读、不发射;未连接的模块报 present=false 是预期。 */
+    mark0("[2]pairing\r\n");
+    /* 先判 MISO 有没有接到东西,再做 SPI —— 否则三块全 0xFF 时无从分辨原因。 */
+    rf_wire_check(&s_wire);
+    esp_err_t rf_err = rf_spi_init();
+    mark0("[3]spi\r\n");
+    if (rf_err == ESP_OK) {
+        rf_probe_run(&s_probe);
+    } else {
+        led_set_state(LED_STATE_FAULT);
+    }
+
+    mark0("[4]probe done\r\n");
+    /* 6. 启动横幅(此时的状态就是真实初始化结果)。 */
+    if (err == ESP_OK) {
+        send_banner(pairing_ok);
+    }
+
+    mark0("[5]banner sent\r\n");
     rflab_rx_t rx;
     rflab_rx_init(&rx);
 
-    static uint8_t buf[512];
     for (;;) {
-        int n = usb_serial_jtag_read_bytes(buf, sizeof(buf), pdMS_TO_TICKS(20));
-        for (int i = 0; i < n; i++) {
-            int rc = rflab_rx_feed(&rx, buf[i], &s_rx_frame);
+        bool got = false;
+        for (int guard = 0; guard < 256; guard++) {
+            /* 直接读 UART0 的 RX FIFO:不依赖驱动 ISR,也不依赖 ROM 控制台的 RX 通道。 */
+            uint8_t c;
+            if (uart_ll_get_rxfifo_len(s_uart) == 0) {
+                break;
+            }
+            uart_ll_read_rxfifo(s_uart, &c, 1);
+            got = true;
+            int rc = rflab_rx_feed(&rx, c, &s_rx_frame);
             if (rc == RFLAB_RX_FRAME) {
                 dispatch(&s_rx_frame);
             } else if (rc == RFLAB_RX_BAD_VER) {
@@ -406,6 +587,9 @@ void app_main(void)
             } else if (rc == RFLAB_RX_TOO_BIG) {
                 send_error(0, "frame_too_large", "LEN 超过 usb_frame_max");
             }
+        }
+        if (!got) {
+            vTaskDelay(pdMS_TO_TICKS(2));
         }
     }
 }
