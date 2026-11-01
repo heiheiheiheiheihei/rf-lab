@@ -2,16 +2,16 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "msg-error.schema.json",
   "title": "ERROR (0x7F)",
-  "description": "方向:设备→App · 文档 §3.1 · 协议 v1。错误应答。code 取 §6 错误码表中非 WARN 的 11 项(含 §2.2.1 的 frame_too_large);未知消息类型回 ERROR{unsupported}(§1)。",
+  "description": "方向:设备→App · 文档 §3.1 · 协议 v1。错误应答。code 取 §6 错误码表中非 WARN 的 12 项(含 §2.2.1 的 frame_too_large);未知消息类型回 ERROR{unsupported}(§1)。",
   "type": "object",
   "properties": {
     "code": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/errorCode"
+          "$ref": "common.schema.json#/definitions/errorCode"
         }
       ],
-      "description": "错误码(11 项,不含 WARN 专用的 band_clipped/throttled/edge_clamped/preempted)。"
+      "description": "错误码(取 common.schema.json#/definitions/errorCode 的 12 项,不含 WARN 专用的 band_clipped/throttled/edge_clamped/preempted)。"
     },
     "msg": {
       "type": "string",

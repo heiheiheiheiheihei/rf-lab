@@ -30,11 +30,22 @@ CONFIG_LOG_DEFAULT_LEVEL_NONE=y
 
 # --- 串口监视 ----------------------------------------------------------
 # 与 App 的协议波特率一致;ROM bootloader 那几行是 115200,在监视器里会是乱码,属正常。
-CONFIG_ESPTOOLPY_MONITOR_BAUD_921600B=y
+# ⚠️ L-01:IDF 5.5 的 CONFIG_ESPTOOLPY_MONITOR_BAUD 是**看不见来源的 int**
+#    (Kconfig 里没有 prompt,默认值 = 控制台波特率;本项目控制台为 NONE ⇒ 恒 115200),
+#    因此 sdkconfig.defaults **无法**覆盖它;生成的 sdkconfig 里它显示 115200 不是漂移。
+#    真正决定 serial monitor 波特率的是 platformio.ini 的 `monitor_speed = 921600`
+#    (PIO monitor 直接用它,不读这个 Kconfig 值)。旧版本这里写的
+#    `CONFIG_ESPTOOLPY_MONITOR_BAUD_921600B=y` 是无效符号,已删除以免误导。
 
 # --- FreeRTOS ----------------------------------------------------------
 # 指示语的时序分辨率需要 ms 级 tick;1000Hz 让 WS2812 慢闪/快闪的占空比准确。
 CONFIG_FREERTOS_HZ=1000
+
+# 主任务栈:默认 3584 B 对 cJSON 递归解析不够(M-05)。cJSON 的
+# CJSON_NESTING_LIMIT=1000 只是计数上限,parse_{value,array,object} 是递归实现,
+# 对端发来深嵌套 JSON 时 3584 B 栈会溢出重启(违反契约 §1"不崩溃")。
+# 提到 8192 B 留出余量;进一步加固(限制 JSON 深度/移入专用任务)是下一批项。
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 
 # --- 日志 --------------------------------------------------------------
 # 见上:控制台与日志均关闭(LOG_DEFAULT_LEVEL_NONE)。协议流必须是纯二进制帧。

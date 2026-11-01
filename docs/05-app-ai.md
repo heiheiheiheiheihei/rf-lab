@@ -14,7 +14,7 @@
 | 主载体 | PWA:免安装、免审核、服务端发版即生效;本机零新工具链(Node v22.22.1 + npm 已装) |
 | 传输基线(后端 B) | `navigator.usb` + `web-serial-polyfill` —— **必须能工作**的那条 |
 | 传输优化(后端 A) | `navigator.serial`,探测到才用;**不得作为硬依赖** |
-| 设备过滤 | 控制口 = 标 `OTG` 的 Type-C(板载 CH343P),过滤器写死 `vendorId 0x1a86 / productId 0x55d3`;**禁止** `classCode:2` 通配;原生 USB 口(`0x303a`)在本板从未枚举成功,不可用。外壳必须标出控制口 |
+| 设备过滤 | 控制口 = 标 `COM` 的 Type-C(板载 CH343P;现场确认丝印为 `COM`,不是 `OTG`),过滤器写死 `vendorId 0x1a86 / productId 0x55d3`;**禁止** `classCode:2` 通配;原生 USB 口(`0x303a`)在本板从未枚举成功,不可用。外壳必须标出控制口 |
 | 门禁 | 真机 `claimInterface` + 字节回环仍须验证(TC-074a,见 [docs/06-test-plan.md](06-test-plan.md));失败则只把 USB 读写包成原生 Android USB Host 薄壳,UI 与业务逻辑仍留 Web 层 |
 
 **为什么是 WebUSB 而不是 Web Serial**:Android 的 Web Serial 到 Chrome 148(2026-04)才引入,以它为基线等于把最低系统要求钉死在 148+;WebUSB 自 Chrome 61 级长期可用。规范层面无障碍:WebUSB 的受保护接口类只有 Audio/HID/MassStorage/Hub/SmartCard/Video/A-V/Wireless,CDC(`0x02`)与 CDC-Data(`0x0A`)都不在其中。Chrome 官方文档另给出决定性事实:Android 默认**没有** CDC-ACM 驱动("一个值得注意的遗漏"),串口类设备通常未被系统占用,因此 Android 反而比桌面更可用;而桌面 Linux/macOS 的 `cdc_acm` 常先占用接口。Google 的 polyfill 实现的就是 Web Serial API(该规范的原型实现),两个后端同形,上层只写一套逻辑。

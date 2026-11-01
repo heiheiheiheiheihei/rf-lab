@@ -8,7 +8,7 @@
     "slot": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/slot"
+          "$ref": "common.schema.json#/definitions/slot"
         }
       ],
       "description": "目标模块槽位 1..3。"

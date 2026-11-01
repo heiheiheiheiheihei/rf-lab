@@ -45,13 +45,13 @@
 | App 载体 | **仅 Android 的 PWA**;传输层 = 一层抽象 + 两个同形后端,基线 **WebUSB + `web-serial-polyfill`**,`navigator.serial` 仅作探测成功时的优先项;不得把 Web Serial 写成硬依赖(Android 的 Web Serial 迟至 Chrome 148) |
 | App 连接体验 | 首次连接会弹**两次**系统授权框(`requestDevice` 后与 `open()` 时);CH343P 的 DTR/RTS 接了自动复位,打开端口会让设备重启一次,App 必须能处理;不得向用户承诺"自动重连、无需交互" |
 | OLED 显示 | ⏸ 延后到下一批:引脚(GPIO40/41)与 I²C 4 针 SSD1306/SH1106 选型保留,本批不装、不写驱动 |
-| 本地指示 | **没有蜂鸣器**(GPIO39 已释放回可用池);唯一载体是板载 **WS2812(GPIO48)**。语义由**闪烁时序**承载、颜色只作增强;它停更即保持最后颜色,故 `KILL` 必须显式写黑,且"灯灭"不得当作"不会发射"的证据(唯一证据是 `RF_KILL` 硬件门控) |
+| 本地指示 | **没有蜂鸣器**(GPIO39 已释放回可用池);唯一载体是板载 **WS2812(GPIO48)**。语义由**闪烁时序**承载、颜色只作增强;它停更即保持最后颜色,故 `KILL` 必须显式写黑,且"灯灭"不得当作"不会发射"的证据(唯一证据是 **M3 CE=0**,即 `AND(GPIO7 2.4G总闸, GPIO8 RF_KILL)` 输出为低;KILL 低即保证 CE=0) |
 | AI 分析 | 在 **App 侧**调用 DeepSeek;设备不持有 API Key、不发起任何 AI 网络请求 |
 | 射频模块 | 三块即最终配置,不增补(见 §4) |
 
 ## 4. 硬件配置与频率覆盖
 
-主控:**ESP32-S3N16R8** — Xtensa LX7 双核 240MHz、16MB Flash、8MB PSRAM、片内 2.4GHz Wi-Fi + BLE。开发板:**VCC-GND YD-ESP32-S3**(丝印 `HW678`),两个物理 Type-C 口,无 HUB。安全门控 **`RF_KILL` = GPIO8,低有效**。
+主控:**ESP32-S3N16R8** — Xtensa LX7 双核 240MHz、16MB Flash、8MB PSRAM、片内 2.4GHz Wi-Fi + BLE。开发板:**VCC-GND YD-ESP32-S3**(丝印 `HW678`),两个物理 Type-C 口,无 HUB。安全门控 **`RF_KILL` = GPIO8,低有效**;**M3 的 CE 由 AND(GPIO7,GPIO8) 驱动**(不新增 CE GPIO),M1 的 SDN = GPIO9(开漏 + 外部 100k 上拉)。
 
 | 编号 | 型号 | 芯片 | 模块级频段 | 功率 | 接口 / 尺寸 | 调制能力 |
 |---|---|---|---|---|---|---|

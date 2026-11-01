@@ -7,7 +7,7 @@
   "properties": {
     "t_ms": {
       "type": "number",
-      "description": "时间戳,单位 ms。RTT 计算需要回显 PING 的 t_ms,但文档 §3.1 未明确(见 README §7)。"
+      "description": "时间戳,单位 ms。RTT 计算需要回显 PING 的 t_ms,但文档 §3.1 未明确(见 README §7.14)。"
     }
   },
   "required": [

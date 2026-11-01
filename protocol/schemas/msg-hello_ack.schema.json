@@ -49,7 +49,7 @@
     "pair_error": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/pairError"
+          "$ref": "common.schema.json#/definitions/pairError"
         }
       ],
       "description": "配对失败原因(§7.1(1.1))。仅 pair_ok:false 时出现,故不列入 required。"

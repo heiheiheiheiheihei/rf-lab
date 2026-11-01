@@ -23,7 +23,7 @@
 | 归属 | 内容 | 现状(2026-10-25) |
 |---|---|---|
 | ✅ 必须 CI(每次提交) | 帧编解码、分片重组、RLE、特征、令牌、门禁与功率夹取、状态机、限流、审计格式化 | ⚠️ 仓库**尚无 host 测试目录**(`firmware/test/` 不存在)⇒ **L0 自动化覆盖目前为 0** |
-| ✅ 必须 CI(契约一致性) | `python3 tools/validate_schemas.py` 退出码 0;`CAPS` 样例必须过 schema | ✅ 已可跑、已通过(37 个 schema) |
+| ✅ 必须 CI(契约一致性) | `python3 tools/validate_schemas.py` 退出码 0;`CAPS` 样例必须过 schema | ✅ 已可跑、已通过(37 个 schema;jsonschema 可用时还会对 `protocol/schemas/fixtures/` 的正/负例做真求值) |
 | 🔧 HIL(串行) | 驱动/SPI/RMT/看门狗/审计掉电保持/功率档位 | 硬件独占,不得与其他硬件任务并发(每模块独占 SPI 与天线) |
 | ❌ 必须人工 | 空口 L3、屏蔽泄漏、载板点灯、`ARMED` 与 `IDLE` 的可辨识度、A-01..A-07 现场 | 无替代手段 |
 
@@ -57,7 +57,7 @@
 | TC-005 | 物理拔除槽位 3 模块 | `MODULES` 中 slot 3 `present:false`;`SELECT_MODULE{slot:3}` → `module_absent` | I+H |
 | TC-006 | client B 请求被跨槽位/不可抢占持有者占用的模块 | `ERROR{module_busy}`;同槽位新请求走隐式中止 + `WARN{preempted}`,不排队 | I |
 | TC-007 | `GET_CAPS` | 含 `proto/fw/device_id/active_slot/modules[3]/policy/limits`;`bands` 为**模块级**区间;`tx_whitelist==[]`、`tx_requires_token==true` | U+I |
-| TC-008 | `CAPS` 过 schema | `python3 tools/validate_schemas.py` 退出码 0 | U |
+| TC-008 | `CAPS` 过 schema | `python3 tools/validate_schemas.py` 退出码 0;脚本用 `protocol/schemas/fixtures/` 的真实载荷(含 `caps.json`、`hello_ack_*.json`、`tx_request_stage*.json`)做 jsonschema 正/负例求值 + 结构校验(本机无 jsonschema 时**如实跳过**求值,不静默算通过) | U |
 | TC-009 | `PING{t_ms}` | `PONG{t_ms}`,RTT 可算;5s 无 PONG 触发保活超时处理 | I |
 | TC-010 | 发 `TYPE=0x5A` 的合法帧 | `ERROR{unsupported}`;状态不变、不崩溃、不断连接 | U+I |
 | TC-011 | 活动槽 2(CC1101),扫 200–250MHz | `ERROR{band_out_of_range}`;不下发任何调谐命令 | U+I |
@@ -66,14 +66,14 @@
 | TC-013a | **A-06**:依次扫 315 / 868 / 915MHz | ①返回 `band_out_of_range` 或 `band_clipped`,**绝不**返回"正常完成 + 0 命中" ②`coverage` 为空或仅含真实可扫区间 ③App 显著提示"该频段不在本机能力内" | U+I |
 | TC-013b | **A-06**:范围选择器与全部文案审查 | ①可选范围由 `CAPS` 驱动,无硬编码全域 ②带外不可选或明确标注"超出能力" ③全应用不存在"支持 119–1050MHz""全覆盖"表述 | I+人工 |
 | TC-014 | 433.92MHz 有信号,`rssi_threshold_dbm:-80` | 仅收到 `rssi_dbm > -80` 的点;低于阈值的点不出现 | I+H |
-| TC-015 | 扫描完成后核对 `SCAN_DONE` | `hits` 与实收 `SCAN_HIT` 条数一致;`elapsed_ms` 与假时钟一致;`aborted` 正确 | U+I |
+| TC-015 | 扫描完成后核对 `SCAN_DONE` | `hits_total == hits_pushed + hits_dropped`;`hits_pushed` 与实收 `SCAN_HIT` 条数一致;`hits_total` 不因限流变小;`elapsed_ms` 与假时钟一致;`aborted` 正确 | U+I |
 | TC-016 | `SET_RSSI_STREAM{f_hz:433.92e6,interval_ms:100,enable:true}` | 按 `interval_ms` 收 `RSSI_SAMPLE`;`enable:false` 后停止 | I+H |
 
 ### 3.2 捕获、分片、限流与状态机(25)
 | ID | 场景 | 判据 | 类型 |
 |---|---|---|---|
 | TC-017 | 含 `dt_us=0xFFFF` 饱和值与 `long_gaps[]` 的序列编码→解码 | 解码结果与原始逐项相等;`long_gaps` 真实值被还原 | U |
-| TC-018 | 编码一帧二进制 `DATA_CHUNK` | 字段偏移与契约一致;JSON 元数据可解析且含 `f_hz/mod/rssi_dbm/sample_clock_hz/long_gaps` | U |
+| TC-018 | 编码一帧二进制 `DATA_CHUNK` | 字段偏移与契约 §3.5 一致;JSON 元数据可解析且含 `f_hz/mod/rssi_dbm/sample_clock_hz/long_gaps`。⚠️ `DATA_CHUNK` 的**字节级黄金向量尚未入库**(`protocol/schemas/README.md` §3 标为 TODO),本用例只验字段偏移/元数据,**不**宣称二进制布局已被 fixture 或测试向量覆盖 | U |
 | TC-019 | 5 片顺序到达 | 重组出完整原帧,与 USB 单帧路径逐字节一致 | U+I |
 | TC-020 | 按 3,1,5,2,4 乱序发 5 片 | 按 `SEQ + FRAG_IDX` 重组正确 | U |
 | TC-021 | 5 片缺第 4 片 | 距最后一片 500ms 后 `ERROR{frag_timeout}`;缓冲区清空,不残留半帧污染后续帧 | U+I |
@@ -262,11 +262,11 @@
 5. **合规负向测试报告已签署**(含 TC-060..TC-066 全部结果、固件哈希、测试日期、测试人与见证人)。
 
 ## 6. 阶段计划与门禁
-| 阶段 | 出口判据 | 关联用例 | 状态(2026-10-25) |
+| 阶段 | 出口判据 | 关联用例 | 状态(2026-10-31) |
 |---|---|---|---|
 | **0 可行性**(🔴 阻塞) | T0.1 控制载体可访问且能回环、取得确切 VID:PID;T0.2 WS2812"停更保持颜色"有结论;T0.3 载板正品且灯会亮 | TC-074a、TC-105c、TC-106 | ⚠️ **部分完成**:原生 USB 实测不可用 ⇒ 载体按实测定为 CH343P;指示语已实现但停更行为待实测;点灯待现场 |
-| **1 固件骨架** | 能烧录;UART0 上跑通 `HELLO` → `HELLO_ACK` → `GET_CAPS` → `CAPS`;`RF_KILL` 上电即禁止;WS2812 按指示语点亮 | TC-001..TC-010、TC-105 | ✅ **已达成**(2026-10-25 实测 PASS);`RF_KILL` 软件切换尚无协议字段 |
-| **2 射频驱动** | 三模块 `probe` 认出;调谐落在 ±100kHz;RSSI 读回合理 | **A-02**、TC-067 | ❌ **未达成**:三模块 `present` 全 false,SPI MOSI/NSEL 现场接线待查 |
+| **1 固件骨架** | 能烧录;UART0 上跑通 `HELLO` → `HELLO_ACK` → `GET_CAPS` → `CAPS`;`RF_KILL` 上电即禁止;WS2812 按指示语点亮 | TC-001..TC-010、TC-105 | ✅ **已达成**(2026-10-25 实测 PASS);`RF_KILL` 软件切换尚无协议字段(本批 GPIO7/GPIO8 恒 0) |
+| **2 射频驱动** | 三模块 `probe` 认出;调谐落在 ±100kHz;RSSI 读回合理 | **A-02**、TC-067 | ❌ **未达成,原因待定**:三模块 `present` 全 false。⚠️ 2026-10-31 固件审计发现旧固件有 C-01/H-01/H-02/H-03 等缺陷会**产生完全相同的读数**(M2 探测在旧固件下结构性不可能通过),已修复,需按 §7.2 重新探测后才能判定是否还有硬件问题 |
 | **3 捕获与特征** | OOK 捕获 → RLE → `features`;`*_confidence` 真产出而非填默认 | A-03、TC-017..TC-026、TC-034c | ⛔ 未开始(依赖阶段 2) |
 | **4 发射门禁** | 四道门禁**各自**能真实拒绝;审计先写后发;令牌校验含 `seq` 单调性 | TC-035..TC-050、TC-104 系列 | ⛔ 未开始 |
 | **5 App** | A-01 30s 内连接(含首次授权与免弹窗);拔线**立刻**感知并给出具体原因 | A-01、TC-074e | ⛔ 未开始(载体层可先做,不被阶段 0 阻塞) |
@@ -274,7 +274,7 @@
 
 **排期结论**:阶段 0 只阻塞"碰硬件的代码" —— 帧编解码、特征提取、策略判定、App 载体层可立即开工。
 
-## 7. 当前可执行测试(2026-10-25)
+## 7. 当前可执行测试(2026-10-31)
 
 ```bash
 export PATH="$HOME/.platformio/penv/bin:$PATH"
@@ -288,29 +288,44 @@ python3 tools/validate_schemas.py                   # 退出码 0 = 通过(当�
 
 ### 7.1 启动横幅字段判读
 
-横幅是 **4 行以上以 `#` 开头**的文本,启动时只发一次;协议解析器只在 `MAGIC` 处开始,会把它当噪声跳过。⚠️ 复位后 ROM bootloader 自己那几行仍是 **115200**,用 921600 打开会看到一小段乱码 —— 正常。
+横幅是 **4 行以上以 `#` 开头**的文本,启动时只发一次。⚠️ 横幅**含 `'R'`(0x52)= 帧 `MAGIC`**,设备 ID 里也有 `R`,因此"解析器只在 MAGIC 处开始就会跳过横幅"的说法**不成立**:严格按契约 §2 实现的解析器必须**校验 VER,失配时把当前字节重新处理**(`tools/bringup_test.py` 已这样实现)。复位后 ROM bootloader 自己那几行是 **115200**,App 启动后的横幅/协议帧统一 **921600**;`[0]start … [5]banner sent` 标记在 `transport_init()` 之后才输出,因此也是 921600 可读(旧版前两条在切速率前打,是乱码)。
 
 | 行/字段 | 判读 |
 |---|---|
 | `# RF-Lab fw=… proto=… device=… boot` / `# carrier=CH343P->UART0 baud=921600` | 固件已起来;`device` 用于核对是否为目标板;载体与速率与 `bringup_test.py` 默认一致 |
 | `# wire MISO 14: pd=… pu=…` | `pd=0 pu=1` ⇒ **floating**(MISO 未接到任何驱动);`pd=1` ⇒ 被强拉高;其余 ⇒ 被拉低 |
 | `# RF_KILL=asserted(禁止发射) pairing:ok/FAILED` | 安全默认已生效;`pairing` 反映 NVS/配对初始化 |
-| `# probe M1/M2/M3 … present=` | M1 需 `cts=0xFF` 且 `part=0x4463`;M2 需 `partnum=0x00` 且 `version=0x14`;M3 复位值 `config=0x08`。`present=1` **只证明 SPI 读写通**,不证明射频性能 |
-| `# line M1/M2 cs_pu=…` / `# spi M1/M2 pullup=…` | `cs_pu != cs_pd` 才表示"MISO 被驱动";相等 ⇒ 选中后仍悬空。读回随上下拉变化 ⇒ 线上无人驱动,不是协议解析问题 |
+| `# gate 2.4G(GPIO7)=… KILL(GPIO8)=… -> M3 CE=AND(7,8)=…` | 门控链事实:两者都为 0 ⇒ `CE=0` ⇒ nRF24 power-down。本批**恒为 0**;若出现 1 说明有代码拉高了门控,是缺陷 |
+| `# sdn  M1(GPIO9)=…` | GPIO9 为**开漏**输出(外部 100 kΩ 上拉);`0` = SDN 已拉低/POR 脉冲完成、芯片工作;`1` = shutdown 或 `rf_spi_init()` 未执行到 SDN 步骤。旧接线(SDN 直接接 GND)下同样读到 0,属预期 |
+| `# probe ran=0/1` | `0` = SPI 初始化失败,**此时 `present=false` 是"未探测"**;`1` = 探测真的执行过 |
+| `# probe M1/M2/M3 … present=` | M1 需 `cts=0xFF`(**实际读到的 CTS 字节**,不再是常量)且 `part=0x4463`;M2 需 `partnum=0x00` 且 `version=0x14`(状态寄存器用 `0xC0` 读头);M3 复位值 `config=0x08`。`present=1` **只证明 SPI 读写通**,不证明射频性能 |
+| `# line M1/M2/M3 cs_pu=…` / `# spi M1/M2/M3 pullup=…` | 事实判读:`cs_pu == cs_pd` ⇒ 选中后 MISO 被外部驱动;不等 ⇒ 读数随内部上下拉变(线上无驱动)。SPI 自证同理:**变 = 线上无人驱动;不变 = 读回被固定/有驱动**。两者都**不能单独证明接线坏** |
 | `# loop MOSI13->MISO14 hi=1 lo=0 -> PASS` | 短接 GPIO13–14 后 PASS ⇒ **ESP32 侧 SPI 外设/GPIO 矩阵正常**;FAIL ⇒ 未短接或 GPIO 损坏 |
 | `# rssi 433.920MHz = …` / `# ready` | 三行 rssi 出现 ⇒ CC1101 调谐 + 接收链路真的在工作(不只是 SPI 通);`ready` = 进入帧循环 |
 
-> ⚠️ **短接线插着时探测结果不可用**(整条 SPI 变成回环,读数变成"发出去的字节本身",如 `cts=0x00`),复测前必须拔掉。`CAPS.modules[].present=false` 是"**探过但没探到**",不是"确认没装";`CAPS.limits` 当前值:`usb_frame_max=16384`、`ble_frame_max=3600`、`max_edges=16384`、`stream_rate_hz=50`、`arm_timeout_ms=5000`。
+> ⚠️ **短接线插着时探测结果不可用**(整条 SPI 变成回环,读数变成"发出去的字节本身",如 `cts=0x00`),复测前必须拔掉。`CAPS.modules[].present=false` 只有在 `# probe ran=1` 时才是"**探过但没探到**",不是"确认没装";`CAPS.limits` 当前值:`usb_frame_max=16384`、`ble_frame_max=3600`、`max_edges=16384`、`stream_rate_hz=50`、`arm_timeout_ms=5000`。
 
 ### 7.2 联调记录摘要
 | 日期 | 做了什么 | 结果 |
 |---|---|---|
 | **2026-10-18** | 首次上机启动;原生 USB 与 CH343P 两路对比 | 原生 USB:9.4 min 内 435 次 connect、**0 次成功**、438 次 `error -71`;CH343P:稳定枚举为 `/dev/ttyACM0`,烧录/日志/I-Q 均验证 |
 | **2026-10-25 第 1 次探测**(M1/M2 已接、M3 未接) | 启动时只读探测三模块 + MISO 线检 | 三块一致 `0xFF`;`pd=0 pu=1` ⇒ **MISO 悬空**,是电气/供电问题而非驱动问题。据此补 `rf_wire_check` 与模块侧针序表 |
-| **2026-10-25 第 2 次探测**(按接线文档重接后) | 波特率改回 921600 后复测 | **控制通道 PASS**(`HELLO_ACK fw=0.2.0`、`PING` RTT 1.7/1.9/3.5ms);MISO 变为 `driven-LOW`,但 M1/M2 读数仍随时钟/上下拉变化 ⇒ **SPI 采样异常**。排除实验(降到 100kHz、对调 SCK/MOSI、补 SDN 时序、连续复位 3 次)均未改变结论 |
-| **2026-10-25 第 3 次探测**(AS10 的 SDN 改接 GND) | 修正两处**即使接线正确也读不到 ID** 的软件错误:①Si446x 命令与响应是两笔独立事务(先发命令,再发 `READ_CMD_BUFF` 读 CTS 与 8 字节响应),PART 大端;②CC1101 的 `tSP,pd` 由 1µs 改为 **200µs** 并检查 CHIP_RDYn | 仍识别不到(M1 `cts=0xFF/part=0xFFFF`、M2 `partnum=0xFF`);**新增 GPIO13–14 回环自检 PASS** ⇒ ESP32 侧全部正常,故障定位在 **GPIO13 之后的 MOSI 线/面包板接触/模块 pin 6** |
+| **2026-10-25 第 2 次探测**(按接线文档重接后) | 波特率改回 921600 后复测 | **控制通道 PASS**(`HELLO_ACK fw=0.2.0`、`PING` RTT 1.7/1.9/3.5ms);MISO 变为 `driven-LOW`,但 M1/M2 读数仍随时钟/上下拉变化 ⇒ 当时判为 **SPI 采样异常**。排除实验(降到 100kHz、对调 SCK/MOSI、补 SDN 时序、连续复位 3 次)均未改变结论。⚠️ **该结论已被 2026-10-31 审计推翻**:旧固件的 CC1101 读头错误与 POR 时序不足即可造成同样现象 |
+| **2026-10-25 第 3 次探测**(AS10 的 SDN 改接 GND) | 修正两处**即使接线正确也读不到 ID** 的软件错误:①Si446x 命令与响应是两笔独立事务(先发命令,再发 `READ_CMD_BUFF` 读 CTS 与 8 字节响应),PART 大端;②CC1101 的 `tSP,pd` 由 1µs 改为 **200µs** 并检查 CHIP_RDYn | 仍识别不到(M1 `cts=0xFF/part=0xFFFF`、M2 `partnum=0xFF`);GPIO13–14 回环自检 PASS(只证明 ESP32 侧 SPI 正常)。⚠️ **当时「故障定位在 GPIO13 之后的 MOSI 线」的结论已被 2026-10-31 审计推翻**,见下一行 |
+| **2026-10-31 固件审计与修复**(静态,未上机) | 对固件做逐行只读审计,修复 **C-01**(帧发送经 `esp_rom_output_putc` 把 0x0A→0x0D0A、丢 0x0D,约 1.5% 应答帧静默损坏)、**H-01**(CC1101 状态寄存器读头 0x80→**0xC0**,旧固件下 M2 探测结构性不可能通过)、**H-02**(POR:EN 拉高后 ≥20 ms、M1 SDN(开漏+100k 上拉)释放 ≥100 µs→拉低→≥10 ms、Si446x CTS 窗口 100 ms)、**H-03**(GPIO7 上电显式拉低;M3 CE=AND(7,8),无 CE GPIO),以及 M-01/M-02/M-03/M-04…/L-01…L-17;`pio run -e esp32s3` 通过且无 8/16 MB 警告 | **尚未重新上机探测**。上述缺陷都会产生「接线坏」的相同读数 ⇒ 旧根因结论作废;必须按下方「下一步」重新采集横幅原始读数后才能判定硬件是否也有问题 |
 
-**下一步(现场)**:换或重插 MOSI 杜邦线;确认模块排针已焊;以模块丝印/方形焊盘为 pin 1 重新核对 pin 6。两块模块排针都是**交错双排孔**(AS10 2×6、AS07 2×4),按"同一排顺序数"极易错位。因此当前**除 TC-074a/074e/074i 与 schema 校验外不存在可执行的设备侧用例**:A-02/A-03/A-07 及全部发射类用例都被阶段 2 阻塞。
+**下一步(现场,2026-10-31 起)**:
+
+1. **拔掉 GPIO13–14 回环短接线**(插着时整条 SPI 变回环,读数不可用);确认模块排针已焊。
+2. 烧录本版固件,复位后按 **921600** 抓**完整**横幅(建议 `python3 tools/rf_module_test.py --raw-banner`),先核对三行新字段:`# probe ran=` 必须为 `1`(否则是 SPI 初始化失败,`present=false` 是「未探测」);`# gate 2.4G(GPIO7)=0 KILL(GPIO8)=0 -> M3 CE=AND(7,8)=0`;`# sdn M1(GPIO9)=0`。
+3. **逐块累加接模块**(先 M1 → 再 M2 → 再 M3),按 [docs/03-firmware.md](03-firmware.md) §6 判读:
+   - M1:`cts=` 是**实际读到的 CTS 字节**(不再是常量伪造),`part=0x4463` 才算识别;
+   - M2:`partnum=0x00` 且 `version=0x14`(状态寄存器已改 `0xC0` 读头);`present=1` 后应有 3 行 `# rssi`;
+   - M3:`config=0x08`;探测时 CE=0(power-down),属安全态。
+4. 若某槽仍失败,**先留原始横幅**(`--raw-banner` 全文)+ 接线照片 + 模块 VCC–GND 万用表读数,再决定是否动硬件。**不要预设「MOSI 线坏」**;两块模块排针都是**交错双排孔**(AS10 2×6、AS07 2×4、AS01 2×4),按「同一排顺序数」极易错位,需要核对时以模块丝印/方形焊盘为 pin 1。
+5. 复测通过后更新本节与 [docs/03-firmware.md](03-firmware.md) §1/§6 的现状段,并把阶段 2 状态从「原因待定」改判。
+
+在此之前**除 TC-074a/074e/074i 与 schema 校验外不存在可执行的设备侧用例**:A-02/A-03/A-07 及全部发射类用例都被阶段 2 阻塞。
 
 ## 8. 合规参考(本批 = 屏蔽室内使用,不作验收门)
 
@@ -347,7 +362,7 @@ python3 tools/validate_schemas.py                   # 退出码 0 = 通过(当�
 |---|---|---|---|
 | **R-13** | 控制载体不可用 ⇒ 既不能配对也不能控制 | 🔴 发布门禁 | 已按实测改走 **CH343P**(原生 USB 在本板从未枚举);阶段 0 的可用性以回环实测为准(TC-074a) |
 | **R-01** | M3 20dBm 自扰压掉本机无线 | 🔴 | 本批无无线 ⇒ 风险面收窄;USB 侧仍须实测 **TC-074g** |
-| **—** | **模块探测不通**(`present` 全 false,MOSI 接线待查) | 🔴 当前阻塞 | A-02/A-03/A-07 及全部发射类用例被阻塞;先做完 §7.2 的现场核对 |
+| **—** | **模块探测不通**(`present` 全 false,根因待定) | 🔴 当前阻塞 | 旧固件缺陷(C-01/H-01/H-02/H-03)已修复,这些缺陷本身就会产生「接线坏」的读数 ⇒ 不再预设 MOSI 接线故障;按 §7.2 重新探测后再判定。A-02/A-03/A-07 及全部发射类用例仍被阶段 2 阻塞 |
 | **R-18** | 山寨板 WS2812 未焊 ⇒ 状态出口静默失效 | 🟠 | 点灯实测(TC-106);失败则必须另行引入状态出口 |
 | **R-16/17、R-07** | 无屏 ⇒ 状态不可观测;板载 N16R8 的 GPIO33–37 不可用 | 🟠 / 🟡 | `RF_KILL` 状态可查 + WS2812 指示语(软件切换尚无协议字段);GPIO33–37 全程不用(已落实) |
 

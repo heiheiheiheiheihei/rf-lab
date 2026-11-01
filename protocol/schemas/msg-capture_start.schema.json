@@ -8,7 +8,7 @@
     "f_hz": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/frequencyHz"
+          "$ref": "common.schema.json#/definitions/frequencyHz"
         }
       ],
       "description": "捕获频率,单位 Hz(整数)。"
@@ -16,7 +16,7 @@
     "mod": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/mod"
+          "$ref": "common.schema.json#/definitions/mod"
         }
       ],
       "description": "调制方式:ook / 2fsk / auto(文档 §3.4 明列)。注意 mod:\"2fsk\" 有硬件前提——RMT 只采数字边沿,2FSK 必须先经比较器/过零整形(§3.5)。"
@@ -33,7 +33,7 @@
     "trigger_rssi_dbm": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/rssi"
+          "$ref": "common.schema.json#/definitions/rssi"
         }
       ],
       "description": "触发捕获的 RSSI 门限,单位 dBm。"

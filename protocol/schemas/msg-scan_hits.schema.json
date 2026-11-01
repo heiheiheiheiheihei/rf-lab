@@ -8,7 +8,7 @@
     "scan_id": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/scanId"
+          "$ref": "common.schema.json#/definitions/scanId"
         }
       ],
       "description": "本次分页数据所属的扫描会话标识。"
@@ -26,9 +26,9 @@
     "hits": {
       "type": "array",
       "items": {
-        "$ref": "common.schema.json#/$defs/hitPoint"
+        "$ref": "common.schema.json#/definitions/hitPoint"
       },
-      "description": "本页命中点数组,元素见 common.schema.json#/$defs/hitPoint。文档 §3.3 示例:[{f_hz,rssi_dbm,t_ms}...]。"
+      "description": "本页命中点数组,元素见 common.schema.json#/definitions/hitPoint。文档 §3.3 示例:[{f_hz,rssi_dbm,t_ms}...]。"
     }
   },
   "required": [

@@ -20,7 +20,7 @@
     "active_slot": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/slot"
+          "$ref": "common.schema.json#/definitions/slot"
         }
       ],
       "description": "当前活动模块槽位 1..3(文档 §4 示例 1)。"
@@ -28,15 +28,15 @@
     "modules": {
       "type": "array",
       "items": {
-        "$ref": "common.schema.json#/$defs/capsModule"
+        "$ref": "common.schema.json#/definitions/capsModule"
       },
-      "description": "模块能力数组,元素见 common.schema.json#/$defs/capsModule。"
+      "description": "模块能力数组,元素见 common.schema.json#/definitions/capsModule。"
     },
     "policy": {
-      "$ref": "common.schema.json#/$defs/policy"
+      "$ref": "common.schema.json#/definitions/policy"
     },
     "limits": {
-      "$ref": "common.schema.json#/$defs/limits"
+      "$ref": "common.schema.json#/definitions/limits"
     },
     "deprecated": {
       "type": "array",
@@ -44,19 +44,19 @@
         "type": "string",
         "description": "被弃用的字段名。"
       },
-      "description": "已弃用字段清单。文档 §8 规定「移除字段前必须先在 CAPS 中标记 deprecated:[...],保留至少一个小版本」,但 §4 的示例与 limits 表都没有它的形状——本 schema 按 §8 展示的数组语法建模为可选字段(string 元素属推断),见 README §7。"
+      "description": "已弃用字段清单。文档 §8 规定「移除字段前必须先在 CAPS 中标记 deprecated:[...],保留至少一个小版本」,但 §4 的示例与 limits 表都没有它的形状——本 schema 按 §8 展示的数组语法建模为可选字段(string 元素属推断),见 README §7.9。"
     },
     "transports": {
       "type": "array",
       "items": {
-        "$ref": "common.schema.json#/$defs/transport"
+        "$ref": "common.schema.json#/definitions/transport"
       },
       "description": "设备支持的链路清单(契约 §2.2)。App 据此决定可用通道;至少含一条。"
     },
     "active_transport": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/transport"
+          "$ref": "common.schema.json#/definitions/transport"
         }
       ],
       "description": "当前承载会话的那一条链路(契约 §2.2 活动链路唯一性)。链路由 USB 抢占无线时该值变化,App 应以 HELLO_ACK/STATUS 的最新值为准。"

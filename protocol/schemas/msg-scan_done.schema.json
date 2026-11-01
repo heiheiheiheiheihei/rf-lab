@@ -31,9 +31,9 @@
     "coverage": {
       "type": "array",
       "items": {
-        "$ref": "common.schema.json#/$defs/freqRange"
+        "$ref": "common.schema.json#/definitions/freqRange"
       },
-      "description": "实际覆盖的频率区间数组,元素见 common.schema.json#/$defs/freqRange。文档 §3.3 示例:[{f_start_hz,f_stop_hz}...]。"
+      "description": "实际覆盖的频率区间数组,元素见 common.schema.json#/definitions/freqRange。文档 §3.3 示例:[{f_start_hz,f_stop_hz}...]。"
     }
   },
   "required": [

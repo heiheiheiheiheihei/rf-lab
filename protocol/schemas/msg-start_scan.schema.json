@@ -8,7 +8,7 @@
     "f_start_hz": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/frequencyHz"
+          "$ref": "common.schema.json#/definitions/frequencyHz"
         }
       ],
       "description": "扫频起始频率,单位 Hz(整数)。"
@@ -16,7 +16,7 @@
     "f_stop_hz": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/frequencyHz"
+          "$ref": "common.schema.json#/definitions/frequencyHz"
         }
       ],
       "description": "扫频结束频率,单位 Hz(整数)。"
@@ -24,7 +24,7 @@
     "step_hz": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/frequencyHz"
+          "$ref": "common.schema.json#/definitions/frequencyHz"
         }
       ],
       "description": "步进间隔,单位 Hz(整数)。"
@@ -36,7 +36,7 @@
     "rssi_threshold_dbm": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/rssi"
+          "$ref": "common.schema.json#/definitions/rssi"
         }
       ],
       "description": "命中阈值,单位 dBm;只有超过该值的点才回 SCAN_HIT。"
@@ -44,7 +44,7 @@
     "mode": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/scanMode"
+          "$ref": "common.schema.json#/definitions/scanMode"
         }
       ],
       "description": "扫频模式:peak(峰值保持)/ sweep(逐点扫描)。"

@@ -2,13 +2,13 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "msg-tx_request.schema.json",
   "title": "TX_REQUEST (0x40)",
-  "description": "方向:App→设备 · 契约 §3.7 · 协议 v1.1。发射请求。发射默认拒绝:需频段白名单 + 功率上限 + 显式用户确认 + 有效令牌(§1、§7);auth_token 只是第四道门,前三道任何一道不过即拒绝且不因令牌有效而放宽(§7.1(4))。每次 TX_REQUEST(含被拒的)必须写本地环形审计日志,含时间、频率、功率、结果(§7)。**两段式发射复用本消息**:第一阶段带完整参数与令牌,设备回 TX_STATUS{armed};第二阶段**只带** {armed_ack:true}。",
+  "description": "方向:App→设备 · 契约 §3.7 · 协议 v1.1。发射请求。发射默认拒绝:需频段白名单 + 功率上限 + 显式用户确认 + 有效令牌(§1、§7);auth_token 只是第四道门,前三道任何一道不过即拒绝且不因令牌有效而放宽(§7.1(4))。每次 TX_REQUEST(含被拒的)必须写本地环形审计日志,含时间、频率、功率、结果(§7)。**两段式发射复用本消息,本 schema 用 oneOf 强制两种互斥形态**:①第一阶段 = 完整参数(f_hz/mod/payload_rle/repeats/power_dbm/reason,可带 auth_token),**不得带 armed_ack**;②第二阶段 = **只带** {armed_ack:true},不得携带任何其它字段。顶层 additionalProperties:false 对两分支同时生效,因此拼错字段或把两阶段混在一起都会被拒绝(契约 §3.7「只带」)。",
   "type": "object",
   "properties": {
     "f_hz": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/frequencyHz"
+          "$ref": "common.schema.json#/definitions/frequencyHz"
         }
       ],
       "description": "发射频率,单位 Hz(整数)。必须落在 policy.tx_whitelist 内,否则 ERROR{tx_denied}(§6)。"
@@ -16,7 +16,7 @@
     "mod": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/txMod"
+          "$ref": "common.schema.json#/definitions/txMod"
         }
       ],
       "description": "发射调制方式,契约 §3.7 正文已明确:`mod:\"ook\"|\"2fsk\"`,**不含 auto**(auto 是接收侧 CAPTURE_START 的自动选择语义)。"
@@ -33,7 +33,7 @@
     "power_dbm": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/powerDbm"
+          "$ref": "common.schema.json#/definitions/powerDbm"
         }
       ],
       "description": "发射功率,单位 dBm;不得超过 policy.tx_power_cap_dbm 与模块 tx_max_dbm。令牌把它按 ×10 的整数绑定(power_dbm_x10_be16,§7.1(2))。"
@@ -51,13 +51,34 @@
       "description": "发射理由,自由文本;用于审计日志(§7)。"
     }
   },
-  "required": [
-    "f_hz",
-    "mod",
-    "payload_rle",
-    "repeats",
-    "power_dbm",
-    "reason"
+  "oneOf": [
+    {
+      "description": "第一阶段:完整参数。armed_ack 不得出现(它只属于第二阶段)。",
+      "required": [
+        "f_hz",
+        "mod",
+        "payload_rle",
+        "repeats",
+        "power_dbm",
+        "reason"
+      ],
+      "properties": {
+        "armed_ack": false
+      }
+    },
+    {
+      "description": "第二阶段:只带 {armed_ack:true}。additionalProperties:false 保证不会混入第一阶段参数。",
+      "required": [
+        "armed_ack"
+      ],
+      "properties": {
+        "armed_ack": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    }
   ],
   "additionalProperties": false
 }

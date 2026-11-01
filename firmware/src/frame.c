@@ -18,6 +18,21 @@ void rflab_rx_init(rflab_rx_t *rx)
     rx->state = ST_MAGIC;
 }
 
+void rflab_rx_reset(rflab_rx_t *rx)
+{
+    /* 只复位"在途"状态;type/seq/len/got 无意义,一并清零便于调试。 */
+    rx->state = ST_MAGIC;
+    rx->type  = 0;
+    rx->seq   = 0;
+    rx->len   = 0;
+    rx->got   = 0;
+}
+
+bool rflab_rx_in_progress(const rflab_rx_t *rx)
+{
+    return rx->state != ST_MAGIC;
+}
+
 int rflab_rx_feed(rflab_rx_t *rx, uint8_t b, rflab_frame_t *out)
 {
     switch (rx->state) {

@@ -8,7 +8,7 @@
     "f_hz": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/frequencyHz"
+          "$ref": "common.schema.json#/definitions/frequencyHz"
         }
       ],
       "description": "观测频率,单位 Hz(整数)。"
@@ -16,7 +16,7 @@
     "rssi_dbm": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/rssi"
+          "$ref": "common.schema.json#/definitions/rssi"
         }
       ],
       "description": "接收信号强度,单位 dBm。"

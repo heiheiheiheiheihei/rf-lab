@@ -4,11 +4,13 @@
 |---|---|
 | [`../docs/02-hardware.md`](../docs/02-hardware.md) | **硬件设计正文**:开发板事实、引脚分配、模块针序、供电/门控、天线、BOM、接线注意 |
 | [`wiring/`](wiring/) | 接线表 + 接线图(SVG/PNG),由 `tools/gen_wiring_diagram.py` **生成**,不要手工编辑 |
+| [`wiring/as10-pin-card.png`](wiring/as10-pin-card.png) | AS10 现场认脚卡(由 `tools/gen_as10_pin_card.py` 生成;SMA 端/13.5mm 排距/方焊盘定位) |
 | [`bom/`](bom/) | 物料清单(占位;单价待询价) |
 | [`datasheets/`](datasheets/) | 厂商官方手册存档,让频率/功率结论可复核 |
 
-> 引脚分配的唯一数据源是 `tools/gen_wiring_diagram.py` 的 `PINS`;改引脚流程:
-> 改 `docs/02-hardware.md` §3 → 改脚本 `PINS` → 重跑 `python3 tools/gen_wiring_diagram.py`。
+> 引脚分配的唯一权威是 [`docs/02-hardware.md`](../docs/02-hardware.md) §3;
+> `tools/gen_wiring_diagram.py` 的 `PINS` 是它的可执行镜像。改引脚流程:
+> 改 `docs/02-hardware.md` §3 → 改脚本 `PINS` → 重跑 `python3 tools/gen_wiring_diagram.py` → `--check` 逐字节比对生成物。
 
 ## 三块模块(模块级能力,来源:厂商官方手册)
 

@@ -59,10 +59,18 @@ esp_err_t pairing_init(void)
     }
 
     nvs_handle_t h;
-    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) {
+    esp_err_t nerr = nvs_open(NVS_NS, NVS_READONLY, &h);
+    if (nerr == ESP_ERR_NVS_NOT_FOUND) {
         /* 命名空间还不存在 = 从未配对过,这是正常首次启动。 */
         s_bonded = false;
         return ESP_OK;
+    }
+    if (nerr != ESP_OK) {
+        /* L-12:NVS 损坏/无空间等**不是**"未配对"。如实上报,由调用方置 FAULT,
+         * 不要把它静默当成"从没配过"(否则每次启动都表现为可重新配对)。 */
+        ESP_LOGE(TAG, "NVS 打开失败(不是「未配对」): %s", esp_err_to_name(nerr));
+        s_bonded = false;
+        return nerr;
     }
 
     size_t len = sizeof(s_secret);
@@ -91,7 +99,9 @@ esp_err_t pairing_create(const char *client_id)
     if (s_bonded) {
         return ESP_ERR_INVALID_STATE;
     }
-    if (client_id == NULL || strlen(client_id) > PAIRING_CLIENT_ID_MAX) {
+    if (client_id == NULL || client_id[0] == '\0' ||
+        strlen(client_id) > PAIRING_CLIENT_ID_MAX) {
+        /* M-06:空 client_id 会让设备永久绑定到一个无法匹配的 client。 */
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -107,6 +117,8 @@ esp_err_t pairing_create(const char *client_id)
         }
     }
     if (all_zero) {
+        /* 只有这里代表"随机源失败"。ESP_FAIL 是 main.c 映射 rng_failed 的唯一来源;
+         * NVS 错误按原样返回(ESP_ERR_NVS_* 等),不会被冒充成 RNG 问题(L-12)。 */
         return ESP_FAIL;
     }
 

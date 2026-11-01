@@ -7,6 +7,7 @@
 #include "driver/rmt_tx.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 
 #define LED_GPIO          48
@@ -30,6 +31,11 @@ static rmt_channel_handle_t s_chan;
 static rmt_encoder_handle_t s_enc;
 static bool                 s_ready;
 
+/* ws2812_write 的互斥:主任务(例如 KILL 置位时立即写黑)与 LED 任务会并发
+ * 调用它,而它内部用的是共享的静态符号缓冲。没有锁时后一次刷新会改写正在
+ * 发送的数据(RMT 还在读),表现为颜色错乱。 */
+static SemaphoreHandle_t s_lock;
+
 static volatile led_state_t s_state = LED_STATE_KILL;
 static volatile uint32_t    s_last_link_ms;
 static uint32_t             s_ms;
@@ -48,9 +54,10 @@ static const rgb_t COL_PURPLE = {32, 0, 32};
 
 static void ws2812_write(rgb_t c)
 {
-    if (!s_ready) {
+    if (!s_ready || s_lock == NULL) {
         return;
     }
+    xSemaphoreTake(s_lock, portMAX_DELAY);
 
     /* 24 bit/灯,WS2812 字节序为 G-R-B(高位先出)。 */
     static rmt_symbol_word_t sym[26];
@@ -81,10 +88,18 @@ static void ws2812_write(rgb_t c)
         /* 阻塞到发完再改 sym[],否则下一次刷新会改写正在发送的数据。 */
         rmt_tx_wait_all_done(s_chan, 50);
     }
+
+    xSemaphoreGive(s_lock);
 }
 
 void led_init(void)
 {
+    s_lock = xSemaphoreCreateMutex();
+    if (s_lock == NULL) {
+        ESP_LOGE(TAG, "LED 互斥量创建失败(WS2812 不可用)");
+        return;
+    }
+
     rmt_tx_channel_config_t tx_cfg = {
         .gpio_num          = LED_GPIO,
         .clk_src           = RMT_CLK_SRC_DEFAULT,
@@ -97,7 +112,10 @@ void led_init(void)
         ESP_LOGE(TAG, "RMT 通道创建失败(WS2812 不可用)");
         return;
     }
-    rmt_copy_encoder_config_t enc_cfg = {0};
+    /* ⚠️ IDF 5.5 的 rmt_copy_encoder_config_t 是**空结构体**(没有成员),
+     *    `= {0}` 会触发 "excess elements in struct initializer" 警告,
+     *    所以这里不做零初始化(没有可取的成员)。 */
+    rmt_copy_encoder_config_t enc_cfg;
     if (rmt_new_copy_encoder(&enc_cfg, &s_enc) != ESP_OK) {
         ESP_LOGE(TAG, "RMT copy encoder 创建失败");
         return;
@@ -115,6 +133,13 @@ void led_init(void)
 void led_set_state(led_state_t st)
 {
     s_state = st;
+    if (st == LED_STATE_KILL) {
+        /* ⚠️ KILL 必须**立即**写黑,不能只改状态等 LED 任务下一拍(10ms):
+         *    - WS2812 停更会保持上一次颜色,这段时间灯可能还是亮的;
+         *    - "灯灭"虽不是安全证据,但"灯亮着而系统说 KILL"会直接误导现场判读。
+         *    写黑与 LED 任务通过 s_lock 串行化(见 ws2812_write)。 */
+        ws2812_write(COL_OFF);
+    }
 }
 
 void led_note_link_activity(void)
@@ -187,7 +212,7 @@ static void led_task(void *arg)
 
 void led_start(void)
 {
-    /* 低优先级、独立任务:不让 LED 刷新去挤射频时序(硬件文档 §2.7 纪律 3)。 */
+    /* 低优先级、独立任务:不让 LED 刷新去挤射频时序(硬件文档 §4)。 */
     xTaskCreate(led_task, "led", 3072, NULL, 4, NULL);
 }
 

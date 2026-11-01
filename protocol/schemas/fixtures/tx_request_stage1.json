@@ -1,0 +1,8 @@
+{
+  "f_hz": 433920000,
+  "mod": "ook",
+  "payload_rle": "AQIDBA",
+  "repeats": 3,
+  "power_dbm": 10,
+  "reason": "fixture"
+}

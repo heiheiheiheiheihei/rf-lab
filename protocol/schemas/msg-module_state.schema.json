@@ -8,7 +8,7 @@
     "slot": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/slot"
+          "$ref": "common.schema.json#/definitions/slot"
         }
       ],
       "description": "模块槽位 1..3。"
@@ -16,7 +16,7 @@
     "state": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/moduleState"
+          "$ref": "common.schema.json#/definitions/moduleState"
         }
       ],
       "description": "模块状态。"

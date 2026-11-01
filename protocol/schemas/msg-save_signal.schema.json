@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "msg-save_signal.schema.json",
   "title": "SAVE_SIGNAL (0x42)",
-  "description": "方向:App→设备 · 文档 §3.7 · 协议 v1。把信号存入设备本地。raw_ref 的类型文档未规定,按「引用标识」建模为字符串并列入 README §7。",
+  "description": "方向:App→设备 · 文档 §3.7 · 协议 v1。把信号存入设备本地。raw_ref 的类型文档未规定,按「引用标识」建模为字符串并列入 README §7.15。",
   "type": "object",
   "properties": {
     "name": {
@@ -10,7 +10,7 @@
       "description": "信号名称,自由文本;后续 DELETE_SAVED / REPLAY_SIGNAL / SAVED_LIST 以它引用。"
     },
     "features": {
-      "$ref": "common.schema.json#/$defs/features"
+      "$ref": "common.schema.json#/definitions/features"
     },
     "raw_ref": {
       "type": "string",

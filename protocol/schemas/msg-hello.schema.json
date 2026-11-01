@@ -19,7 +19,9 @@
     },
     "client_id": {
       "type": "string",
-      "description": "App 实例标识,用于设备侧配对与防串台(§7、§7.1)。"
+      "description": "App 实例标识,用于设备侧配对与防串台(§7、§7.1)。必须非空且 ≤64 字节(设备侧 NVS 绑定缓冲上限)。",
+      "minLength": 1,
+      "maxLength": 64
     },
     "pairing": {
       "type": "boolean",

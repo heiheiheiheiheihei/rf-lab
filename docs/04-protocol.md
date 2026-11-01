@@ -1,5 +1,5 @@
 # 04 · 设备 ↔ App 协议契约
-状态:`draft` · 契约版本 `v1.1` · 帧版本 `VER = 0x01` · 最后更新:2026-10-25
+状态:`draft` · 契约版本 `v1.1` · 帧版本 `VER = 0x01` · 最后更新:2026-10-31
 > **本文件是协议契约的唯一权威来源。** 固件、App、AI 提示词三方均以此为准;**任何字段改动必须先改本文件**,再在同一批改动里同步 `protocol/schemas/`。机器可读镜像见 [`protocol/schemas/`](../protocol/schemas/)(校验 `python3 tools/validate_schemas.py`);固件实现见 [03-firmware.md](03-firmware.md),App 与 AI 见 [05-app-ai.md](05-app-ai.md),验证用例见 [06-test-plan.md](06-test-plan.md)。
 > **章节编号 §1–§9 及子节号被 schema 与代码直接引用,不得重排或复用。**
 
@@ -31,7 +31,7 @@
 | `VER` | 1B | 协议主版本,当前 `0x01`。不匹配即 `ERROR{version_mismatch}` |
 | `TYPE` | 1B | 消息类型,见 §3。最高位 `0x80` 标记**二进制数据帧** |
 | `SEQ` | 1B | 序列号,每帧递增,用于配对请求/响应与丢帧检测 |
-| `LEN` | 2B LE | `PAYLOAD` 字节长度。**格式层逻辑上限 4096**,实际可达上限由承载决定(§2.2.1、§2.2.2);Wi-Fi 上限 65535 |
+| `LEN` | 2B LE | `PAYLOAD` 字节长度。**`LEN` 的实际上限由承载决定**:USB = `CAPS.limits.usb_frame_max`(本固件 16384,§2.2.2),BLE = `CAPS.limits.ble_frame_max`(§2.2.1),Wi-Fi 可达 65535。`4096` **只是 §2.2.1 BLE 分片预算推导中沿用的格式层参考值**,不是 USB 上限、也不是任何承载的独立上限——USB 的 16384 与它不矛盾。超限一律回 `ERROR{frame_too_large}` 并给出当前承载上限(§6) |
 
 ### 2.1 PAYLOAD 解析规则
 控制帧(`TYPE` 最高位 = 0)的 `PAYLOAD` 是 UTF-8 JSON 文本;数据帧(`TYPE` 最高位 = 1)是 §3.5 定义的二进制块 + 尾部 JSON 元数据。
@@ -48,7 +48,7 @@
 > ⏸ **活动链路唯一性与抢占(本批不适用,定义保留)**:同一时刻只有一条链路承载会话;新链路完成 `HELLO` 时旧链路被隐式中止并回 `WARN{preempted}`;**USB 可抢占正在使用的 Wi-Fi/BLE 链路**;禁止两条链路同时下发命令(否则 `seq` 防重放校验与状态机抢占出现竞态)。本批只有 USB 一条链路,不存在仲裁对象,**不要实现抢占分支**。
 
 ### 2.2.1 BLE 上"一个完整帧"能有多大(⏸ 本批不实现,定义与限制值保留)
-`LEN` 字段类型允许到 4096,但**字段能表示 ≠ 能传过去**:整帧必须被切成 ≤15 个分片(§2.3 的 4bit `FRAG_TOTAL`),每片能装多少由协商出的 ATT 载荷决定。按 BLE 5.0 数据长度扩展的典型值推导:
+本小节推导只用 `LEN = 4096` 作为**格式层参考值**(历史设计值,非任何承载的实际上限;USB 的实际上限是 §2.2.2 的 `usb_frame_max` = 16384)。即便如此,**字段能表示 ≠ 能传过去**:整帧必须被切成 ≤15 个分片(§2.3 的 4bit `FRAG_TOTAL`),每片能装多少由协商出的 ATT 载荷决定。按 BLE 5.0 数据长度扩展的典型值推导:
 
 ```text
 LL_Payload(251) − L2CAP 头(4)           = ATT_Payload 247
@@ -77,7 +77,7 @@ BLE ATT MTU 协商后有效载荷通常 20–244B。分片头:`[FRAG_IDX:4bit | 
 
 | TYPE | 名称 | 方向 | 载荷要点 |
 |---|---|---|---|
-| `0x01` | `HELLO` | App→设备 | `{app_version, proto_min, proto_max, client_id}`;**配对时另带** `{pair_code, pairing:true}`(§7.1) |
+| `0x01` | `HELLO` | App→设备 | 必带 `{app_version, proto_min, proto_max, client_id}`,**client_id 必须非空且 ≤64 字节**(配对时固件对空值/超长回 `ERROR{unsupported}`,§7.1);`pairing` 缺省或 `false` = **只建立会话、不请求配对**(自检工具默认如此,不写 NVS),`pairing:true` = 请求配对(§7.1,可能永久绑定) |
 | `0x81` | `HELLO_ACK` | 设备→App | `{fw_version, proto, device_id, chip:"esp32s3", uptime_ms, last_accepted_seq}`;配对字段见 §7.1 |
 | `0x02` / `0x82` | `GET_CAPS` / `CAPS` | App→设备 / 设备→App | 请求 `{}`;应答见 §4 |
 | `0x03` / `0x83` | `PING` / `PONG` | 双向 | `{t_ms}`,用于 RTT 与保活(默认 5s) |
@@ -164,6 +164,8 @@ BLE ATT MTU 协商后有效载荷通常 20–244B。分片头:`[FRAG_IDX:4bit | 
 | `0x42` | `SAVE_SIGNAL` | App→设备 | `{name, features, raw_ref}` — 存入设备本地 |
 | `0x43` | `REPLAY_SIGNAL` | App→设备 | `{name, repeats, auth_token}` |
 
+**两段式 `TX_REQUEST` 的形态互斥(机器可读镜像用 `oneOf` 强制)**:第一阶段必须带完整参数 `{f_hz, mod, payload_rle, repeats, power_dbm, reason}`(按 `policy.tx_requires_token` 可带 `auth_token`),**不得带 `armed_ack`**;第二阶段**只带** `{armed_ack:true}`,不得携带任何其它字段。把两阶段混在同一帧、或第二阶段夹带参数,都属非法载荷,设备应拒绝(§6 无专门的「载荷格式错」错误码,这是已知缺口;当前用 `ERROR{unsupported}` 并说明原因)。
+
 **`payload_rle` 的编码(App↔设备两个方向必须一致)**:两个方向复用 §3.5 的同一布局(`FLAGS` 1B + `edge[0]` 起点 u32 LE + RLE 对 `u16 LE dt` / `u8 level`)。在 **JSON 消息**里该结构以 **base64url 字符串**承载(因为控制帧 `PAYLOAD` 必须是 UTF-8 JSON,§2.1),目前**只有 `TX_REQUEST.payload_rle`** 承载原始码流。`REPLAY_SIGNAL` **不承载**该结构:它按 `name` 引用设备本地已存信号,故载荷只有 `{name, repeats, auth_token}`——回放码流不经过 App,省带宽且避免 App 侧篡改。在 **`DATA_CHUNK`**(`0xB0`)里,同一结构直接作为二进制块承载。**统一布局的理由**:App 常做"捕获→回放"闭环,两个方向布局不同就必须做一次无谓且易错的转码。`FLAGS` 的 bit1(判决点)在**发射**方向无意义(发射的是电平序列),发送方置 `0`。
 **`TX_STATUS.state = "armed"` 的语义**
 
@@ -199,6 +201,8 @@ App **必须**以 `CAPS` 为唯一真实来源,不得硬编码频段。
   "policy": { "tx_whitelist": [], "tx_power_cap_dbm": 20, "tx_requires_token": true },
   "limits": { "ble_frag_total_max": 15, "ble_frame_max": 3600, "usb_frame_max": 16384, "max_edges": 16384, "stream_rate_hz": 50, "arm_timeout_ms": 5000 } }
 ```
+> ⚠️ 上面示例里的 `transports: ["usb", "ble", "wifi"]` 列出的是**协议已定义**的三条链路;BLE/Wi-Fi 本批 ⏸ 移出(§2.2),**固件实际只上报 `["usb"]`**,`active_transport` 也只可能是 `"usb"`。示例保留 `ble_*` limits 是为了后续批次直接接续,不代表本批可用。
+>
 > ⚠️ **`modules[].bands` 必须是模块级、不是芯片级**。误用芯片能力(如把 SI4463 写成 142–1050MHz、CC1101 写成三段)会让 App 以为能扫到实际扫不到的频段——这正是"带外频段必须可见地失败"要禁止的失效模式。真实值:**M1 425–525MHz、M2 387–464MHz、M3 2400–2525MHz**;固件**必须**按实际装的前端上报。
 `policy.tx_whitelist` 为空 = **禁止一切发射**,出厂默认即为空。**`policy.tx_power_cap_dbm` 出厂 20**:产品在屏蔽室内使用,**所有模块按各自模块上限满功率出厂**。该字段是**设备级全局最大值**,**不是"每模块的值"、也不是"按频段的表"**;某次发射的**有效上限 = min(请求值, 本字段, 该模块 `tx_max_dbm`)**。按当前硬件 `min(20, module)` 得 M1 = 20、**M2 = 10**、M3 = 20——**M2 达不到 20 是模块硬件所致,不是被策略限住**,该区别必须体现在 UI 文案上。功率门只防"超过模块/硬件能力",**不再承担法规限幅职责**;真正的约束落在**频段白名单**与**显式用户确认**。`power_dbm` **必须**可由用户在 App 内调节:出厂默认满功率,但设备**不得**忽略 `TX_REQUEST.power_dbm` 而恒用上限;设备回报的 `granted_power_dbm` 与请求值同时存在时以 `granted_power_dbm` 为准。
 **`transports` 与 `active_transport`**:设备支持的链路清单与当前承载会话的那一条(§2.2 活动链路唯一性)。`active_transport` 在链路切换时变化,App 应以 `HELLO_ACK` / `STATUS` 的最新值为准。

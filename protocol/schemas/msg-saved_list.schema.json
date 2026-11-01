@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "msg-saved_list.schema.json",
   "title": "SAVED_LIST (0xD0)",
-  "description": "方向:双向 · 文档 §3.8 · 协议 v1。已存信号清单。文档 §3.8 未给出元素字段,故列表元素为「开放对象」(不设 additionalProperties:false),仅作占位;见 README §7。本 schema 的 type 为 array(MODULES 同理)。",
+  "description": "方向:双向 · 文档 §3.8 · 协议 v1。已存信号清单。文档 §3.8 未给出元素字段,故列表元素为「开放对象」(不设 additionalProperties:false),仅作占位;见 README §7.3。本 schema 的 type 为 array(MODULES 同理,见 §7.13)。",
   "type": "array",
   "items": {
     "type": "object",

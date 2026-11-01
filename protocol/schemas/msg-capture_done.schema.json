@@ -19,7 +19,7 @@
       "description": "是否因 max_edges 钳制或超时而截断(截断时 App 不应把 features 当作完整波形)。"
     },
     "features": {
-      "$ref": "common.schema.json#/$defs/features"
+      "$ref": "common.schema.json#/definitions/features"
     }
   },
   "required": [

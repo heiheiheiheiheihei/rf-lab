@@ -14,6 +14,7 @@
  */
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -64,6 +65,15 @@ typedef struct {
 
 void   rflab_rx_init(rflab_rx_t *rx);
 int    rflab_rx_feed(rflab_rx_t *rx, uint8_t byte, rflab_frame_t *out);
+
+/* 复位接收状态机(回到等 MAGIC)。
+ * 用途(契约 §2 未定义字节间超时,这是实现层的重同步兜底):
+ *   一帧载荷在传输中丢了尾部时,解析器会停在 ST_PAYLOAD 把后续新帧当载荷吃掉;
+ *   接收层在"无字节超过 200ms"时调用本函数,立刻回到干净的等 MAGIC 状态。 */
+void rflab_rx_reset(rflab_rx_t *rx);
+
+/* 是否处于帧中途(已见到 MAGIC、尚未收完一帧)。 */
+bool rflab_rx_in_progress(const rflab_rx_t *rx);
 
 /* 编码一帧到 buf。返回整帧长度;cap 不足返回 0(不截断)。
  * payload 为 NULL 时按空载荷编码(LEN=0)。 */

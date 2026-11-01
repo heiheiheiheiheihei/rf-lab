@@ -8,7 +8,7 @@
     "scan_id": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/scanId"
+          "$ref": "common.schema.json#/definitions/scanId"
         }
       ],
       "description": "本次扫描的会话标识。"
@@ -16,7 +16,7 @@
     "f_hz": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/frequencyHz"
+          "$ref": "common.schema.json#/definitions/frequencyHz"
         }
       ],
       "description": "命中频率,单位 Hz(整数)。"
@@ -24,7 +24,7 @@
     "rssi_dbm": {
       "allOf": [
         {
-          "$ref": "common.schema.json#/$defs/rssi"
+          "$ref": "common.schema.json#/definitions/rssi"
         }
       ],
       "description": "该点的接收信号强度,单位 dBm。"

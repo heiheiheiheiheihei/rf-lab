@@ -2,8 +2,8 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "common.schema.json",
   "title": "RF-Lab 协议共享定义 (v1)",
-  "description": "设备↔App 协议的公共 $defs 集合,镜像 docs/04-protocol.md(契约 v1.1,sha256 eb8aa44235dbdacdbbd19ae6dccce793b9acb5a42ee2200aa8acd6760e40ba24)。本文件不描述任何具体消息载荷,只被 msg-*.schema.json 通过相对路径 $ref 引用。字段与枚举值以协议文档为唯一权威。",
-  "$defs": {
+  "description": "设备↔App 协议的公共 definitions 集合,镜像 docs/04-protocol.md(契约 v1.1,sha256 42fd9a8ff5e1b58bb85fbabc6597732bdb7397c7712551e3b20b059bc32b0545)。本文件不描述任何具体消息载荷,只被 msg-*.schema.json 通过相对路径 $ref 引用。字段与枚举值以协议文档为唯一权威。",
+  "definitions": {
     "frequencyHz": {
       "type": "integer",
       "description": "频率,单位 Hz,一律用整数表示。换算提示:433920000 = 433.92MHz;315000000 = 315MHz;868000000 = 868MHz;2400000000 = 2.4GHz;2525000000 = 2.525GHz。文档 §3 的所有 f_*_hz 字段均为本类型,禁止用 MHz 或浮点表示。",
@@ -59,7 +59,7 @@
     },
     "scanId": {
       "type": "integer",
-      "description": "扫描会话标识。由设备在 START_SCAN 时分配,用于把 SCAN_HIT / SCAN_DONE / GET_SCAN_HITS / SCAN_HITS 关联到同一次扫描;设备端命中缓存保留到下一次扫描开始(文档 §3.3)。文档未规定其类型与起始值,按非负整数建模(判断,见 README §7)。",
+      "description": "扫描会话标识。由设备在 START_SCAN 时分配,用于把 SCAN_HIT / SCAN_DONE / GET_SCAN_HITS / SCAN_HITS 关联到同一次扫描;设备端命中缓存保留到下一次扫描开始(文档 §3.3)。文档未规定其类型与起始值,按非负整数建模(判断,见 README §7.6)。",
       "minimum": 0
     },
     "errorCode": {
@@ -82,7 +82,7 @@
     },
     "warnCode": {
       "type": "string",
-      "description": "WARN 码:文档 §6 中标注 (WARN) 的 3 项(band_clipped、throttled、edge_clamped),外加 §5 规则 3 正文使用的 preempted(§6 表未收录,见 README §7)。",
+      "description": "WARN 码:文档 §6 中标注 (WARN) 的 4 项(band_clipped、throttled、edge_clamped、preempted;§5 规则 3 正文同样使用 preempted)。",
       "enum": [
         "band_clipped",
         "throttled",
@@ -92,7 +92,7 @@
     },
     "mod": {
       "type": "string",
-      "description": "调制方式,取值来自文档 §3.4 CAPTURE_START 的 mod:\"ook\"|\"2fsk\"|\"auto\"。注意:这是「接收侧」的取值集合(CAPTURE_START 用),发射侧另有 txMod;文档 §3.7 TX_REQUEST 的载荷行只写了裸 mod(见 README §7)。",
+      "description": "调制方式,取值来自文档 §3.4 CAPTURE_START 的 mod:\"ook\"|\"2fsk\"|\"auto\"。注意:这是「接收侧」的取值集合(CAPTURE_START 用,含 auto 自动选择);发射侧另有 txMod(不含 auto)。文档 §3.7 TX_REQUEST 的载荷行只写了裸 mod,语义按 §3.4 复用,见 README §7.7。",
       "enum": [
         "ook",
         "2fsk",
@@ -102,6 +102,14 @@
     "txMod": {
       "type": "string",
       "description": "发射调制方式,取值 ook/2fsk。文档 §3.7 载荷行已明确 `mod:\"ook\"|\"2fsk\"`,并写明**不含 auto**:auto 是接收侧的自动选择语义(§3.4),发射必须由 App 指定具体调制。",
+      "enum": [
+        "ook",
+        "2fsk"
+      ]
+    },
+    "modResolved": {
+      "type": "string",
+      "description": "**已确定**的调制方式,取值 ook/2fsk,**不含 auto**(自动选择只属于接收侧请求语义,§3.4)。用于 CAPTURE_DONE.features.mod 这类「设备归纳后的实际结果」字段:设备必须给出实际使用的调制,不得把请求侧的 auto 回填为结果,否则下游 AI 无法判断载荷语义。",
       "enum": [
         "ook",
         "2fsk"
@@ -153,12 +161,12 @@
       },
       "minItems": 2,
       "maxItems": 2,
-      "description": "单个频段,两元素整数数组 [f_start_hz, f_stop_hz],单位 Hz,含端点。文档 §4 示例:[[142000000,1050000000]]、[[300000000,348000000],[387000000,464000000],[779000000,928000000]]。"
+      "description": "单个频段,两元素整数数组 [f_start_hz, f_stop_hz],单位 Hz,含端点。⚠️ 文档 §4 **明确禁止**把芯片级能力当作模块级上报;以下两组数是文档里的**反面示例**,不要复制:[[142000000,1050000000]](SI4463 芯片能力)、[[300000000,348000000],[387000000,464000000],[779000000,928000000]](CC1101 芯片能力三段)。正确值是**模块级**:M1 425–525MHz、M2 387–464MHz、M3 2400–2525MHz(§4)。"
     },
     "bands": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/band"
+        "$ref": "#/definitions/band"
       },
       "description": "频段数组,元素为两元素整数数组(见 band)。文档 §4:模块可覆盖的频段范围;SCAN_DONE.coverage 使用命名形式 freqRange。"
     },
@@ -168,7 +176,7 @@
         "f_start_hz": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/frequencyHz"
+              "$ref": "common.schema.json#/definitions/frequencyHz"
             }
           ],
           "description": "区间起始频率,单位 Hz(整数)。"
@@ -176,7 +184,7 @@
         "f_stop_hz": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/frequencyHz"
+              "$ref": "common.schema.json#/definitions/frequencyHz"
             }
           ],
           "description": "区间结束频率,单位 Hz(整数)。"
@@ -195,7 +203,7 @@
         "f_hz": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/frequencyHz"
+              "$ref": "common.schema.json#/definitions/frequencyHz"
             }
           ],
           "description": "命中频率,单位 Hz(整数)。"
@@ -203,7 +211,7 @@
         "rssi_dbm": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/rssi"
+              "$ref": "common.schema.json#/definitions/rssi"
             }
           ],
           "description": "该点的接收信号强度,单位 dBm。"
@@ -289,7 +297,7 @@
         "f_hz": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/frequencyHz"
+              "$ref": "common.schema.json#/definitions/frequencyHz"
             }
           ],
           "description": "本次捕获的中心频率,单位 Hz(整数)。文档 §3.6 示例 433920000 = 433.92MHz。[测量量]"
@@ -297,15 +305,15 @@
         "mod": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/mod"
+              "$ref": "common.schema.json#/definitions/modResolved"
             }
           ],
-          "description": "本次捕获的调制方式。"
+          "description": "本次捕获的**实际**调制方式(ook/2fsk)。features 是设备归纳结果,不得为 auto——auto 只是 CAPTURE_START 的请求语义(§3.4);见 README §7.7。"
         },
         "raw_semantics": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/rawSemantics"
+              "$ref": "common.schema.json#/definitions/rawSemantics"
             }
           ],
           "description": "原始序列判决语义,镜像 §3.5 FLAGS bit1;决定 symbol_rate_bps 与 pulse_width_us 的解读方式(§3.6 规则 4)。v1.1 新增字段,可能缺失(§3.6 规则 5),故不列入 required。"
@@ -313,7 +321,7 @@
         "rssi_dbm": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/rssi"
+              "$ref": "common.schema.json#/definitions/rssi"
             }
           ],
           "description": "捕获期间的接收信号强度,单位 dBm。[测量量]"
@@ -335,18 +343,18 @@
         "symbol_rate_confidence": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/confidence"
+              "$ref": "common.schema.json#/definitions/confidence"
             }
           ],
           "description": "symbol_rate_bps 的置信度(0.0–1.0)。文档 §3.6 示例 0.81。"
         },
         "pulse_width_us": {
-          "$ref": "#/$defs/pulseWidthUs"
+          "$ref": "#/definitions/pulseWidthUs"
         },
         "encoding_guess": {
           "allOf": [
             {
-              "$ref": "#/$defs/guessString"
+              "$ref": "#/definitions/guessString"
             }
           ],
           "description": "编码方式的猜测结果,自由文本;文档 §3.6 示例 \"pwm\",未给出封闭枚举。[猜测量] 证据不足时必须为 null(§3.6 规则 2,表示「拒绝猜测」,与「猜错了的值」是两回事)。"
@@ -354,7 +362,7 @@
         "encoding_confidence": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/confidence"
+              "$ref": "common.schema.json#/definitions/confidence"
             }
           ],
           "description": "encoding_guess 的置信度(0.0–1.0)。文档 §3.6 示例 0.66。"
@@ -366,7 +374,7 @@
         "payload_bits": {
           "allOf": [
             {
-              "$ref": "#/$defs/guessInt"
+              "$ref": "#/definitions/guessInt"
             }
           ],
           "description": "估计的载荷比特数。[猜测量] 证据不足时必须为 null(§3.6 规则 2)。文档 §3.6 示例 24。"
@@ -374,7 +382,7 @@
         "payload_bits_confidence": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/confidence"
+              "$ref": "common.schema.json#/definitions/confidence"
             }
           ],
           "description": "payload_bits 的置信度(0.0–1.0)。文档 §3.6 示例 0.4。"
@@ -382,7 +390,7 @@
         "preamble_bits": {
           "allOf": [
             {
-              "$ref": "#/$defs/guessInt"
+              "$ref": "#/definitions/guessInt"
             }
           ],
           "description": "估计的前导码比特数。[猜测量] 证据不足时必须为 null(§3.6 规则 2)。文档 §3.6 示例 12。"
@@ -390,7 +398,7 @@
         "crc_guess": {
           "allOf": [
             {
-              "$ref": "#/$defs/guessString"
+              "$ref": "#/definitions/guessString"
             }
           ],
           "description": "CRC 类型的猜测结果,自由文本;文档 §3.6 示例 \"crc8_ poly?0x07\",未给出封闭枚举。[猜测量] 证据不足时必须为 null(§3.6 规则 2)。"
@@ -398,7 +406,7 @@
         "crc_confidence": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/confidence"
+              "$ref": "common.schema.json#/definitions/confidence"
             }
           ],
           "description": "crc_guess 的置信度(0.0–1.0)。文档 §3.6 示例 0.22。"
@@ -411,7 +419,7 @@
         "noise_floor_dbm": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/rssi"
+              "$ref": "common.schema.json#/definitions/rssi"
             }
           ],
           "description": "噪声底,单位 dBm。文档 §3.6 示例 -95.0。[测量量]"
@@ -423,18 +431,18 @@
         "repetition_ms_confidence": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/confidence"
+              "$ref": "common.schema.json#/definitions/confidence"
             }
           ],
-          "description": "repetition_ms 的置信度(0.0–1.0)。§3.6 的表格把 repetition_ms 列为「估计量:必带同名 *_confidence」,但 §3.6 的 JSON 示例里没有这个字段——本 schema 依示例不将其列入 required,见 README §7。"
+          "description": "repetition_ms 的置信度(0.0–1.0)。§3.6 的表格把 repetition_ms 列为「估计量:必带同名 *_confidence」,但 §3.6 的 JSON 示例里没有这个字段——本 schema 依示例不将其列入 required,见 README §7.4 与 §4 第 6 条。"
         },
         "preamble_bits_confidence": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/confidence"
+              "$ref": "common.schema.json#/definitions/confidence"
             }
           ],
-          "description": "preamble_bits 的置信度(0.0–1.0)。§3.6 的表格把 preamble_bits 列为「猜测量:必带同名 *_confidence」,但 §3.6 的 JSON 示例里没有这个字段——本 schema 依示例不将其列入 required,见 README §7。"
+          "description": "preamble_bits 的置信度(0.0–1.0)。§3.6 的表格把 preamble_bits 列为「猜测量:必带同名 *_confidence」,但 §3.6 的 JSON 示例里没有这个字段——本 schema 依示例不将其列入 required,见 README §7.4 与 §4 第 6 条。"
         }
       },
       "description": "特征提取结果(设备侧归纳,供 AI 消费)。按文档 §3.6 JSON 示例逐字段定义;设备只上传本对象,不上传原始码流。三级不确定性表达(§3.6 强制):测量量直接给值,估计量带 *_confidence,猜测量带 *_confidence 且证据不足时必须为 null。**required 只含 v1 的 14 个字段**:§3.6 规则 5 规定 v1.1 新增字段(raw_semantics / *_confidence / incomplete)可能因固件较旧而**缺失**,缺失时一律按「未知/低」处理——若把它们设为必填,规则 5 就永远无法触发,且旧固件报文会被开发期校验误判非法。",
@@ -462,7 +470,7 @@
         "slot": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/slot"
+              "$ref": "common.schema.json#/definitions/slot"
             }
           ],
           "description": "模块槽位编号 1..3。"
@@ -478,7 +486,7 @@
         "bands": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/bands"
+              "$ref": "common.schema.json#/definitions/bands"
             }
           ],
           "description": "该模块可覆盖的频段数组,元素为 [f_start_hz, f_stop_hz](Hz)。"
@@ -486,7 +494,7 @@
         "tx_max_dbm": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/powerDbm"
+              "$ref": "common.schema.json#/definitions/powerDbm"
             }
           ],
           "description": "该模块硬件允许的最大发射功率,单位 dBm。文档 §4 示例 20 / 10。"
@@ -496,7 +504,7 @@
           "description": "驱动版本号,自由文本。"
         },
         "spi": {
-          "$ref": "#/$defs/spi"
+          "$ref": "#/definitions/spi"
         },
         "ant": {
           "type": "string",
@@ -506,7 +514,7 @@
           ]
         }
       },
-      "description": "MODULES 消息中的单个模块描述(文档 §3.2)。与 §4 CAPS.modules 的元素不同:CAPS 元素用 tx_allowed 且无 driver_version/spi/ant,故另有 capsModule 定义(见 README «已知文档缺口»)。",
+      "description": "MODULES 消息中的单个模块描述(文档 §3.2)。与 §4 CAPS.modules 的元素不同:CAPS 元素用 tx_allowed 且无 driver_version/spi/ant,故另有 capsModule 定义(见 README §7.1)。",
       "required": [
         "slot",
         "chip",
@@ -525,7 +533,7 @@
         "slot": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/slot"
+              "$ref": "common.schema.json#/definitions/slot"
             }
           ],
           "description": "模块槽位编号 1..3。"
@@ -541,7 +549,7 @@
         "bands": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/bands"
+              "$ref": "common.schema.json#/definitions/bands"
             }
           ],
           "description": "该模块可覆盖的频段数组,App 必须以此夹取频率(§6 band_out_of_range 的应对)。"
@@ -549,7 +557,7 @@
         "tx_max_dbm": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/powerDbm"
+              "$ref": "common.schema.json#/definitions/powerDbm"
             }
           ],
           "description": "该模块硬件允许的最大发射功率,单位 dBm。"
@@ -576,15 +584,15 @@
         "tx_whitelist": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/bands"
+              "$ref": "common.schema.json#/definitions/bands"
             }
           ],
-          "description": "允许发射的频段白名单,元素为 [f_start_hz, f_stop_hz](Hz)。文档 §4/§1:为空数组 = 禁止一切发射,出厂默认即为 []。文档 §4 示例中该数组为空,元素类型按 §1「频段白名单」与 §6 band_out_of_range 推断为 band(判断,见 README §7)。"
+          "description": "允许发射的频段白名单,元素为 [f_start_hz, f_stop_hz](Hz)。文档 §4/§1:为空数组 = 禁止一切发射,出厂默认即为 []。文档 §4 示例中该数组为空,元素类型按 §1「频段白名单」与 §6 band_out_of_range 推断为 band(判断,见 README §7.8)。"
         },
         "tx_power_cap_dbm": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/powerDbm"
+              "$ref": "common.schema.json#/definitions/powerDbm"
             }
           ],
           "description": "**设备级全局**发射功率上限,单位 dBm,出厂取 20(2026-09-21:C-11 扩围至全部模块 + NQ-03 关闭)。⚠️ 它是全局单值,**不是按频段的表**;某次发射的有效上限 = **min(请求值, 本字段, 该模块 tx_max_dbm)**。原表述里的'该频段策略上限'一层已废止(来自合规折算值,屏蔽室用途下非设计输入)。注意 M2(AS07)的 tx_max_dbm=10,达不到 20 是**模块硬件真顶**,不是策略限幅。"
@@ -654,7 +662,7 @@
         "f_hz": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/frequencyHz"
+              "$ref": "common.schema.json#/definitions/frequencyHz"
             }
           ],
           "description": "本次捕获的中心频率,单位 Hz(整数)。"
@@ -662,7 +670,7 @@
         "mod": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/mod"
+              "$ref": "common.schema.json#/definitions/mod"
             }
           ],
           "description": "本次捕获的调制方式。"
@@ -670,7 +678,7 @@
         "rssi_dbm": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/rssi"
+              "$ref": "common.schema.json#/definitions/rssi"
             }
           ],
           "description": "捕获期间的接收信号强度,单位 dBm。"
@@ -678,7 +686,7 @@
         "sample_clock_hz": {
           "allOf": [
             {
-              "$ref": "common.schema.json#/$defs/frequencyHz"
+              "$ref": "common.schema.json#/definitions/frequencyHz"
             }
           ],
           "description": "采样时钟频率,单位 Hz(整数)。用于把 RLE 的 dt_us 还原成采样点序号。"
@@ -704,7 +712,7 @@
     },
     "transport": {
       "type": "string",
-      "description": "控制链路类型(契约 §2.2)。wifi = WebSocket 承载(设备开 AP 或连现场路由器);ble = GATT Notify/Write;usb = USB Serial/JTAG 的 CDC-ACM 有线通道(ADR-0003/F-11)。三条传输共用同一套帧格式与消息语义,新增传输不新增消息类型。",
+      "description": "控制链路类型(契约 §2.2)。wifi = WebSocket 承载(设备开 AP 或连现场路由器,⏸ 本批移出);ble = GATT Notify/Write(⏸ 本批移出);usb = CDC-ACM 字节流,本板实际通路是板载 CH343P(VID:PID 1a86:55d3)→ UART0,原生 USB Serial/JTAG 在本板**从未枚举成功、不可用**(契约 §2.2)。三条传输共用同一套帧格式与消息语义,新增传输不新增消息类型。",
       "enum": [
         "wifi",
         "ble",

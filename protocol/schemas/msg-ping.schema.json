@@ -7,7 +7,7 @@
   "properties": {
     "t_ms": {
       "type": "number",
-      "description": "发送时刻的本地时间戳,单位 ms。文档未规定 PONG 的 t_ms 是回显该值还是设备本地时刻(见 README §7)。"
+      "description": "发送时刻的本地时间戳,单位 ms。文档未规定 PONG 的 t_ms 是回显该值还是设备本地时刻(见 README §7.14)。"
     }
   },
   "required": [
