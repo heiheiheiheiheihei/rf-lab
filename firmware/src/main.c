@@ -1,16 +1,19 @@
 /*
- * RF-Lab 0.4.0 — ESP32-C3 OLED + YS-RF34DL(315/433 编解码模块)
+ * RF-Lab 0.5.0 — ESP32-C3 OLED + YS-RF34DL(315/433 编解码模块)
  *
  * 分工:
  *   · 解码、编码、发射全部在模块里完成,ESP32 只做「串口 ↔ 文本命令行」;
  *   · 模块接 UART1(9600 8N1,TX=GPIO3 → 模块 RXD,RX=GPIO4 ← 模块 TXD);
  *   · 命令行走 原生 USB-Serial-JTAG + UART0(GPIO20/21),115200 8N1;
+ *   · 板载 OLED(SSD1306 72×40,I2C GPIO5/6)做**纯输出**状态面板:
+ *     READY / LEARN / RX / TX 结果 / 计数器;屏不在时静默降级为纯串口;
  *   · 学码 = 按一下原遥控器(模块主动输出 8 字节帧),固件自动入库并打印;
  *   · 码存 NVS,掉电不丢;同码 600ms 内只算一次(模块默认连续输出)。
  *
  * 刻意不做:
  *   · 启动时不向模块发任何配置命令 —— 模块行为未公开,少发一条就少一个假证据源;
- *   · 不解析 EV1527 位结构 —— 模块给的 4 字节原样存、原样回放,不做推断。
+ *   · 不解析 EV1527 位结构 —— 模块给的 4 字节原样存、原样回放,不做推断;
+ *   · 不把整条串口日志镜像到 OLED —— 72×40 只有 12×5 字符,语义状态页比滚动日志可读。
  */
 
 #include <ctype.h>
@@ -31,10 +34,14 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+#include "oled.h"
+#include "oled_gfx.h"
+#include "oled_panel.h"
 #include "rf34dl.h"
+#include "ui.h"
 
 #ifndef RFLAB_FW_VERSION
-#define RFLAB_FW_VERSION "0.4.0"
+#define RFLAB_FW_VERSION "0.5.0"
 #endif
 
 /* ---------------- 引脚与参数 ---------------- */
@@ -46,6 +53,11 @@
 #define MODULE_UART UART_NUM_1
 #define PIN_MODULE_TX 3 /* ESP32 发 → 模块 RXD */
 #define PIN_MODULE_RX 4 /* 模块 TXD → ESP32 收 */
+
+/* 板载 0.42" OLED:SSD1306 72×40,I2C 地址 0x3C */
+#define PIN_OLED_SDA 5
+#define PIN_OLED_SCL 6
+#define OLED_I2C_HZ 400000 /* 失败时驱动自动退回 100000 */
 
 #define MODULE_BAUD_DEFAULT 9600
 #define MAX_CODES 32
@@ -98,6 +110,19 @@ static uint8_t s_last_band = 0;
 static uint8_t s_last_code[RF34DL_CODE_LEN];
 static int64_t s_last_ms = 0;
 
+/* OLED 状态面板 */
+#define UI_MIN_INTERVAL_MS 100
+
+static ui_model_t s_ui;
+static gfx_t s_gfx;
+static bool s_oled_ok = false;
+static bool s_ui_dirty = true;
+static int64_t s_ui_last_draw_ms = 0;
+static int64_t s_boot_until_ms = 0;
+static int64_t s_test_until_ms = 0;
+static bool s_test_drawn = false;
+static uint32_t s_oled_err_reported = 0;
+
 /* ---------------- 小工具 ---------------- */
 
 static int64_t now_ms(void)
@@ -138,6 +163,93 @@ static void out(const char *fmt, ...)
         }
         con_write(buf, n);
     }
+}
+
+/* ---------------- OLED 状态面板 ---------------- */
+
+static void ui_mark_dirty(void)
+{
+    s_ui_dirty = true;
+}
+
+static void oled_report_err(const char *what, esp_err_t e)
+{
+    const oled_stats_t *st = oled_stats();
+    uint32_t n = st ? st->flush_err : 0;
+
+    /* 只在第一次和每 25 次失败时打印,避免连续帧把控制台刷满。 */
+    if (n == 1 || n - s_oled_err_reported >= 25) {
+        s_oled_err_reported = n;
+        out("# WARN oled %s: %s (flush_err=%lu)\n", what, esp_err_to_name(e),
+            (unsigned long)n);
+    }
+}
+
+/* 把模型渲染进 s_gfx(纯内存,不碰 I2C);DISP SHOW 也用它。 */
+static void ui_draw_model(void)
+{
+    char rows[UI_ROWS][UI_COLS + 1];
+
+    ui_render(&s_ui, rows);
+    gfx_clear(&s_gfx);
+    for (int r = 0; r < UI_ROWS; r++) {
+        gfx_text_row(&s_gfx, r, rows[r]);
+    }
+}
+
+/*
+ * 把当前状态画到屏上。只在"脏"或 force 时真正走 I2C,并且全帧刷新最多 10Hz:
+ * 整帧 361 字节 @400kHz 实测 ≈8.6ms,不能让它挤占模块 F0(0.85s)的接收窗口。
+ */
+static void ui_refresh(bool force)
+{
+    int64_t now = now_ms();
+
+    if (s_test_until_ms && now >= s_test_until_ms) {
+        s_test_until_ms = 0;
+        s_test_drawn = false;
+        s_ui_dirty = true;
+    }
+    if (s_boot_until_ms && now >= s_boot_until_ms) {
+        s_boot_until_ms = 0;
+        if (s_ui.ev == UI_EV_BOOT) {
+            ui_note_idle(&s_ui);
+        }
+        s_ui_dirty = true;
+    }
+
+    if (!s_oled_ok || !s_ui.enabled) {
+        s_ui_dirty = false;
+        return;
+    }
+    if (s_test_until_ms) {
+        if (force || !s_test_drawn) {
+            ui_test_pattern(&s_gfx);
+            esp_err_t e = oled_flush(&s_gfx);
+            if (e != ESP_OK) {
+                oled_report_err("test", e);
+            } else {
+                s_test_drawn = true;
+            }
+            s_ui_last_draw_ms = now;
+        }
+        return;
+    }
+    if (!s_ui_dirty && !force) {
+        return;
+    }
+    if (!force && now - s_ui_last_draw_ms < UI_MIN_INTERVAL_MS) {
+        return; /* 保留 dirty,下一轮再画 */
+    }
+
+    ui_draw_model();
+
+    esp_err_t e = oled_flush(&s_gfx);
+    if (e != ESP_OK) {
+        oled_report_err("flush", e);
+    }
+    s_ui_last_draw_ms = now;
+    s_ui_dirty = false;
 }
 
 /* ---------------- 初始化 ---------------- */
@@ -303,6 +415,8 @@ static void handle_frame(const rf34dl_frame_t *f)
 
     int idx = find_code(f->band, f->code);
     if (idx >= 0) {
+        ui_note_rx(&s_ui, idx + 1, f->band, f->code);
+        ui_mark_dirty();
         if (s_echo) {
             out("RX id=%d band=%s code=%s\n", idx + 1, rf34dl_band_name(f->band), hex);
         }
@@ -310,6 +424,8 @@ static void handle_frame(const rf34dl_frame_t *f)
     }
 
     if (s_count >= MAX_CODES) {
+        ui_note_full(&s_ui, f->band, f->code);
+        ui_mark_dirty();
         if (s_echo) {
             out("RX band=%s code=%s (store full, not saved)\n", rf34dl_band_name(f->band), hex);
         }
@@ -321,6 +437,10 @@ static void handle_frame(const rf34dl_frame_t *f)
     s_count++;
     store_save();
 
+    ui_note_learn(&s_ui, s_count, f->band, f->code);
+    ui_note_count(&s_ui, s_count);
+    ui_mark_dirty();
+
     if (s_echo) {
         out("LEARN id=%d band=%s code=%s\n", s_count, rf34dl_band_name(f->band), hex);
     }
@@ -329,6 +449,7 @@ static void handle_frame(const rf34dl_frame_t *f)
 static void handle_ack(uint8_t a)
 {
     const char *name = "unknown";
+    uint8_t prev = s_ack_last;
 
     s_ack_last = a;
     switch (a) {
@@ -344,10 +465,20 @@ static void handle_ack(uint8_t a)
     case RF34DL_ACK_CONT_OK:
         name = "OUTPUT_CONT_OK";
         break;
+    case RF34DL_ACK_LONG_ON:
+        name = "LONG_ON";
+        break;
+    case RF34DL_ACK_STOPPED:
+        name = "STOPPED";
+        break;
     default:
         break;
     }
-    if (s_echo) {
+    /*
+     * 长发期间 0xFE 约 25Hz 重复(实测),逐条打印会把控制台刷满;
+     * 只在状态变化时打印一次,后续心跳仍计入 acks(INFO 可见)。
+     */
+    if (s_echo && !((a == RF34DL_ACK_LONG_ON || a == RF34DL_ACK_STOPPED) && a == prev)) {
         out("ACK 0x%02X %s\n", a, name);
     }
 }
@@ -378,6 +509,12 @@ static int pump(int wait_ms)
         total += r;
     } while (now_ms() - t0 < wait_ms);
 
+    if (total > 0) {
+        ui_note_counters(&s_ui, (unsigned)s_frames, (unsigned)s_acks,
+                         (unsigned)s_parser.stray);
+        ui_mark_dirty();
+    }
+    ui_refresh(false);
     return total;
 }
 
@@ -447,6 +584,19 @@ static bool arg_eq(const char *a, const char *b)
     return *a == 0 && *b == 0;
 }
 
+/* 前缀比较(大小写不敏感),用于 "DISP TEST 20" 这种带参数的子命令。 */
+static bool arg_prefix(const char *a, const char *b)
+{
+    while (*b) {
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
+            return false;
+        }
+        a++;
+        b++;
+    }
+    return true;
+}
+
 static void cmd_help(void)
 {
     out("commands (115200 8N1):\n");
@@ -463,9 +613,10 @@ static void cmd_help(void)
     out("  RAW <hex>             send raw bytes to module (debug)\n");
     out("  MON ON|OFF            hex-dump every module byte (debug)\n");
     out("  ECHO ON|OFF           print decoded frames (default ON)\n");
+    out("  DISP ON|OFF|TEST [s]|SHOW  OLED panel / test pattern / ASCII dump\n");
     out("  RESET                 restart ESP32\n");
     out("\nlearn: press a remote button; firmware prints LEARN id=... automatically\n");
-    out("note: SEND gets F0 after ~0.85s; LONG/STOP get no F0 on this module (measured)\n");
+    out("note: SEND gets F0 after ~0.85s; LONG gets 0xFE heartbeat; STOP gets 0xFF (measured)\n");
 }
 
 static void cmd_info(void)
@@ -474,6 +625,13 @@ static void cmd_info(void)
     out("# module UART1 %d 8N1 TX=GPIO%d RX=GPIO%d\n", s_mod_baud, PIN_MODULE_TX, PIN_MODULE_RX);
     out("# console uart0:%s usb:%s %d 8N1\n", s_uart0 ? "on" : "off", s_usb ? "on" : "off",
         CONSOLE_BAUD);
+    const oled_stats_t *st = oled_stats();
+    out("# oled 72x40 @0x%02X i2c%d sda=%d scl=%d present=%s on=%s flush=%lu err=%lu "
+        "last_us=%lu max_us=%lu\n",
+        OLED_PANEL_ADDR, oled_bus_hz(), PIN_OLED_SDA, PIN_OLED_SCL,
+        s_oled_ok ? "yes" : "no", s_ui.enabled ? "yes" : "no",
+        (unsigned long)st->flush_count, (unsigned long)st->flush_err,
+        (unsigned long)st->last_us, (unsigned long)st->max_us);
     out("OK stored=%d/%d rx_bytes=%lu frames=%lu acks=%lu dups=%lu stray=%lu resync=%lu\n",
         s_count, MAX_CODES, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
         (unsigned long)s_acks, (unsigned long)s_dups, (unsigned long)s_parser.stray,
@@ -511,14 +669,35 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
         return;
     }
 
-    module_write(f, RF34DL_FRAME_LEN);
-    uint8_t a = wait_ack(RF34DL_ACK_TX_OK, ACK_WAIT_MS);
+    ui_tx_kind_t kind = (dur == RF34DL_DUR_LONG)   ? UI_TX_LONG
+                        : (dur == RF34DL_DUR_STOP) ? UI_TX_STOP
+                                                   : UI_TX_SEND;
+    ui_note_tx(&s_ui, kind, id, c->band, c->code);
+    ui_mark_dirty();
+    ui_refresh(true); /* 先把 sending... 画出来,再进入最长 1.5s 的等待 */
 
-    if (a == RF34DL_ACK_TX_OK) {
-        out("OK %s id=%d band=%s code=%s\n", what, id, rf34dl_band_name(c->band), hex);
+    /* 单次发射等 F0;长发等 0xFE 心跳;停止等 0xFF(2026-11-15 实测)。 */
+    uint8_t need = (dur == RF34DL_DUR_LONG)   ? RF34DL_ACK_LONG_ON
+                   : (dur == RF34DL_DUR_STOP) ? RF34DL_ACK_STOPPED
+                                              : RF34DL_ACK_TX_OK;
+    int64_t t0 = now_ms();
+    module_write(f, RF34DL_FRAME_LEN);
+    uint8_t a = wait_ack(need, ACK_WAIT_MS);
+    unsigned dt = (unsigned)(now_ms() - t0);
+
+    if (a == need) {
+        out("OK %s id=%d band=%s code=%s (0x%02X, %ums)\n", what, id,
+            rf34dl_band_name(c->band), hex, need, dt);
     } else {
-        out("WARN %s id=%d band=%s code=%s no F0 within %dms\n", what, id,
-            rf34dl_band_name(c->band), hex, ACK_WAIT_MS);
+        out("WARN %s id=%d band=%s code=%s no 0x%02X within %dms\n", what, id,
+            rf34dl_band_name(c->band), hex, need, ACK_WAIT_MS);
+    }
+
+    /* 长发/停止模块本来就不回 F0,不要把"已知行为"画成失败。 */
+    if (kind == UI_TX_SEND) {
+        ui_note_tx_result(&s_ui, a == RF34DL_ACK_TX_OK, dt);
+        ui_mark_dirty();
+        ui_refresh(true);
     }
 }
 
@@ -527,6 +706,10 @@ static void cmd_erase(const char *args)
     if (arg_eq(args, "all")) {
         s_count = 0;
         store_save();
+        ui_note_count(&s_ui, s_count);
+        ui_note_forget(&s_ui);
+        ui_note_idle(&s_ui);
+        ui_mark_dirty();
         out("OK erased all\n");
         return;
     }
@@ -541,6 +724,14 @@ static void cmd_erase(const char *args)
     }
     s_count--;
     store_save();
+    ui_note_count(&s_ui, s_count);
+    if (s_count > 0) {
+        ui_note_seed(&s_ui, s_count, s_saved[s_count - 1].band, s_saved[s_count - 1].code);
+    } else {
+        ui_note_forget(&s_ui);
+    }
+    ui_note_idle(&s_ui);
+    ui_mark_dirty();
     out("OK erased id=%d (%d left)\n", id, s_count);
 }
 
@@ -679,6 +870,102 @@ static void cmd_raw(const char *args)
     out("OK raw %d B\n", n);
 }
 
+static void cmd_disp(const char *args)
+{
+    const oled_stats_t *st = oled_stats();
+
+    if (!*args) {
+        out("OK disp=%s present=%s test=%s flush=%lu err=%lu\n",
+            s_ui.enabled ? "on" : "off", s_oled_ok ? "yes" : "no",
+            s_test_until_ms ? "on" : "off", (unsigned long)st->flush_count,
+            (unsigned long)st->flush_err);
+        return;
+    }
+
+    if (arg_eq(args, "on")) {
+        if (!s_oled_ok) {
+            out("ERR oled not present at 0x%02X\n", OLED_PANEL_ADDR);
+            return;
+        }
+        esp_err_t e = oled_set_on(true);
+        if (e != ESP_OK) {
+            out("ERR oled on: %s\n", esp_err_to_name(e));
+            return;
+        }
+        s_ui.enabled = true;
+        s_test_until_ms = 0;
+        s_test_drawn = false;
+        ui_mark_dirty();
+        ui_refresh(true);
+        out("OK disp=on\n");
+        return;
+    }
+
+    if (arg_eq(args, "off")) {
+        if (s_oled_ok) {
+            esp_err_t e = oled_set_on(false);
+            if (e != ESP_OK) {
+                out("ERR oled off: %s\n", esp_err_to_name(e));
+                return;
+            }
+        }
+        s_ui.enabled = false;
+        s_test_until_ms = 0;
+        s_test_drawn = false;
+        out("OK disp=off\n");
+        return;
+    }
+
+    if (arg_prefix(args, "test") && (args[4] == 0 || isspace((unsigned char)args[4]))) {
+        if (!s_oled_ok) {
+            out("ERR oled not present at 0x%02X\n", OLED_PANEL_ADDR);
+            return;
+        }
+        int secs = atoi(args + 4);
+        if (secs <= 0) {
+            secs = 10;
+        }
+        if (secs > 300) {
+            secs = 300;
+        }
+        if (!s_ui.enabled) {
+            esp_err_t e = oled_set_on(true);
+            if (e != ESP_OK) {
+                out("ERR oled on: %s\n", esp_err_to_name(e));
+                return;
+            }
+            s_ui.enabled = true;
+        }
+        s_boot_until_ms = 0;
+        s_test_until_ms = now_ms() + (int64_t)secs * 1000;
+        s_test_drawn = false;
+        ui_mark_dirty();
+        ui_refresh(true);
+        out("OK disp=test %ds (DISP ON to leave test)\n", secs);
+        return;
+    }
+
+    if (arg_eq(args, "show")) {
+        if (s_test_until_ms && now_ms() < s_test_until_ms) {
+            ui_test_pattern(&s_gfx);
+        } else {
+            s_test_until_ms = 0;
+            s_test_drawn = false;
+            ui_draw_model();
+        }
+        char line[GFX_W + 1];
+        out("# fb %dx%d '#'=on (screen content, not read back from glass)\n", GFX_W, GFX_H);
+        for (int y = 0; y < GFX_H; y++) {
+            gfx_ascii_line(&s_gfx, y, line);
+            out("%s\n", line);
+        }
+        out("OK fb %dx%d\n", GFX_W, GFX_H);
+        return;
+    }
+
+    out("ERR usage: DISP ON|OFF|TEST [s]|SHOW\n");
+}
+
 /* ---------------- 命令分发 ---------------- */
 
 static char s_line[160];
@@ -742,6 +1029,8 @@ static void handle_line(char *line)
         } else {
             out("ERR usage: MON ON|OFF\n");
         }
+    } else if (strcmp(cmd, "DISP") == 0) {
+        cmd_disp(p);
     } else if (strcmp(cmd, "ECHO") == 0) {
         if (arg_eq(p, "on")) {
             s_echo = true;
@@ -806,13 +1095,41 @@ void app_main(void)
     init_console();
     init_module();
 
+    esp_err_t oe = oled_init(PIN_OLED_SDA, PIN_OLED_SCL, OLED_I2C_HZ);
+    s_oled_ok = (oe == ESP_OK);
+
     out("\n# RF-Lab fw=%s (ESP32-C3 + YS-RF34DL)\n", RFLAB_FW_VERSION);
     out("# module UART1 %d 8N1 TX=GPIO%d RX=GPIO%d\n", s_mod_baud, PIN_MODULE_TX, PIN_MODULE_RX);
     out("# console uart0:%s usb:%s %d 8N1\n", s_uart0 ? "on" : "off", s_usb ? "on" : "off",
         CONSOLE_BAUD);
+    out("# oled 72x40 @0x%02X i2c%d sda=GPIO%d scl=GPIO%d: %s\n", OLED_PANEL_ADDR,
+        oled_bus_hz(), PIN_OLED_SDA, PIN_OLED_SCL,
+        s_oled_ok ? "ok" : esp_err_to_name(oe));
+    if (!s_oled_ok) {
+        /* 屏不在不是错误:0.4.0 的纯串口行为必须原样保留。 */
+        out("# oled unavailable (%s); continuing with serial console only\n",
+            esp_err_to_name(oe));
+    }
 
     bool nvs_ok = init_store();
     out("# stored %d code(s)%s\n", s_count, nvs_ok ? "" : " (NVS unavailable)");
+
+    char title[UI_COLS + 1];
+    snprintf(title, sizeof(title), "RF-Lab %s", RFLAB_FW_VERSION);
+    ui_init(&s_ui, title, s_count, MAX_CODES, s_oled_ok);
+    ui_note_counters(&s_ui, (unsigned)s_frames, (unsigned)s_acks, (unsigned)s_parser.stray);
+    if (s_count > 0) {
+        ui_note_seed(&s_ui, s_count, s_saved[s_count - 1].band, s_saved[s_count - 1].code);
+    }
+    if (!nvs_ok) {
+        ui_note_error(&s_ui, "NVS FAIL");
+    } else if (s_oled_ok) {
+        ui_note_boot(&s_ui, "OLED 72x40", "I2C 3C OK");
+        s_boot_until_ms = now_ms() + 1500;
+    }
+    ui_mark_dirty();
+    ui_refresh(true);
+
     out("# press a remote button to learn; HELP for commands\n");
 
     uint8_t tmp[256];

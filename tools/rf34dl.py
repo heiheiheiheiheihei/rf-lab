@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""RF-Lab 主机命令行 —— 没有 OLED/按键,这就是设备的 UI。
+"""RF-Lab 主机命令行 —— 串口是控制入口;板载 OLED 只显示状态(0.5.0)。
 
 用法:
     python3 tools/rf34dl.py --port /dev/ttyACM0                 # 交互模式
@@ -7,7 +7,8 @@
     python3 tools/rf34dl.py --port /dev/ttyACM0 learn 15        # 听 15s,按遥控器
     python3 tools/rf34dl.py --port /dev/ttyACM0 send 1
 
-交互模式下直接输固件命令(HELP / LIST / SEND 1 ...),输入 learn N 听 N 秒。
+交互模式下直接输固件命令(HELP / LIST / SEND 1 / DISP SHOW ...),输入 learn N 听 N 秒。
+OLED: `disp test 30` 几何自检,`disp show` 把当前帧缓冲打成 ASCII。
 默认 115200 8N1;ESP32-C3 原生 USB-Serial-JTAG 不需要驱动。
 """
 

@@ -70,6 +70,9 @@ static void test_helpers(void)
 
     CHECK(rf34dl_is_ack(0xF0));
     CHECK(rf34dl_is_ack(0xF3));
+    /* 2026-11-15 实测:长发期间 0xFE 心跳(约 25Hz),停止后 0xFF。 */
+    CHECK(rf34dl_is_ack(0xFE));
+    CHECK(rf34dl_is_ack(0xFF));
     CHECK(!rf34dl_is_ack(0xF4));
     CHECK(!rf34dl_is_ack(0xEF));
 }
@@ -210,6 +213,16 @@ static void test_parser_acks(void)
     c = feed(&p, not_ack, sizeof(not_ack));
     CHECK(c.acks == 0);
     CHECK(p.stray == 3);
+
+    /* 长发心跳:FE 连续出现,停止后 FF;全部是状态,不应计成 stray */
+    rf34dl_parser_init(&p);
+    const uint8_t long_stop[] = {0xFE, 0xFE, 0xFE, 0xFF};
+    c = feed(&p, long_stop, sizeof(long_stop));
+    CHECK(c.acks == 4);
+    CHECK(c.frames == 0);
+    CHECK(p.ack == 0xFF);
+    CHECK(p.stray == 0);
+    CHECK(p.dropped == 0);
 }
 
 static void test_fuzz(void)

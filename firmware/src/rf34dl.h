@@ -7,7 +7,8 @@
  *   解码     FD <F3|F4> <03>       <c0 c1 c2 c3> DF
  *   波特率   FD <01..04> <F1> <00 00 00 00> DF
  *   输出模式 FD <01|02> <F2> <00 00 00 00> DF
- *   应答     单字节 F0/F1/F2/F3(不在帧内)
+ *   应答     单字节 F0/F1/F2/F3(不在帧内);
+ *            长发期间周期性 0xFE,停止时 0xFF(2026-11-15 实测,见 evidence)
  *
  * 第三个字节在两方向含义不同:发射=持续时间,解码=固定 0x03。
  * 因此结构体里叫 b3,不做语义假设。
@@ -37,10 +38,12 @@
 #define RF34DL_RX_FIXED 0x03
 
 /* 应答字节 */
-#define RF34DL_ACK_TX_OK 0xF0
-#define RF34DL_ACK_BAUD_OK 0xF1
+#define RF34DL_ACK_TX_OK 0xF0    /* 单次发射完成(实测 ~0.85s 才到) */
+#define RF34DL_ACK_BAUD_OK 0xF1  /* 波特率已切换 */
 #define RF34DL_ACK_SINGLE_OK 0xF2
 #define RF34DL_ACK_CONT_OK 0xF3
+#define RF34DL_ACK_LONG_ON 0xFE  /* 长发进行中:约 25Hz 周期重复 */
+#define RF34DL_ACK_STOPPED 0xFF  /* 长发已停止:停止命令后出现一次 */
 
 typedef struct {
     uint8_t band; /* F3 / F4 */

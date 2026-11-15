@@ -53,7 +53,8 @@ int rf34dl_sel_baud(int sel)
 
 bool rf34dl_is_ack(uint8_t b)
 {
-    return b >= RF34DL_ACK_TX_OK && b <= RF34DL_ACK_CONT_OK;
+    return (b >= RF34DL_ACK_TX_OK && b <= RF34DL_ACK_CONT_OK) ||
+           b == RF34DL_ACK_LONG_ON || b == RF34DL_ACK_STOPPED;
 }
 
 size_t rf34dl_build_tx(uint8_t out[RF34DL_FRAME_LEN], uint8_t band, uint8_t dur,
