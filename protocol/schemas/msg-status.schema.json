@@ -1,8 +1,0 @@
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "msg-status.schema.json",
-  "title": "STATUS (0xD2)",
-  "description": "方向:双向 · 文档 §3.8 · 协议 v1。设备状态。文档只写「温度、供电、Wi-Fi RSSI、模块状态」四类内容,未给出任何字段名,故本 schema 只能声明为开放对象(无法设 additionalProperties:false,否则会拒绝一切真实载荷);见 README §7.3。",
-  "type": "object",
-  "properties": {}
-}

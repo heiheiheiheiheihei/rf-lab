@@ -1,9 +1,0 @@
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "msg-tx_abort.schema.json",
-  "title": "TX_ABORT (0x41)",
-  "description": "方向:App→设备 · 文档 §3.7 · 协议 v1。中止发射。载荷按文档为空对象 {}。",
-  "type": "object",
-  "properties": {},
-  "additionalProperties": false
-}

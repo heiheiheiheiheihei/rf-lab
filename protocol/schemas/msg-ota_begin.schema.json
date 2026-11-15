@@ -1,9 +1,0 @@
-{
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "msg-ota_begin.schema.json",
-  "title": "OTA_BEGIN (0x54)",
-  "description": "方向:App→设备 · 文档 §3.8 · 协议 v1。预留占位。文档 §3.8 标注「预留」,§9 明确本期不做 OTA 固件升级,载荷未定义任何字段,故按空对象建模;见 README §7.12。",
-  "type": "object",
-  "properties": {},
-  "additionalProperties": false
-}
