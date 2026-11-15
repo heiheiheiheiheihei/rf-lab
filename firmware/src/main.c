@@ -50,7 +50,12 @@
 #define MODULE_BAUD_DEFAULT 9600
 #define MAX_CODES 32
 #define DEDUP_MS 600
-#define ACK_WAIT_MS 500
+/*
+ * 发射应答 F0 的实测延迟:0.7–1.0s(2026-11-15,315M,单帧 dur=03)。
+ * 原来按 500ms 等,结果每次都先报 WARN、F0 随后才到 —— 属于误报。
+ * 给到 1.5s;等待期间仍会处理收到的解码帧。
+ */
+#define ACK_WAIT_MS 1500
 
 #define NVS_NS "rf34dl"
 #define NVS_KEY "codes"
@@ -460,6 +465,7 @@ static void cmd_help(void)
     out("  ECHO ON|OFF           print decoded frames (default ON)\n");
     out("  RESET                 restart ESP32\n");
     out("\nlearn: press a remote button; firmware prints LEARN id=... automatically\n");
+    out("note: SEND gets F0 after ~0.85s; LONG/STOP get no F0 on this module (measured)\n");
 }
 
 static void cmd_info(void)
@@ -585,62 +591,75 @@ static void cmd_baud(const char *args)
     module_write(f, RF34DL_FRAME_LEN);
 
     /*
-     * 应答可能落在旧波特率上(先回再切),也可能落在新波特率上(先切再回)。
-     * 两段都收:先在旧波特率听 80ms,切过去再听 400ms;任一段收到 F1 就算成功。
+     * 实测(2026-11-15,57600):模块改完波特率后,应答可能落在**旧**波特率上,
+     * 而且比 80ms 晚 —— 先切本地就会把它读成乱码。做法:先在旧波特率上等满
+     * ACK_WAIT_MS;没等到再切过去,按新波特率再等一轮。
      */
-    uint8_t a = wait_ack(RF34DL_ACK_BAUD_OK, 80);
+    uint8_t a = wait_ack(RF34DL_ACK_BAUD_OK, ACK_WAIT_MS);
 
-    vTaskDelay(pdMS_TO_TICKS(20));
     uart_set_baudrate(MODULE_UART, b);
-    uart_flush_input(MODULE_UART);
+    uart_flush_input(MODULE_UART); /* 丢掉旧波特率上残留的半截字节 */
     s_mod_baud = b;
 
     if (a != RF34DL_ACK_BAUD_OK) {
-        a = wait_ack(RF34DL_ACK_BAUD_OK, 400);
+        a = wait_ack(RF34DL_ACK_BAUD_OK, ACK_WAIT_MS);
     }
 
     if (a == RF34DL_ACK_BAUD_OK) {
         out("OK baud=%d\n", b);
     } else {
-        out("WARN baud=%d: no F1. Module may already be at %d; if not, run RECOVER\n", b, b);
+        /* 没应答 ≠ 没生效:实测中命令确实生效了,只是 F1 没被读到 */
+        out("WARN baud=%d: no F1. Module probably did switch; verify with SEND, "
+            "or RECOVER to force 9600\n", b);
     }
+}
+
+static bool force_module_9600(void)
+{
+    uint8_t f[RF34DL_FRAME_LEN];
+
+    rf34dl_build_baud(f, rf34dl_baud_sel(9600));
+    uart_flush_input(MODULE_UART);
+    module_write(f, RF34DL_FRAME_LEN);
+    return wait_ack(RF34DL_ACK_BAUD_OK, ACK_WAIT_MS) == RF34DL_ACK_BAUD_OK;
 }
 
 static void cmd_recover(void)
 {
-    static const int k_bauds[] = {4800, 9600, 57600, 115200};
-    uint8_t force9600[RF34DL_FRAME_LEN];
+    static const int k_bauds[] = {4800, 57600, 115200};
+    bool ok = false;
 
-    rf34dl_build_baud(force9600, rf34dl_baud_sel(9600));
-    out("RECOVER: probing module baud, forcing 9600\n");
+    out("RECOVER: forcing module to 9600 (each try can take up to %dms)\n", 2 * ACK_WAIT_MS);
     s_echo = false;
 
-    for (size_t i = 0; i < sizeof(k_bauds) / sizeof(k_bauds[0]); i++) {
-        int b = k_bauds[i];
+    /* 先试最常见的 9600:成功时结论才是准确的 */
+    uart_set_baudrate(MODULE_UART, 9600);
+    if (force_module_9600()) {
+        ok = true;
+    }
 
-        uart_set_baudrate(MODULE_UART, b);
-        uart_flush_input(MODULE_UART);
-        module_write(force9600, RF34DL_FRAME_LEN);
-        vTaskDelay(pdMS_TO_TICKS(80));
+    for (size_t i = 0; !ok && i < sizeof(k_bauds) / sizeof(k_bauds[0]); i++) {
+        out("RECOVER: try %d ...\n", k_bauds[i]);
+        uart_set_baudrate(MODULE_UART, k_bauds[i]);
+        /* 命令按候选波特率发出;若模块真是这个波特率,它会切到 9600 并回 F1 */
+        ok = force_module_9600();
 
-        uart_set_baudrate(MODULE_UART, 9600);
-        uart_flush_input(MODULE_UART);
-        module_write(force9600, RF34DL_FRAME_LEN);
-
-        uint8_t a = wait_ack(RF34DL_ACK_BAUD_OK, 250);
-        out("RECOVER try %6d: %s\n", b, a == RF34DL_ACK_BAUD_OK ? "F1" : "no ack");
-        if (a == RF34DL_ACK_BAUD_OK) {
-            s_echo = true;
-            s_mod_baud = 9600;
-            out("OK module baud=9600\n");
-            return;
+        if (!ok) {
+            /* 应答也可能落在切换后的 9600 上:不再重复发命令,只按 9600 听一轮 */
+            uart_set_baudrate(MODULE_UART, 9600);
+            ok = (wait_ack(RF34DL_ACK_BAUD_OK, ACK_WAIT_MS) == RF34DL_ACK_BAUD_OK);
         }
     }
 
-    s_echo = true;
-    s_mod_baud = 9600; /* 本地按默认值继续,至少命令行还能用 */
     uart_set_baudrate(MODULE_UART, 9600);
-    out("ERR RECOVER failed: check 3V3/GND/TXD-RXD and module power\n");
+    s_mod_baud = 9600;
+    s_echo = true;
+
+    if (ok) {
+        out("OK module baud=9600\n");
+    } else {
+        out("ERR RECOVER failed: check 3V3/GND/TXD-RXD and module power\n");
+    }
 }
 
 static void cmd_raw(const char *args)

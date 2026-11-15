@@ -84,7 +84,12 @@ def main():
 
     try:
         time.sleep(0.3)
-        port.reset_input_buffer()
+        # 实测:USB CDC 打开后,不先写一次就收不到固件已经产生但未刷新的输出。
+        # 写一个空行把设备侧缓冲冲出来,再把它读空丢掉,首条命令的响应才是干净的。
+        port.write(b"\r\n")
+        time.sleep(0.3)
+        while port.read(512):
+            pass
 
         if not args.commands:
             return repl(port, args.wait)
