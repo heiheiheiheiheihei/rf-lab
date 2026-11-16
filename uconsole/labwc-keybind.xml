@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!--
+  uConsole / labwc 键位片段:把下面这段 <keybind> 放到
+  ~/.config/labwc/rc.xml 的 <keyboard> ... </keyboard> 里。
+  与 uconsole-opt 的 Ctrl+Alt 命令层一致:C-A+R 打开 RF-Lab TUI。
+  默认只打印,不自动改用户的 rc.xml;install.sh 会给出路径。
+-->
+<keybind key="C-A-r">
+  <action name="Execute">
+    <command>lxterminal -e rflab-tui</command>
+  </action>
+</keybind>

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RF-Lab Terminal
+Comment=315/433 fixed-code learn / replay / transmit (uConsole keyboard TUI)
+Exec=rflab-tui
+Terminal=true
+Categories=Utility;Electronics;
+Keywords=rf;433;315;remote;terminal;

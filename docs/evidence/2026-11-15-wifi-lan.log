@@ -1,0 +1,64 @@
+# RF-Lab 0.6.0 — real LAN / STA-only evidence
+# 2026-11-15 13:17:33 +0800
+
+## serial INFO (after reboot; AP off)
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=3 err=0 last_us=8714 max_us=8719
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=SSID-A sta_ip=192.168.5.117 rssi=-47
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+## serial STATE
+{"fw":"0.6.0","proto":1,"uptime_ms":37337,"net":{"mode":"sta","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":true,"sta_ssid":"SSID-A","sta_ip":"192.168.5.117","rssi":-47},"ble":{"on":1,"conn":0,"name":"RF-Lab-1B59","pin_set":1},"module":{"baud":9600,"rx_bytes":0,"frames":0,"acks":0,"dups":0,"stray":0,"resync":0},"store":{"count":5,"max":32},"oled":{"present":1,"on":1,"flush":3,"err":0,"last_us":8714,"max_us":8719},"tx":{"active":0,"kind":"idle","id":0,"ok":0,"ms":0},"last":{"kind":"boot","id":0,"band":"","code":"","ms":0}}
+
+## host ping
+PING 192.168.5.117 (192.168.5.117) 56(84) bytes of data.
+64 bytes from 192.168.5.117: icmp_seq=1 ttl=64 time=2.18 ms
+64 bytes from 192.168.5.117: icmp_seq=2 ttl=64 time=22.5 ms
+64 bytes from 192.168.5.117: icmp_seq=3 ttl=64 time=43.6 ms
+
+--- 192.168.5.117 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2002ms
+rtt min/avg/max/mdev = 2.176/22.763/43.623/16.921 ms
+## host HTTP /api/hello
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Length: 99
+Access-Control-Allow-Origin: *
+Cache-Control: no-store
+
+{"fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.5.117","auth":1}
+## host HTTP /api/state
+{"fw":"0.6.0","proto":1,"uptime_ms":38437,"net":{"mode":"sta","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":true,"sta_ssid":"SSID-A","sta_ip":"192.168.5.117","rssi":-47},"ble":{"on":1,"conn":0,"name":"RF-Lab-1B59","pin_set":1},"module":{"baud":9600,"rx_bytes":0,"frames":0,"acks":0,"dups":0,"stray":0,"resync":0},"store":{"count":5,"max":32},"oled":{"present":1,"on":1,"flush":3,"err":0,"last_us":8714,"max_us":8719},"tx":{"active":0,"kind":"idle","id":0,"ok":0,"ms":0},"last":{"kind":"boot","id":0,"band":"","code":"","ms":0}}
+## host SSE (3s)
+event: hello
+data: {"t":"hello","fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.5.117","auth":1}
+
+event: state
+data: {"t":"state","seq":7,"data":{"fw":"0.6.0","proto":1,"uptime_ms":38437,"net":{"mode":"sta","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":true,"sta_ssid":"SSID-A","sta_ip":"192.168.5.117","rssi":-47},"ble":{"on":1,"conn":0,"name":"RF-Lab-1B59","pin_set":1},"module":{"baud":9600,"rx_bytes":0,"frames":0,"acks":0,"dups":0,"stray":0,"resync":0},"store":{"count":5,"max":32},"oled":{"present":1,"on":1,"flush":3,"err":0,"last_us":8714,"max_us":8719},"tx":{"active":0,"kind":"idle","id":0,"ok":0,"ms":0},"last":{"kind":"boot","id":0,"band":"","code":"","ms":0}}}
+
+event: codes
+data: {"t":"codes","seq":2,"items":[{"id":1,"band":"315M","code":"5555034C"},{"id":2,"band":"315M","code":"5555033C"},{"id":3,"band":"315M","code":"5555034B"},{"id":4,"band":"433M","code":"5555034B"},{"id":5,"band":"433M","code":"5555033C"}]}
+
+
+## host POST /api/cmd (DISP TEST 1)
+HTTP/1.1 202 Accepted
+Content-Type: application/json; charset=utf-8
+Content-Length: 25
+Access-Control-Allow-Origin: *
+Cache-Control: no-store
+
+{"ok":true,"queued":true}
+## real Web UI in Chromium
+{
+  "status": 200,
+  "meta": {
+    "url": "http://192.168.5.117/",
+    "title": "RF-LAB // FIELD TERMINAL",
+    "hasNet": true,
+    "text": "FIELD TERMINAL // 315·433 FIXED CODE\nRFLAB\nLEARN · REPLAY · TRANSMIT // 固定码学习与回放\n13:17:43\n2026-11-15 // SUN\nUPTIME 00:00:46\nONLINE\nFW\n0.6.0\nNET\nLAN 192.168.5.117\nBLE\nON\nMOD\n9600\nOLED\nOK\nDISARMED\nACQUISITION // 捕获\nLISTENING\nLAST SIGNAL // 最近信号\n--------\nNO SIGNAL\nID --\nARM TRANSMIT\nSTOP\n\n按一下原遥控器 → 自动入"
+  },
+  "errors": []
+}

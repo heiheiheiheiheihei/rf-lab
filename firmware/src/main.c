@@ -27,21 +27,31 @@
 #include "driver/uart.h"
 #include "driver/usb_serial_jtag.h"
 #include "esp_err.h"
+#include "esp_http_client.h"
+#include "esp_mac.h"
+#include "esp_random.h"
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
+#include "app.h"
+#include "ble_link.h"
+#include "link.h"
+#include "net.h"
 #include "oled.h"
 #include "oled_gfx.h"
 #include "oled_panel.h"
 #include "rf34dl.h"
 #include "ui.h"
+#include "web_server.h"
 
 #ifndef RFLAB_FW_VERSION
-#define RFLAB_FW_VERSION "0.5.0"
+#define RFLAB_FW_VERSION "0.6.0"
 #endif
 
 /* ---------------- 引脚与参数 ---------------- */
@@ -110,6 +120,49 @@ static uint8_t s_last_band = 0;
 static uint8_t s_last_code[RF34DL_CODE_LEN];
 static int64_t s_last_ms = 0;
 
+/* ---------------- 跨平台 UI:命令队列 / 快照 / 事件 ---------------- */
+
+#define CMD_QUEUE_DEPTH 8
+
+typedef struct {
+    char line[APP_CMD_MAX];
+    uint8_t src;
+} cmd_item_t;
+
+static QueueHandle_t s_cmd_q;
+static SemaphoreHandle_t s_snap_lock;
+static char s_state_json[APP_STATE_JSON_MAX];
+static char s_codes_json[APP_CODES_JSON_MAX];
+static volatile uint32_t s_state_seq = 1;
+static volatile uint32_t s_codes_seq = 1;
+static volatile bool s_state_dirty = true;
+static volatile bool s_codes_dirty = true;
+
+static char s_dev_name[32] = "RF-Lab";
+static char s_ble_pin[5] = "0000";
+
+static char s_last_kind[12] = "boot";
+
+/* 网络事件 → OLED:net 任务只入队,main 负责改 ui_model。 */
+static char s_net_note1[UI_COLS + 1];
+static char s_net_note2[UI_COLS + 1];
+static volatile bool s_net_note_pending;
+static portMUX_TYPE s_net_note_mux = portMUX_INITIALIZER_UNLOCKED;
+static int s_last_id;
+static int64_t s_last_event_ms;
+
+/* TX 状态(供状态快照;LONG 时 active=1) */
+static bool s_tx_active;
+static char s_tx_kind[8] = "idle";
+static int s_tx_id;
+static int s_tx_ok;
+static unsigned s_tx_ms;
+
+/* 命令输出镜像:HTTP/BLE 提交的命令把 out() 聚合为一条 log 事件。 */
+static bool s_capture;
+static char s_capture_buf[600];
+static size_t s_capture_len;
+
 /* OLED 状态面板 */
 #define UI_MIN_INTERVAL_MS 100
 
@@ -150,7 +203,7 @@ static void con_write(const void *data, int len)
 
 static void out(const char *fmt, ...)
 {
-    char buf[320];
+    char buf[1024];
     va_list ap;
 
     va_start(ap, fmt);
@@ -162,7 +215,265 @@ static void out(const char *fmt, ...)
             n = (int)sizeof(buf) - 1;
         }
         con_write(buf, n);
+
+        if (s_capture && s_capture_len < sizeof(s_capture_buf) - 1) {
+            size_t room = sizeof(s_capture_buf) - 1 - s_capture_len;
+            size_t take = (size_t)n < room ? (size_t)n : room;
+            memcpy(s_capture_buf + s_capture_len, buf, take);
+            s_capture_len += take;
+            s_capture_buf[s_capture_len] = 0;
+        }
     }
+}
+
+/* ---------------- 快照 / 命令队列(app.h) ---------------- */
+
+static int jappend(char *buf, size_t cap, int off, const char *fmt, ...)
+{
+    va_list ap;
+    int n;
+
+    if (off < 0 || (size_t)off >= cap) {
+        return (int)cap - 1;
+    }
+    va_start(ap, fmt);
+    n = vsnprintf(buf + off, cap - (size_t)off, fmt, ap);
+    va_end(ap);
+    if (n < 0) {
+        return off;
+    }
+    if ((size_t)n >= cap - (size_t)off) {
+        return (int)cap - 1;
+    }
+    return off + n;
+}
+
+static void build_state_json(char *out, size_t cap)
+{
+    net_info_t ni;
+    const oled_stats_t *ost = oled_stats();
+    char ap_ssid[96], sta_ssid[96], name[96];
+    char hex[9] = "";
+    int o = 0;
+
+    net_get_info(&ni);
+    link_json_escape(ni.ap_ssid, ap_ssid, sizeof(ap_ssid));
+    link_json_escape(ni.sta_ssid, sta_ssid, sizeof(sta_ssid));
+    link_json_escape(s_dev_name, name, sizeof(name));
+    if (s_last_id > 0) {
+        hex4(s_last_code, hex);
+    }
+
+    o = jappend(out, cap, o,
+                "{\"fw\":\"%s\",\"proto\":1,\"uptime_ms\":%lld,"
+                "\"net\":{\"mode\":\"%s\",\"ap_on\":%d,\"has_creds\":%d,"
+                "\"ap_ssid\":\"%s\",\"ap_ip\":\"%s\","
+                "\"sta_connected\":%s,\"sta_ssid\":\"%s\",\"sta_ip\":\"%s\",\"rssi\":%d},"
+                "\"ble\":{\"on\":%d,\"conn\":%d,\"name\":\"%s\",\"pin_set\":1},",
+                RFLAB_FW_VERSION, (long long)now_ms(), ni.mode,
+                ni.ap_on ? 1 : 0, ni.has_creds ? 1 : 0, ap_ssid, ni.ap_ip,
+                ni.sta_connected ? "true" : "false", sta_ssid, ni.sta_ip, ni.rssi,
+                ble_link_is_on() ? 1 : 0, ble_link_connected() ? 1 : 0, name);
+    o = jappend(out, cap, o,
+                "\"module\":{\"baud\":%d,\"rx_bytes\":%lu,\"frames\":%lu,\"acks\":%lu,"
+                "\"dups\":%lu,\"stray\":%lu,\"resync\":%lu},"
+                "\"store\":{\"count\":%d,\"max\":%d},"
+                "\"oled\":{\"present\":%d,\"on\":%d,\"flush\":%lu,\"err\":%lu,"
+                "\"last_us\":%lu,\"max_us\":%lu},",
+                s_mod_baud, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
+                (unsigned long)s_acks, (unsigned long)s_dups,
+                (unsigned long)s_parser.stray, (unsigned long)s_parser.dropped,
+                s_count, MAX_CODES, s_oled_ok ? 1 : 0, s_ui.enabled ? 1 : 0,
+                ost ? (unsigned long)ost->flush_count : 0UL,
+                ost ? (unsigned long)ost->flush_err : 0UL,
+                ost ? (unsigned long)ost->last_us : 0UL,
+                ost ? (unsigned long)ost->max_us : 0UL);
+    o = jappend(out, cap, o,
+                "\"tx\":{\"active\":%d,\"kind\":\"%s\",\"id\":%d,\"ok\":%d,\"ms\":%u},"
+                "\"last\":{\"kind\":\"%s\",\"id\":%d,\"band\":\"%s\",\"code\":\"%s\","
+                "\"ms\":%lld}}",
+                s_tx_active ? 1 : 0, s_tx_kind, s_tx_id, s_tx_ok, s_tx_ms,
+                s_last_kind, s_last_id,
+                s_last_id > 0 ? rf34dl_band_name(s_last_band) : "",
+                hex, (long long)s_last_event_ms);
+    out[o] = 0;
+}
+
+static void build_codes_json(char *out, size_t cap)
+{
+    int o = 0;
+
+    o = jappend(out, cap, o, "[");
+    for (int i = 0; i < s_count; i++) {
+        char hex[9];
+        hex4(s_saved[i].code, hex);
+        o = jappend(out, cap, o, "%s{\"id\":%d,\"band\":\"%s\",\"code\":\"%s\"}",
+                    i ? "," : "", i + 1, rf34dl_band_name(s_saved[i].band), hex);
+    }
+    o = jappend(out, cap, o, "]");
+    out[o] = 0;
+}
+
+static void snapshot_task(void *arg)
+{
+    (void)arg;
+
+    for (;;) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        if (s_state_dirty) {
+            xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+            if (s_state_dirty) {
+                build_state_json(s_state_json, sizeof(s_state_json));
+                s_state_seq++;
+                s_state_dirty = false;
+            }
+            xSemaphoreGive(s_snap_lock);
+        }
+        if (s_codes_dirty) {
+            xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+            if (s_codes_dirty) {
+                build_codes_json(s_codes_json, sizeof(s_codes_json));
+                s_codes_seq++;
+                s_codes_dirty = false;
+            }
+            xSemaphoreGive(s_snap_lock);
+        }
+    }
+}
+
+void app_note_net_event(const char *line1, const char *line2)
+{
+    portENTER_CRITICAL(&s_net_note_mux);
+    snprintf(s_net_note1, sizeof(s_net_note1), "%s", line1 ? line1 : "");
+    snprintf(s_net_note2, sizeof(s_net_note2), "%s", line2 ? line2 : "");
+    s_net_note_pending = true;
+    portEXIT_CRITICAL(&s_net_note_mux);
+}
+
+static void ui_mark_dirty(void);
+
+static void poll_net_note(void)
+{
+    if (!s_net_note_pending) {
+        return;
+    }
+    char l1[UI_COLS + 1];
+    char l2[UI_COLS + 1];
+    portENTER_CRITICAL(&s_net_note_mux);
+    snprintf(l1, sizeof(l1), "%s", s_net_note1);
+    snprintf(l2, sizeof(l2), "%s", s_net_note2);
+    s_net_note_pending = false;
+    portEXIT_CRITICAL(&s_net_note_mux);
+
+    out("# net %s %s\n", l1, l2);
+    ui_note_boot(&s_ui, l1, l2);
+    s_boot_until_ms = now_ms() + 5000;
+    ui_mark_dirty();
+}
+
+void app_mark_state_dirty(void)
+{
+    s_state_dirty = true;
+}
+
+void app_mark_codes_dirty(void)
+{
+    s_codes_dirty = true;
+    s_state_dirty = true;
+}
+
+uint32_t app_state_seq(void)
+{
+    return __atomic_load_n(&s_state_seq, __ATOMIC_ACQUIRE);
+}
+
+uint32_t app_codes_seq(void)
+{
+    return __atomic_load_n(&s_codes_seq, __ATOMIC_ACQUIRE);
+}
+
+static void ensure_snapshots(void)
+{
+    if (!s_snap_lock) {
+        return;
+    }
+    xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+    if (s_state_json[0] == 0) {
+        build_state_json(s_state_json, sizeof(s_state_json));
+    }
+    if (s_codes_json[0] == 0) {
+        build_codes_json(s_codes_json, sizeof(s_codes_json));
+    }
+    xSemaphoreGive(s_snap_lock);
+}
+
+void app_copy_state(char *out, size_t cap)
+{
+    if (!out || cap == 0) {
+        return;
+    }
+    if (!s_snap_lock) {
+        return;
+    }
+    ensure_snapshots();
+    xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+    snprintf(out, cap, "%s", s_state_json);
+    xSemaphoreGive(s_snap_lock);
+}
+
+void app_copy_codes(char *out, size_t cap)
+{
+    if (!out || cap == 0) {
+        return;
+    }
+    if (!s_snap_lock) {
+        return;
+    }
+    ensure_snapshots();
+    xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+    snprintf(out, cap, "%s", s_codes_json);
+    xSemaphoreGive(s_snap_lock);
+}
+
+int app_submit_cmd(const char *line, app_src_t src)
+{
+    cmd_item_t it;
+
+    if (!line || !s_cmd_q) {
+        return -1;
+    }
+    memset(&it, 0, sizeof(it));
+    snprintf(it.line, sizeof(it.line), "%s", line);
+    it.src = (uint8_t)src;
+
+    size_t n = strlen(it.line);
+    while (n > 0 && (it.line[n - 1] == '\r' || it.line[n - 1] == '\n')) {
+        it.line[--n] = 0;
+    }
+    if (n == 0) {
+        return 0;
+    }
+    return xQueueSend(s_cmd_q, &it, 0) == pdPASS ? 0 : -1;
+}
+
+const char *app_name(void)
+{
+    return s_dev_name;
+}
+
+const char *app_ble_pin(void)
+{
+    return s_ble_pin;
+}
+
+bool app_ble_enabled(void)
+{
+    return ble_link_is_on();
+}
+
+int64_t app_now_ms(void)
+{
+    return now_ms();
 }
 
 /* ---------------- OLED 状态面板 ---------------- */
@@ -394,7 +705,7 @@ static size_t module_write(const uint8_t *d, size_t n)
 
 static void handle_ack(uint8_t a);
 
-static void handle_frame(const rf34dl_frame_t *f)
+static void handle_frame_locked(const rf34dl_frame_t *f)
 {
     int64_t now = now_ms();
     char hex[9];
@@ -415,8 +726,16 @@ static void handle_frame(const rf34dl_frame_t *f)
 
     int idx = find_code(f->band, f->code);
     if (idx >= 0) {
+        snprintf(s_last_kind, sizeof(s_last_kind), "rx");
+        s_last_id = idx + 1;
+        s_last_event_ms = now;
         ui_note_rx(&s_ui, idx + 1, f->band, f->code);
         ui_mark_dirty();
+        app_mark_state_dirty();
+        link_publishf("{\"t\":\"event\",\"seq\":%lu,\"kind\":\"rx\",\"id\":%d,"
+                      "\"band\":\"%s\",\"code\":\"%s\"}",
+                      (unsigned long)(link_head() + 1), idx + 1,
+                      rf34dl_band_name(f->band), hex);
         if (s_echo) {
             out("RX id=%d band=%s code=%s\n", idx + 1, rf34dl_band_name(f->band), hex);
         }
@@ -424,8 +743,15 @@ static void handle_frame(const rf34dl_frame_t *f)
     }
 
     if (s_count >= MAX_CODES) {
+        snprintf(s_last_kind, sizeof(s_last_kind), "full");
+        s_last_id = 0;
+        s_last_event_ms = now;
         ui_note_full(&s_ui, f->band, f->code);
         ui_mark_dirty();
+        app_mark_state_dirty();
+        link_publishf("{\"t\":\"event\",\"seq\":%lu,\"kind\":\"full\","
+                      "\"band\":\"%s\",\"code\":\"%s\"}",
+                      (unsigned long)(link_head() + 1), rf34dl_band_name(f->band), hex);
         if (s_echo) {
             out("RX band=%s code=%s (store full, not saved)\n", rf34dl_band_name(f->band), hex);
         }
@@ -437,12 +763,31 @@ static void handle_frame(const rf34dl_frame_t *f)
     s_count++;
     store_save();
 
+    snprintf(s_last_kind, sizeof(s_last_kind), "learn");
+    s_last_id = s_count;
+    s_last_event_ms = now;
     ui_note_learn(&s_ui, s_count, f->band, f->code);
     ui_note_count(&s_ui, s_count);
     ui_mark_dirty();
+    app_mark_codes_dirty();
+    link_publishf("{\"t\":\"event\",\"seq\":%lu,\"kind\":\"learn\",\"id\":%d,"
+                  "\"band\":\"%s\",\"code\":\"%s\"}",
+                  (unsigned long)(link_head() + 1), s_count,
+                  rf34dl_band_name(f->band), hex);
 
     if (s_echo) {
         out("LEARN id=%d band=%s code=%s\n", s_count, rf34dl_band_name(f->band), hex);
+    }
+}
+
+static void handle_frame(const rf34dl_frame_t *f)
+{
+    if (s_snap_lock) {
+        xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+    }
+    handle_frame_locked(f);
+    if (s_snap_lock) {
+        xSemaphoreGive(s_snap_lock);
     }
 }
 
@@ -481,6 +826,7 @@ static void handle_ack(uint8_t a)
     if (s_echo && !((a == RF34DL_ACK_LONG_ON || a == RF34DL_ACK_STOPPED) && a == prev)) {
         out("ACK 0x%02X %s\n", a, name);
     }
+    app_mark_state_dirty();
 }
 
 static int pump(int wait_ms)
@@ -513,6 +859,7 @@ static int pump(int wait_ms)
         ui_note_counters(&s_ui, (unsigned)s_frames, (unsigned)s_acks,
                          (unsigned)s_parser.stray);
         ui_mark_dirty();
+        app_mark_state_dirty();
     }
     ui_refresh(false);
     return total;
@@ -614,6 +961,11 @@ static void cmd_help(void)
     out("  MON ON|OFF            hex-dump every module byte (debug)\n");
     out("  ECHO ON|OFF           print decoded frames (default ON)\n");
     out("  DISP ON|OFF|TEST [s]|SHOW  OLED panel / test pattern / ASCII dump\n");
+    out("  WIFI [status]|[ssid pass]|CLEAR  join an AP / forget STA (AP fallback)\n");
+    out("  BLE [on|off]          BLE advertising / status\n");
+    out("  PIN                   show BLE 4-digit PIN (serial only)\n");
+    out("  STATE                 print JSON state snapshot\n");
+    out("  WEBTEST               self-check HTTP /api/hello + /api/events\n");
     out("  RESET                 restart ESP32\n");
     out("\nlearn: press a remote button; firmware prints LEARN id=... automatically\n");
     out("note: SEND gets F0 after ~0.85s; LONG gets 0xFE heartbeat; STOP gets 0xFF (measured)\n");
@@ -632,6 +984,15 @@ static void cmd_info(void)
         s_oled_ok ? "yes" : "no", s_ui.enabled ? "yes" : "no",
         (unsigned long)st->flush_count, (unsigned long)st->flush_err,
         (unsigned long)st->last_us, (unsigned long)st->max_us);
+    net_info_t ni;
+    net_get_info(&ni);
+    out("# net mode=%s ap_on=%d has_creds=%d ap=%s ap_ip=%s clients=%d "
+        "sta=%s sta_ip=%s rssi=%d\n",
+        ni.mode, ni.ap_on ? 1 : 0, ni.has_creds ? 1 : 0,
+        ni.ap_ssid, ni.ap_ip, ni.ap_clients,
+        ni.sta_connected ? ni.sta_ssid : "-", ni.sta_ip, ni.rssi);
+    out("# ble on=%s adv=%s conn=%s name=%s pin=set\n", ble_link_is_on() ? "on" : "off",
+        ble_link_advertising() ? "yes" : "no", ble_link_connected() ? "yes" : "no", s_dev_name);
     out("OK stored=%d/%d rx_bytes=%lu frames=%lu acks=%lu dups=%lu stray=%lu resync=%lu\n",
         s_count, MAX_CODES, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
         (unsigned long)s_acks, (unsigned long)s_dups, (unsigned long)s_parser.stray,
@@ -672,6 +1033,12 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
     ui_tx_kind_t kind = (dur == RF34DL_DUR_LONG)   ? UI_TX_LONG
                         : (dur == RF34DL_DUR_STOP) ? UI_TX_STOP
                                                    : UI_TX_SEND;
+    snprintf(s_tx_kind, sizeof(s_tx_kind), "%s", what);
+    s_tx_id = id;
+    s_tx_active = true;
+    s_tx_ok = 0;
+    s_tx_ms = 0;
+    app_mark_state_dirty();
     ui_note_tx(&s_ui, kind, id, c->band, c->code);
     ui_mark_dirty();
     ui_refresh(true); /* 先把 sending... 画出来,再进入最长 1.5s 的等待 */
@@ -693,6 +1060,17 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
             rf34dl_band_name(c->band), hex, need, ACK_WAIT_MS);
     }
 
+    s_tx_ok = (a == need);
+    s_tx_ms = dt;
+    /* 长发成功后模块持续发;STOP/SEND(含失败)都回到 idle。 */
+    s_tx_active = (kind == UI_TX_LONG && a == need);
+    app_mark_state_dirty();
+    link_publishf("{\"t\":\"event\",\"seq\":%lu,\"kind\":\"tx\",\"tx\":\"%s\","
+                  "\"id\":%d,\"band\":\"%s\",\"code\":\"%s\",\"ok\":%d,"
+                  "\"ms\":%u}",
+                  (unsigned long)(link_head() + 1), what, id,
+                  rf34dl_band_name(c->band), hex, s_tx_ok ? 1 : 0, dt);
+
     /* 长发/停止模块本来就不回 F0,不要把"已知行为"画成失败。 */
     if (kind == UI_TX_SEND) {
         ui_note_tx_result(&s_ui, a == RF34DL_ACK_TX_OK, dt);
@@ -701,7 +1079,7 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
     }
 }
 
-static void cmd_erase(const char *args)
+static void cmd_erase_locked(const char *args)
 {
     if (arg_eq(args, "all")) {
         s_count = 0;
@@ -710,6 +1088,7 @@ static void cmd_erase(const char *args)
         ui_note_forget(&s_ui);
         ui_note_idle(&s_ui);
         ui_mark_dirty();
+        app_mark_codes_dirty();
         out("OK erased all\n");
         return;
     }
@@ -732,7 +1111,19 @@ static void cmd_erase(const char *args)
     }
     ui_note_idle(&s_ui);
     ui_mark_dirty();
+    app_mark_codes_dirty();
     out("OK erased id=%d (%d left)\n", id, s_count);
+}
+
+static void cmd_erase(const char *args)
+{
+    if (s_snap_lock) {
+        xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+    }
+    cmd_erase_locked(args);
+    if (s_snap_lock) {
+        xSemaphoreGive(s_snap_lock);
+    }
 }
 
 static void cmd_mode(const char *args)
@@ -761,6 +1152,7 @@ static void cmd_mode(const char *args)
         out("WARN mode=%s no 0x%02X within %dms\n", cont ? "continuous" : "single", want,
             ACK_WAIT_MS);
     }
+    app_mark_state_dirty();
 }
 
 static void cmd_baud(const char *args)
@@ -803,6 +1195,7 @@ static void cmd_baud(const char *args)
         out("WARN baud=%d: no F1. Module probably did switch; verify with SEND, "
             "or RECOVER to force 9600\n", b);
     }
+    app_mark_state_dirty();
 }
 
 static bool force_module_9600(void)
@@ -851,6 +1244,7 @@ static void cmd_recover(void)
     } else {
         out("ERR RECOVER failed: check 3V3/GND/TXD-RXD and module power\n");
     }
+    app_mark_state_dirty();
 }
 
 static void cmd_raw(const char *args)
@@ -873,6 +1267,7 @@ static void cmd_raw(const char *args)
 static void cmd_disp(const char *args)
 {
     const oled_stats_t *st = oled_stats();
+    app_mark_state_dirty();
 
     if (!*args) {
         out("OK disp=%s present=%s test=%s flush=%lu err=%lu\n",
@@ -966,12 +1361,168 @@ static void cmd_disp(const char *args)
     out("ERR usage: DISP ON|OFF|TEST [s]|SHOW\n");
 }
 
+/* ---------------- 网络 / BLE / 快照命令 ---------------- */
+
+static void cmd_wifi(const char *args)
+{
+    net_info_t ni;
+
+    if (!*args || arg_eq(args, "status")) {
+        net_get_info(&ni);
+        out("OK wifi mode=%s ap_on=%d has_creds=%d ap=%s ap_ip=%s clients=%d "
+            "sta=%s sta_ip=%s rssi=%d\n",
+            ni.mode, ni.ap_on ? 1 : 0, ni.has_creds ? 1 : 0,
+            ni.ap_ssid, ni.ap_ip, ni.ap_clients,
+            ni.sta_connected ? ni.sta_ssid : "-", ni.sta_ip, ni.rssi);
+        return;
+    }
+
+    if (arg_eq(args, "clear") || arg_eq(args, "forget")) {
+        net_clear_sta();
+        out("OK wifi cleared; AP mode\n");
+        app_mark_state_dirty();
+        return;
+    }
+
+    char ssid[33];
+    char pass[65];
+    const char *sp = strchr(args, ' ');
+
+    if (sp) {
+        size_t n = (size_t)(sp - args);
+        if (n >= sizeof(ssid)) {
+            out("ERR ssid too long\n");
+            return;
+        }
+        memcpy(ssid, args, n);
+        ssid[n] = 0;
+        snprintf(pass, sizeof(pass), "%s", sp + 1);
+    } else {
+        snprintf(ssid, sizeof(ssid), "%s", args);
+        pass[0] = 0;
+    }
+
+    esp_err_t e = net_set_sta(ssid, pass);
+    if (e == ESP_OK) {
+        out("OK wifi ssid=%s connecting (AP stays up)\n", ssid);
+    } else {
+        out("ERR wifi: %s\n", esp_err_to_name(e));
+    }
+    app_mark_state_dirty();
+}
+
+static void cmd_ble(const char *args)
+{
+    if (arg_eq(args, "on")) {
+        ble_link_set_enabled(true);
+        out("OK ble=on\n");
+    } else if (arg_eq(args, "off")) {
+        ble_link_set_enabled(false);
+        out("OK ble=off (advertising stopped, current link dropped)\n");
+    } else {
+        out("OK ble=%s adv=%s conn=%s name=%s\n", ble_link_is_on() ? "on" : "off",
+            ble_link_advertising() ? "yes" : "no",
+            ble_link_connected() ? "yes" : "no", s_dev_name);
+    }
+    app_mark_state_dirty();
+}
+
+static void cmd_pin(app_src_t src)
+{
+    if (src != APP_SRC_SERIAL) {
+        /* 远程通道能读 PIN 就等于没有 PIN。只允许物理串口。 */
+        out("ERR PIN is serial-only\n");
+        return;
+    }
+    out("OK ble_pin=%s (enter in Android app; shown on OLED for 5s at boot)\n", s_ble_pin);
+}
+
+static void cmd_state(void)
+{
+    static char buf[APP_STATE_JSON_MAX];
+    app_copy_state(buf, sizeof(buf));
+    /* 状态 JSON 比普通日志长:直接写控制台,避免被 out() 的 1KB 缓冲截断。 */
+    con_write(buf, (int)strlen(buf));
+    con_write("\n", 1);
+}
+
+/* 自测:从设备内部访问自己的 HTTP/SSE,不依赖外部 Wi-Fi 客户端。
+ * 这不是替代真机浏览器验收,只是把"服务起来了"与"路由/响应可用"分开。 */
+static void cmd_webtest(void)
+{
+    char base[32];
+    char urls[3][64];
+    snprintf(base, sizeof(base), "http://%s", net_ip());
+    snprintf(urls[0], sizeof(urls[0]), "%s/api/hello", base);
+    snprintf(urls[1], sizeof(urls[1]), "%s/api/state", base);
+    snprintf(urls[2], sizeof(urls[2]), "%s/api/events", base);
+
+    for (size_t i = 0; i < sizeof(urls) / sizeof(urls[0]); i++) {
+        esp_http_client_config_t cfg = {
+            .url = urls[i],
+            .timeout_ms = 4000,
+            .disable_auto_redirect = true,
+        };
+        esp_http_client_handle_t c = esp_http_client_init(&cfg);
+        if (!c) {
+            out("ERR webtest init\n");
+            return;
+        }
+        esp_err_t e = esp_http_client_open(c, 0);
+        if (e != ESP_OK) {
+            out("ERR webtest open %s: %s\n", urls[i], esp_err_to_name(e));
+            esp_http_client_cleanup(c);
+            continue;
+        }
+        esp_http_client_fetch_headers(c);
+        int status = esp_http_client_get_status_code(c);
+        char body[220];
+        int n = esp_http_client_read(c, body, sizeof(body) - 1);
+        if (n < 0) {
+            n = 0;
+        }
+        body[n] = 0;
+        for (int k = 0; k < n; k++) {
+            if (body[k] == '\n' || body[k] == '\r') {
+                body[k] = ' ';
+            }
+        }
+        out("OK webtest %d %s -> %s\n", status, urls[i], body);
+        esp_http_client_close(c);
+        esp_http_client_cleanup(c);
+    }
+
+    /* POST 走完整入队路径:命令输出会同时打到串口,便于确认 main 真的执行了。 */
+    char post_url[64];
+    snprintf(post_url, sizeof(post_url), "%s/api/cmd", base);
+    esp_http_client_config_t pcfg = {
+        .url = post_url,
+        .timeout_ms = 4000,
+        .disable_auto_redirect = true,
+    };
+    esp_http_client_handle_t pc = esp_http_client_init(&pcfg);
+    if (pc) {
+        const char *json = "{\"cmd\":\"DISP TEST 1\"}";
+        esp_http_client_set_method(pc, HTTP_METHOD_POST);
+        esp_http_client_set_header(pc, "Content-Type", "application/json");
+        esp_http_client_set_post_field(pc, json, (int)strlen(json));
+        esp_err_t pe = esp_http_client_perform(pc);
+        int pstatus = esp_http_client_get_status_code(pc);
+        if (pe == ESP_OK) {
+            out("OK webtest POST %d /api/cmd -> DISP TEST 1\n", pstatus);
+        } else {
+            out("ERR webtest POST: %s\n", esp_err_to_name(pe));
+        }
+        esp_http_client_cleanup(pc);
+    }
+}
+
 /* ---------------- 命令分发 ---------------- */
 
 static char s_line[160];
 static int s_linelen = 0;
 
-static void handle_line(char *line)
+static void handle_line(char *line, app_src_t src)
 {
     char *p = line;
     char cmd[16];
@@ -1004,7 +1555,7 @@ static void handle_line(char *line)
     } else if (strcmp(cmd, "LIST") == 0) {
         cmd_list();
     } else if (strcmp(cmd, "SEND") == 0) {
-        do_tx(p, RF34DL_DUR_NORMAL, "tx");
+        do_tx(p, RF34DL_DUR_NORMAL, "send");
     } else if (strcmp(cmd, "LONG") == 0) {
         do_tx(p, RF34DL_DUR_LONG, "long");
     } else if (strcmp(cmd, "STOP") == 0) {
@@ -1031,6 +1582,16 @@ static void handle_line(char *line)
         }
     } else if (strcmp(cmd, "DISP") == 0) {
         cmd_disp(p);
+    } else if (strcmp(cmd, "WIFI") == 0) {
+        cmd_wifi(p);
+    } else if (strcmp(cmd, "BLE") == 0) {
+        cmd_ble(p);
+    } else if (strcmp(cmd, "PIN") == 0) {
+        cmd_pin(src);
+    } else if (strcmp(cmd, "STATE") == 0) {
+        cmd_state();
+    } else if (strcmp(cmd, "WEBTEST") == 0) {
+        cmd_webtest();
     } else if (strcmp(cmd, "ECHO") == 0) {
         if (arg_eq(p, "on")) {
             s_echo = true;
@@ -1058,7 +1619,9 @@ static void feed_console(const uint8_t *b, int n)
         if (c == '\r' || c == '\n') {
             if (s_linelen > 0) {
                 s_line[s_linelen] = 0;
-                handle_line(s_line);
+                if (app_submit_cmd(s_line, APP_SRC_SERIAL) != 0) {
+                    out("ERR busy: command queue full, try again\n");
+                }
                 s_linelen = 0;
             }
         } else if (c >= 32 && c < 127) {
@@ -1088,6 +1651,64 @@ static int console_read(uint8_t *buf, int max)
     return n;
 }
 
+/* ---------------- 命令执行 / 启动 ---------------- */
+
+static void execute_one_queued(void)
+{
+    cmd_item_t it;
+
+    if (!s_cmd_q || xQueueReceive(s_cmd_q, &it, 0) != pdPASS) {
+        return;
+    }
+
+    s_capture = true;
+    s_capture_len = 0;
+    s_capture_buf[0] = 0;
+
+    handle_line(it.line, (app_src_t)it.src);
+
+    s_capture = false;
+    if (s_capture_len > 0) {
+        char esc[LINK_LINE_MAX - 96];
+        link_json_escape(s_capture_buf, esc, sizeof(esc));
+        link_publishf("{\"t\":\"log\",\"seq\":%lu,\"line\":\"%s\"}",
+                      (unsigned long)(link_head() + 1), esc);
+    }
+    s_capture_len = 0;
+    app_mark_state_dirty();
+}
+
+static void load_ble_pin(void)
+{
+    nvs_handle_t h;
+    uint32_t pin = 0;
+    size_t len = sizeof(pin);
+    bool ok = false;
+
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) == ESP_OK) {
+        if (nvs_get_u32(h, "ble_pin", &pin) == ESP_OK && pin <= 9999) {
+            ok = true;
+        } else {
+            pin = 1000 + (esp_random() % 9000);
+            nvs_set_u32(h, "ble_pin", pin);
+            nvs_commit(h);
+            ok = true;
+        }
+        nvs_close(h);
+    }
+    if (!ok) {
+        pin = 1234;
+    }
+    snprintf(s_ble_pin, sizeof(s_ble_pin), "%04lu", (unsigned long)pin);
+}
+
+static void make_device_name(void)
+{
+    uint8_t mac[6] = {0};
+    esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+    snprintf(s_dev_name, sizeof(s_dev_name), "RF-Lab-%02X%02X", mac[4], mac[5]);
+}
+
 /* ---------------- main ---------------- */
 
 void app_main(void)
@@ -1111,8 +1732,31 @@ void app_main(void)
             esp_err_to_name(oe));
     }
 
+    link_init();
+    s_cmd_q = xQueueCreate(CMD_QUEUE_DEPTH, sizeof(cmd_item_t));
+    s_snap_lock = xSemaphoreCreateMutex();
+
     bool nvs_ok = init_store();
+    load_ble_pin();
+    make_device_name();
     out("# stored %d code(s)%s\n", s_count, nvs_ok ? "" : " (NVS unavailable)");
+
+    esp_err_t ne = net_init();
+    if (ne != ESP_OK) {
+        out("# net init failed: %s (Web UI unavailable)\n", esp_err_to_name(ne));
+    }
+    esp_err_t be = ble_link_start(s_dev_name, s_ble_pin);
+    if (be != ESP_OK) {
+        out("# ble init failed: %s (BLE unavailable)\n", esp_err_to_name(be));
+    }
+    esp_err_t we = web_server_start();
+    if (we != ESP_OK) {
+        out("# web init failed: %s\n", esp_err_to_name(we));
+    }
+
+    if (s_snap_lock) {
+        xTaskCreate(snapshot_task, "snap", 4096, NULL, 3, NULL);
+    }
 
     char title[UI_COLS + 1];
     snprintf(title, sizeof(title), "RF-Lab %s", RFLAB_FW_VERSION);
@@ -1124,12 +1768,30 @@ void app_main(void)
     if (!nvs_ok) {
         ui_note_error(&s_ui, "NVS FAIL");
     } else if (s_oled_ok) {
-        ui_note_boot(&s_ui, "OLED 72x40", "I2C 3C OK");
-        s_boot_until_ms = now_ms() + 1500;
+        char pinline[UI_COLS + 1];
+        char netline[UI_COLS + 1];
+        net_info_t ni;
+        net_get_info(&ni);
+        snprintf(pinline, sizeof(pinline), "BLE PIN %s", s_ble_pin);
+        snprintf(netline, sizeof(netline), "%s",
+                 strcmp(ni.mode, "connecting") == 0 ? "WIFI..." : net_ip());
+        ui_note_boot(&s_ui, pinline, netline);
+        s_boot_until_ms = now_ms() + 5000;
     }
     ui_mark_dirty();
     ui_refresh(true);
 
+    net_info_t boot_net;
+    net_get_info(&boot_net);
+    out("# net mode=%s ap=%s pass=%s ap_ip=%s sta=%s sta_ip=%s\n",
+        boot_net.mode, boot_net.ap_ssid, RFLAB_AP_PASS, boot_net.ap_ip,
+        boot_net.sta_connected ? boot_net.sta_ssid : "-", boot_net.sta_ip);
+    out("# ble name=%s pin=%s (serial PIN; also OLED 5s)\n", s_dev_name, s_ble_pin);
+    if (strcmp(boot_net.mode, "connecting") == 0) {
+        out("# web: STA connecting; AP fallback opens after 15s if it fails\n");
+    } else {
+        out("# web http://%s/  api /api/state /api/events\n", net_ip());
+    }
     out("# press a remote button to learn; HELP for commands\n");
 
     uint8_t tmp[256];
@@ -1139,6 +1801,9 @@ void app_main(void)
         if (n > 0) {
             feed_console(tmp, n);
         }
+        poll_net_note();
+        execute_one_queued();
         pump(5);
+        ui_refresh(false);
     }
 }

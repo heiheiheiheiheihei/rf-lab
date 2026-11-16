@@ -19,7 +19,7 @@ sdkconfig.esp32*
 
 # 依赖
 node_modules/
-dist/
+/dist/
 .venv/
 __pycache__/
 *.pyc
@@ -35,3 +35,11 @@ __pycache__/
 secrets.json
 .env
 .env.*
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/build/
+*.apk
+*.aab
+android/build/

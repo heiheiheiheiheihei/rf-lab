@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# RF-Lab uConsole 启动器 — 安装到 ~/.local/bin/rflab-tui。
+set -euo pipefail
+exec python3 "${HOME}/.local/share/rflab/rflab_tui.py" "$@"

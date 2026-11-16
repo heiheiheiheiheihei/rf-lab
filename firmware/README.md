@@ -1,6 +1,8 @@
 # 固件(ESP32-C3 / ESP-IDF 5.5.5)
 
-**状态**:0.5.0 · 可构建 · 协议/OLED 有主机单测 · **2026-11-15 已上机**(见文末「上机结果」)。
+**状态**:0.6.0 · 可构建 · 协议/OLED/事件环/TUI 有主机单测 · **2026-11-15 已上机**
+(见文末「上机结果」)。0.6.0 增加 Wi-Fi APSTA + HTTP/SSE + NimBLE;规格见
+[`../docs/01-ui.md`](../docs/01-ui.md),射频行为仍以 [`../docs/00-mvp.md`](../docs/00-mvp.md) 为准。
 
 目标板:ESP32-C3 0.42" OLED(4MB Flash,原生 USB)。板载 SSD1306 72×40 由本版驱动,
 只做状态面板;命令与行为规格在 [`docs/00-mvp.md`](../docs/00-mvp.md) §5–6(**唯一权威**,这里不重复)。
@@ -15,7 +17,12 @@
 | [`src/font5x7.h`](src/font5x7.h) | 5×7 字库(Adafruit GFX 子集,BSD 声明在文件头) |
 | [`src/ui.h`](src/ui.h) / [`src/ui.c`](src/ui.c) | **纯状态映射**:事件 → 5 行 × 12 字符;测试图案 |
 | [`src/oled.h`](src/oled.h) / [`src/oled.c`](src/oled.c) | 仅 I2C/SSD1306:probe、初始化、整帧写屏、开关屏、耗时统计 |
-| [`src/main.c`](src/main.c) | 控制台、NVS、模块 UART1、命令分发、OLED 调度 |
+| [`src/link.h`](src/link.h) / [`src/link.c`](src/link.c) | 小型事件环 + JSON 转义(纯 C,主机单测) |
+| [`src/app.h`](src/app.h) | main 暴露给传输层的命令入队 / 状态快照接口 |
+| [`src/net.h`](src/net.h) / [`src/net.c`](src/net.c) | Wi-Fi APSTA、STA 凭据 NVS、IP/RSSI |
+| [`src/web_server.h`](src/web_server.h) / [`src/web_server.c`](src/web_server.c) | HTTP 静态页、`/api/*`、SSE(异步 handler) |
+| [`src/ble_link.h`](src/ble_link.h) / [`src/ble_link.c`](src/ble_link.c) | NimBLE GATT(自定义 NUS 风格)、PIN、分片通知 |
+| [`src/main.c`](src/main.c) | 控制台、NVS、模块 UART1、命令队列、快照、网络初始化、OLED 调度 |
 | [`test/host/test_rf34dl.c`](test/host/test_rf34dl.c) | 协议单测:真实抓包回归、重同步、ACK(含 FE/FF)、fuzz |
 | [`test/host/test_ui.c`](test/host/test_ui.c) | 帧缓冲/字库/状态页/面板几何单测 |
 
@@ -27,14 +34,21 @@ cd firmware
 pio run -e esp32c3
 ```
 
-产物 `.pio/build/esp32c3/firmware.bin`。改了 `sdkconfig.defaults` 先 `rm -f sdkconfig.esp32c3` 再编(它是生成物)。
+构建前会自动跑 `scripts/embed_web.py`(把 `web/` 打成 gzip 并 EMBED_FILES);构建后
+`scripts/check_partitions.py` 校验 app 分区必须是 **2MB**。
+
+产物 `.pio/build/esp32c3/firmware.bin`。**烧录请用仓库根的 `./tools/flash.sh /dev/ttyACM0`**:
+它一次写 bootloader + 2MB 分区表 + app。只 `pio run -t upload` 会留下旧的 1MB 分区表,
+1.06MB 的镜像会启动失败(0.6.0 实测踩过)。
+
+改了 `sdkconfig.defaults` 先 `rm -f sdkconfig.esp32c3` 再编(它是生成物)。
 
 首次为 C3 构建会下载 **RISC-V 工具链**(`toolchain-riscv32-esp`,约 200MB);本机已完成。
 
 ## 主机单测(不接硬件)
 
 ```bash
-./tools/host_test.sh        # 协议 76 项 + OLED/UI 1286 项
+./tools/host_test.sh        # 协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh  # 加 ASan/UBSan
 ```
 
@@ -50,6 +64,21 @@ pio run -e esp32c3 -t upload --upload-port /dev/ttyACM0
 ```
 
 原生 USB-Serial-JTAG,不需要驱动。端口不出现时:按住 **BOOT**(GPIO9)插线进下载模式,或换一根**数据线**(充电线没有 D+/D−)。
+
+## 跨平台 UI(0.6.0)
+
+| 项 | 值 |
+|---|---|
+| 模式 | `ap` / `connecting` / `sta` / `apsta`;有凭据先 STA-only,15s 失败回 AP |
+| AP | `RF-Lab-XXXX`(MAC 末两字节),WPA2 `rflab1234`,`192.168.4.1`;仅回退/配网时开 |
+| STA | `WIFI <ssid> <pass>`、Web 设置页或 `/api/wifi`;凭据存 NVS |
+| Web | `/`(gzip 单页)、`/api/hello|state|codes|net|events|cmd|wifi|wifi/clear` |
+| SSE | `/api/events`;`httpd_req_async_handler_begin` + 每连接任务,最多 2 条 |
+| BLE | `RF-Lab-XXXX`;Service `5a3d0001-…`;RX `…0002` / TX `…0003`;MTU 247 |
+| BLE PIN | 4 位,NVS `ble_pin`;OLED 开机页 5s;串口 `PIN`(仅串口) |
+| 自测 | `WEBTEST` GET `/api/hello|state|events` + POST `/api/cmd`;`wifi_selftest.py` 回退 15/15 |
+
+UI 的 ARM 是防误触,不是硬门控;BLE PIN 是应用层,不是链路加密。
 
 ## 控制台
 
@@ -79,14 +108,27 @@ pio run -e esp32c3 -t upload --upload-port /dev/ttyACM0
 | `DISP TEST [s]` | 四边框 + 非对称角块 + `RF-Lab/72x40/SSD1306/COL 28`;默认 10s,到期回状态页 |
 | `DISP SHOW` | 把当前帧缓冲打成 40 行 × 72 列 `#/.` ASCII(不读玻璃) |
 
+网络 / BLE / 诊断:
+
+| 命令 | 作用 |
+|---|---|
+| `WIFI [status]\|[ssid pass]\|CLEAR` | 配 STA / 忘掉 STA;凭据存 NVS |
+| `BLE [on\|off]` | BLE 广播开关/状态(`adv=yes/no`) |
+| `PIN` | 显示 BLE PIN(仅串口) |
+| `STATE` | 打印完整 JSON 状态快照 |
+| `WEBTEST` | 设备内 GET `/api/hello`、`/api/events`,POST `/api/cmd` |
+
 状态页是 5 行 × 12 字符:标题/频段/码/结果/`F A S` 计数。`LONG` 期间 `0xFE` 心跳
 会让 `A` 增长,这正好是模块在长发状态的证据。
 
 ## 一次完整流程
 
 ```text
-# RF-Lab fw=0.5.0 (ESP32-C3 + YS-RF34DL)
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
 # oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# net mode=ap ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1
+# ble name=RF-Lab-1B59 pin=**** (serial PIN; also OLED 5s)
+# web http://192.168.4.1/
 # stored 3 code(s)                              ← NVS 里的码
 LEARN id=4 band=315M code=5555034C               ← 按一下原遥控器
 OK tx id=4 band=315M code=5555034C (0xF0, 852ms) ← SEND 4
@@ -95,6 +137,21 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 ```
 
 ## 上机结果(2026-11-15)
+
+### 0.6.0 跨平台 UI
+
+| 项 | 结果 |
+|---|---|
+| 构建 | Flash 1,066,628B / RAM 55,732B;2MB 分区保护通过 |
+| 设备内 HTTP | `/api/hello` 200、`/api/state` 200、`/api/events` 200、POST `/api/cmd` 202 |
+| 命令回归 | `SEND` 851ms / `LONG` 224ms / `STOP` 51ms |
+| BLE | `INFO` `adv=yes`;`BLE OFF/ON` 可停/启广播 |
+| 自检 | `tools/device_selftest.py --tx` **18/18** |
+| Wi-Fi 回退 | 有凭据 STA-only 启动(AP 关)→15s 超时 AP 回退;15/15 |
+| Wi-Fi LAN | ✅ 真实 `SSID-A`→192.168.5.117;ping/HTTP/SSE/POST/浏览器 200;重启 `ap_on=0` |
+| 证据 | [`../docs/evidence/2026-11-15-ui.md`](../docs/evidence/2026-11-15-ui.md) · [`../docs/evidence/2026-11-15-wifi.md`](../docs/evidence/2026-11-15-wifi.md) |
+
+### 0.5.0 射频/OLED
 
 | 项 | 结果 |
 |---|---|
@@ -117,6 +174,11 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 4. 无屏(0x3C 不应答)的实机降级路径:屏焊死,未拆;代码路径与主机渲染有,未上机。
 5. 两条 `433M` 学码记录(与 315M 码值相同)未解释,见 `evidence/2026-11-15-oled.md` §5。
 6. 教学期间一次 `stray` 累积 72 字节,未复现(与长发 `0xFE/0xFF` 不是同一现象)。
+7. 外部浏览器经 AP:本机无 Wi-Fi 适配器,只做了设备内 HTTP/SSE 自测。
+8. 手机 BLE 连接/鉴权/发射:本机无 BT 适配器,只证明广播已开。
+9. Android 真机安装与 uConsole 真机 1280×720 未验收。
+10. STA 接 LAN:✅ 2026-11-15 已用 `SSID-A` 验证(192.168.5.117);见 `evidence/2026-11-15-wifi-lan.md`。
+11. STA 运行中掉线回退:代码路径已实现,但没有路由器控制权来触发。
 
 ## 已知缺口
 
@@ -126,6 +188,8 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 4. 无发射硬门控(旧方案 `RF_KILL` 随三模块方案一起取消)。
 5. 控制台用 USB CDC:端口打开后**第一次写入前读不到历史输出**(驱动缓冲不主动刷新),主机工具需先写一个空行。
 6. OLED 只有 5×7 ASCII / 12×5 字符,无中文、无按键交互;写屏同步阻塞 ~8.6ms。
+7. BLE 无链路加密,4 位 PIN 只挡随手连接;AP 密码是固件宏,换密码要重编。
+8. Web 的 ARM 默认关,但刷新页面/重连后回到 DISARMED;串口仍可直接发。
 
 ## 排障
 
@@ -137,4 +201,9 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 | `SEND` 出 `WARN … no 0xF0` | 正常发射的 `F0` 约 0.85s;若一直没有,查 GPIO3→RXD |
 | `LONG`/`STOP` 出 `WARN … no 0xFE/0xFF` | 检查模块是否真进入长发;`MON ON` 看有没有 `FE` 心跳/`FF` |
 | OLED 黑屏 | `DISP ON`;`INFO` 看 `present/err`;`DISP TEST 30`;查 0x3C、GPIO5/6 |
+| Web 打不开 | `INFO` 看 `mode`;`sta` 用 LAN IP,`ap/apsta` 连 AP;`WEBTEST` 看设备内 HTTP 是否 200 |
+| 配网后连不上 | 15s 后自动回 AP;浏览器在 AP 里看 `WIFI` 提示,或串口 `WIFI status` / `WIFI CLEAR` |
+| BLE 扫不到 | `INFO` 看 `adv=yes`;`BLE ON`;PIN 看 OLED 5s 或串口 `PIN` |
+| 启动反复重启 | 多半是旧 1MB 分区表;用 `tools/flash.sh` 写全布局 |
+| 内网 curl 503 | 本机代理把内网 IP 也代理了;用 `curl --noproxy '*'` 或 `NO_PROXY=<ip>` |
 | OLED 画面偏移/镜像 | 改 `src/oled_panel.h` 的列偏移/初始化行,重跑 `DISP TEST`(见 `hardware/README.md` §8) |

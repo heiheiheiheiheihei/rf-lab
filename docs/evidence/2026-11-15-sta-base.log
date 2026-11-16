@@ -1,0 +1,100 @@
+# RF-Lab 0.6.0 on-device self-test
+# 2026-11-15 13:18:45 +0800
+
+$ RESET
+OK reset
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bedc
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x2fa4
+entry 0x403cbf10
+
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# stored 5 code(s)
+# net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
+# ble name=RF-Lab-1B59 pin=**** (serial PIN; also OLED 5s)
+# web: STA connecting; AP fallback opens after 15s if it fails
+# press a remote button to learn; HELP for commands
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=1 err=0 last_us=8718 max_us=8718
+# net mode=connecting ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+# net LAN OK 192.168.5.11
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=2 err=0 last_us=9063 max_us=9063
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=SSID-A sta_ip=192.168.5.117 rssi=-48
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ STATE
+{"fw":"0.6.0","proto":1,"uptime_ms":5536,"net":{"mode":"sta","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":true,"sta_ssid":"SSID-A","sta_ip":"192.168.5.117","rssi":-48},"ble":{"on":1,"conn":0,"name":"RF-Lab-1B59","pin_set":1},"module":{"baud":9600,"rx_bytes":0,"frames":0,"acks":0,"dups":0,"stray":0,"resync":0},"store":{"count":5,"max":32},"oled":{"present":1,"on":1,"flush":2,"err":0,"last_us":9063,"max_us":9063},"tx":{"active":0,"kind":"idle","id":0,"ok":0,"ms":0},"last":{"kind":"boot","id":0,"band":"","code":"","ms":0}}
+
+$ DISP
+OK disp=on present=yes test=off flush=2 err=0
+
+$ DISP TEST 1
+OK disp=test 1s (DISP ON to leave test)
+
+$ DISP ON
+OK disp=on
+
+$ BLE OFF
+OK ble=off (advertising stopped, current link dropped)
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=5 err=0 last_us=9081 max_us=9081
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=SSID-A sta_ip=192.168.5.117 rssi=-48
+# ble on=off adv=no conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ BLE ON
+OK ble=on
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=5 err=0 last_us=9081 max_us=9081
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=SSID-A sta_ip=192.168.5.117 rssi=-47
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ WEBTEST
+OK webtest 200 http://192.168.5.117/api/hello -> {"fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.5.117","auth":1}
+OK webtest 200 http://192.168.5.117/api/state -> {"fw":"0.6.0","proto":1,"uptime_ms":13536,"net":{"mode":"sta","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":true,"sta_ssid":"SSID-A","sta_ip":"192.168.5.117","rssi":-47},"ble":{"on"
+OK webtest 200 http://192.168.5.117/api/events -> event: hello data: {"t":"hello","fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.5.117","auth":1}  event: state data: {"t":"state","seq":13,"data":{"fw":"0.6.0","proto":1,"uptime_ms":135
+OK webtest POST 202 /api/cmd -> DISP TEST 1
+OK disp=test 1s (DISP ON to leave test)
+
+$ SEND 1
+ACK 0xF0 TX_OK
+OK send id=1 band=315M code=5555034C (0xF0, 861ms)
+
+$ LONG 1
+ACK 0xFE LONG_ON
+OK long id=1 band=315M code=5555034C (0xFE, 248ms)
+
+$ STOP 1
+ACK 0xFE LONG_ON
+ACK 0xFF STOPPED
+OK stop id=1 band=315M code=5555034C (0xFF, 26ms)

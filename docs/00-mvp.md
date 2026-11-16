@@ -1,15 +1,22 @@
 # RF-Lab MVP — 315/433 固定码 学习 / 复制 / 发射
 
-状态:现行 · 2026-11-15 · 固件 **0.5.0** · **本文件是唯一规格**
+状态:现行 · 2026-11-15 · 固件 **0.6.0** · **本文件是射频/命令的唯一规格**
+
+> 跨平台 UI(Web / BLE / Android / uConsole)的规格单独放在 [`01-ui.md`](01-ui.md);
+> 本文只保留硬件、模块协议、命令语义与射频验收。两者冲突时,射频行为以本文为准,
+> UI 传输细节以 `01-ui.md` 为准。
 
 ## 1. 目标
 
 一台 315/433MHz 固定码遥控器的「学码 → 存 → 发射」工具:
 
-> 按一下原遥控器 → 模块解码 → ESP32 存码 → **OLED 显示状态** → 串口命令发射 → 原接收器动作。
+> 按一下原遥控器 → 模块解码 → ESP32 存码 → **OLED 显示状态** → 串口/Web/BLE/uConsole 发射 → 原接收器动作。
 
-两块板:**ESP32-C3 OLED** 做「串口 ↔ 命令行」,并用板载 72×40 OLED 做本地状态显示;
+两块板:**ESP32-C3 OLED** 做「串口/Wi-Fi/BLE ↔ 命令行」,并用板载 72×40 OLED 做本地状态显示;
 **YS-RF34DL** 负责解码、编码、发射。
+
+0.6.0 起 C3 的 **Wi-Fi(STA 优先 / AP 回退)+ BLE** 只承载控制 UI(Web/Android/uConsole),
+315/433 的调制、解码、发射仍全部在 YS-RF34DL 内;C3 的 2.4G 射频不参与射频链路。
 
 ## 2. 硬件方案(已定稿,只剩两块板)
 
@@ -27,7 +34,7 @@
 **代价(写死,不要在执行时忘掉)**:
 
 - **没有本地按键**:板载 OLED(SSD1306 72×40,GPIO5/6)只做**状态显示**
-  (READY / LEARN / RX / TX / 计数器),不能选码或发码;所有操作仍走串口。
+  (READY / LEARN / RX / TX / 计数器),不能选码或发码;操作走串口/Web/BLE/uConsole。
   屏不在时固件静默降级为纯串口,不阻塞启动。
 - **屏只有 72×40 / 12×5 字符**:只放状态,不镜像整条串口日志;不支持中文。
 - **I2C 写屏是同步的**:整帧 361B,400kHz 实测 ~8.6ms(失败回退 100kHz)。
@@ -155,6 +162,11 @@ FD F3 03 55 55 03 3C DF  FD F3 03 55 55 03 4B DF
 | `RAW <hex>` | 向模块注入任意字节(调试) | `OK raw n B` |
 | `MON ON\|OFF` | 逐字节 hex 打印模块数据(调试) | — |
 | `ECHO ON\|OFF` | 是否打印解码事件 | — |
+| `WIFI [status]\|[ssid pass]\|CLEAR` | 配 STA / 忘记 STA;凭据存 NVS | `OK wifi …` |
+| `BLE [on\|off]` | BLE 广播开关/状态 | `OK ble=on adv=…` |
+| `PIN` | 显示 BLE 4 位 PIN(**仅串口**) | `OK ble_pin=…` |
+| `STATE` | 打印 JSON 状态快照 | JSON |
+| `WEBTEST` | 设备内自测 HTTP `/api/hello`、`/api/events`、POST `/api/cmd` | `OK webtest …` |
 | `DISP ON\|OFF` | 开/关板载 OLED(显存保留) | `OK disp=…` |
 | `DISP TEST [s]` | 几何测试图案,默认 10s,到期自动回状态页 | `OK disp=test Ns` |
 | `DISP SHOW` | 把当前帧缓冲打成 72×40 `#/.` ASCII(不读玻璃) | `OK fb 72x40` |
@@ -175,8 +187,8 @@ FD F3 03 55 55 03 3C DF  FD F3 03 55 55 03 4B DF
 | # | 验收 | 通过标准 | 状态 |
 |---|---|---|---|
 | AC-1 | 构建 | `pio run -e esp32c3` 成功 | ✅ 主机 |
-| AC-2 | 主机单测 | `tools/host_test.sh` 全过:协议 76 项 + OLED/UI 1286 项 | ✅ 主机 |
-| AC-3 | 上电自检 | 串口出现 `# RF-Lab fw=0.5.0`、端口状态与 `# oled …: ok` | ✅ 2026-11-15 |
+| AC-2 | 主机单测 | `tools/host_test.sh` 全过:协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12 | ✅ 主机 |
+| AC-3 | 上电自检 | 串口出现 `# RF-Lab fw=0.6.0`、端口状态与 `# oled …: ok` | ✅ 2026-11-15(0.5.0 首跑时为 0.5.0) |
 | AC-4 | 学码 | 按原遥控器 → `LEARN id=N band=315M code=…` | ✅ 3 个键;另有 2 条 433M 未解释(§11.2) |
 | AC-5 | 掉电保持 | 复位/断电再上电,`LIST` 仍有该码 | ✅ 跨重烧复位;真断电(拔 USB)未单独做 |
 | AC-6 | 发射 | 原接收器动作,10 次 ≥9 | ✅ 15/15 回 F0;学习遥控器学到同码并被模块解回 |
@@ -189,9 +201,16 @@ FD F3 03 55 55 03 3C DF  FD F3 03 55 55 03 4B DF
 | AC-13 | OLED 发射页 | `SEND` 显示 `TX ID n OK` + `F0 xxxms`;`LONG/STOP` 页正确 | ✅ 帧缓冲解码 2026-11-15 |
 | AC-14 | OLED 开关/图案 | `DISP OFF` 灭、`DISP ON` 恢复、`DISP TEST s` 到期回状态页 | ✅ 2026-11-15 |
 | AC-15 | 无屏降级 | 0x3C 不应答时仍启动、串口可用 | ⏳ 未上机(屏焊死);`DISP SHOW` 可脱屏验证 |
+| AC-16 | Web/HTTP/SSE | 设备内 `WEBTEST` hello/state/events 200 + POST 202,SSE 有 hello+state | ✅ 2026-11-15,见 `evidence/2026-11-15-ui.md` |
+| AC-17 | BLE 广播 | `INFO` 显示 `adv=yes`;手机可扫到 `RF-Lab-*` | ✅ 广播;⏳ 手机连接未测(本机无 BT 适配器) |
+| AC-18 | Android APK | `assembleDebug` 成功、资源/权限正确 | ✅ 构建;⏳ 真机安装/BLE 未测 |
+| AC-19 | uConsole TUI | 主机解析/键位 12 项测试;PTY 布局 | ✅ 主机;⏳ 真机未测 |
+| AC-20 | 跨平台 UI 回归 | 0.5.0 串口 `LIST/SEND/LONG/STOP` 与 OLED 行为不变 | ✅ 2026-11-15 |
+| AC-21 | Wi-Fi STA/AP 回退 | 有凭据先 STA-only;15s 失败打开 AP;AP 内可配网;`WIFI CLEAR` 回 AP | ✅ 真实 LAN `SSID-A`→192.168.5.117;回退 15/15;⏳ STA 掉线回退 |
 
 **仍未验证**:长发时接收器是否真持续动作(有 `0xFE` 状态,但仍缺接收器观察)→ 距离 → 真断电保持
-→ 无屏降级实机 → 两条 433M 异常记录(§11.2)。
+→ 无屏降级实机 → 两条 433M 异常记录(§11.2)→ 外部浏览器经 AP → 手机 BLE/Android 真机
+→ uConsole 真机。
 2026-11-15 长发/停止期间新增的 stray(82 字节)已解释:`0xFE/0xFF` 状态字节,
 0.5.0 已识别(§5.3);**教学期间那 72 字节是另一现象,仍未复现**(§11.1)。
 
@@ -204,8 +223,8 @@ AC-6 的「原接收器动作」由**更硬的证据**替代:**学习型遥控�
 | 滚动码克隆/重放 | 模块只输出固定码;需要裸 OOK 捕获,另案 |
 | 原始 OOK 波形记录/分析 | 同上;这版连射频引脚都没有 |
 | 扫频 / RSSI / 频谱 | 模块不提供,也没有可编程射频前端 |
-| Wi-Fi/BLE | 控制只走 USB 串口,C3 的 2.4G 与 315/433 无关 |
-| OLED 菜单/按键交互 | 屏只做状态输出;板载按键不参与选码/发码 |
+| Wi-Fi/BLE 做 315/433 射频 | 只做控制 UI;315/433 的调制/解码/发射仍由 YS-RF34DL 负责 |
+| OLED 菜单/按键交互 | 屏只做状态输出;板载按键不参与选码/发码;交互走 Web/BLE/TUI |
 | OLED 中文/图形界面 | 5×7 ASCII、12×5 字符,够状态用;不做 UI 框架 |
 
 ## 9. 证据
@@ -216,7 +235,8 @@ AC-6 的「原接收器动作」由**更硬的证据**替代:**学习型遥控�
 | 波特率判定(最短 104µs) | [`evidence/2026-11-14-9600-baud.log`](evidence/2026-11-14-9600-baud.log) |
 | 上机记录(2026-11-15 0.4.0,逐条命令与观察) | [`evidence/2026-11-15-bringup.md`](evidence/2026-11-15-bringup.md) |
 | **OLED + 长发/停止修正**(2026-11-15 0.5.0) | [`evidence/2026-11-15-oled.md`](evidence/2026-11-15-oled.md) |
-| 主机单测 | `tools/host_test.sh`(协议 76 项 + OLED/UI 1286 项) |
+| **跨平台 UI**(2026-11-15 0.6.0) | [`evidence/2026-11-15-ui.md`](evidence/2026-11-15-ui.md) |
+| 主机单测 | `tools/host_test.sh`(协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12) |
 | 构建 | `cd firmware && pio run -e esp32c3` |
 
 ## 10. 与旧版的关系
@@ -291,3 +311,24 @@ ESP32-C3 0.42" OLED + YS-RF34DL,VCC **3V3 直连**,模块 TXD→GPIO4 / RXD→GP
 - I2C 写屏是同步阻塞:最坏 10Hz、每次 ~8.6ms,发射瞬间屏幕会晚 ~9ms 更新。
 - 构建体积(0.5.0,PlatformIO 汇总):Flash 221,594B(5.3%),RAM 9,836B(3.0%);
   这是整镜像数字,未单独剥离 OLED 的增量。
+
+## 13. 跨平台 UI(0.6.0)
+
+详细规格与传输契约见 [`01-ui.md`](01-ui.md)。本节只记录它对射频规格的边界:
+
+| 项 | 结论 |
+|---|---|
+| Web | ESP32-C3 上 `esp_http_server`,单页内嵌 gzip;STA 成功时走 LAN IP,失败/配网时 AP `RF-Lab-XXXX` / `rflab1234` / `192.168.4.1` |
+| BLE | NimBLE 外设,自定义 NUS 风格 GATT;应用层 4 位 PIN;不改变 315/433 链路 |
+| Android | 同一份 Web UI + WebView + BLE 桥;APK 可侧载 |
+| uConsole | `tools/rflab_tui.py`,HTTP 优先、串口回退;键盘操作 |
+| 对射频的影响 | 无。命令最终仍走 §6 的 `SEND/LONG/STOP`;`F0`≈0.85s、`FE`≈25Hz、`FF` 已复测 |
+| 已上机 | STA 接 `SSID-A`、LAN 浏览器/HTTP/SSE/POST、重启 AP 关闭;AP 回退 15/15 |
+| 未验证 | STA 运行中掉线回退、外部浏览器经 AP、真实手机 BLE、Android 真机、uConsole 真机 |
+
+**为什么不在 C3 上做第二套业务逻辑**:0.5.0 的命令时序(`F0` 0.85s、`FE/FF`)是上机
+验证过的;Web/BLE 只做「一行命令 + 事件/快照」,避免复制一份会漂移的协议实现。
+
+**代价**:STA 失败时最多等 15s 才打开 AP;APSTA 配网期间 AP 与 STA 同信道,吞吐/功耗略增;
+**HTTP 无登录,AP 密码就是门槛**(STA 模式下则是局域网可达);BLE 无链路加密,只有应用层 PIN;
+Web 的 ARM 只是防误触,不是硬门控。

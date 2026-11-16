@@ -2,33 +2,60 @@
 #
 # 只放"有设计依据"的项。每条后面的 ⚠️ 说明为什么不能随手改。
 # 改完必须删掉生成物再编:`rm -f sdkconfig.esp32c3`(它是 .gitignore 里的生成物)。
+#
+# 0.6.0 起启用 Wi-Fi + HTTP + NimBLE。规格见 docs/01-ui.md。
 
 CONFIG_IDF_TARGET="esp32c3"
 
-# --- Flash:4MB(0.42" OLED 这类 C3 小板的标准配置)------------------------
-# 写成更大的容量会让 4MB 的片子被当成大容量;分区表按 4MB 规划。
+# --- Flash:4MB ---------------------------------------------------------
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
-CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+# 0.5.0 的 singleapp_large 只有 1500K;Wi-Fi+HTTP+NimBLE+内嵌 UI 需要 2MB。
+# partitions.csv 保留 nvs 在 0x9000,已有码库不丢。
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 
 # --- 控制台:自己实现,不用 IDF console ---------------------------------
-# 固件用两个通道收发行命令:
-#   ① 原生 USB-Serial-JTAG(GPIO18/19,板载 Type-C)——C3 上这条通路可靠;
-#   ② UART0(GPIO20/21)——兼容外接 USB-TTL/CH340 的玩法。
-# 两个通道由 usb_serial_jtag_driver_install() + uart_driver_install(UART0) 直接管,
-# 因此必须关掉 IDF 自己的 console,否则日志会和命令行抢同一路 UART。
 CONFIG_ESP_CONSOLE_NONE=y
 CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_LOG_DEFAULT_LEVEL_NONE=y
-# ⚠️ IDF 5.x 在部分目标上默认把二级 console 设成 USB-Serial-JTAG,必须显式关掉。
 
 # --- FreeRTOS ----------------------------------------------------------
 CONFIG_FREERTOS_HZ=1000
-
-# 主任务栈:解析 8 字节帧 + NVS 读写 + snprintf,3584 B 偏紧(格式化输出吃栈);
-# 提到 8192 B 换余量,代价是一次性 4.5KB 静态 RAM(C3 共 400KB SRAM)。
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 
-# --- 串口监视 ----------------------------------------------------------
-# 真正决定 pio device monitor 波特率的是 platformio.ini 的 monitor_speed。
-# CONFIG_ESPTOOLPY_MONITOR_BAUD 在 IDF 里是看不见来源的 int,这里不设。
+# --- Wi-Fi -------------------------------------------------------------
+# STA 优先、失败回退 AP;降低静态/动态缓冲以给 NimBLE 让 RAM。
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=6
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_AMPDU_TX_ENABLED=n
+CONFIG_ESP_WIFI_AMPDU_RX_ENABLED=n
+CONFIG_ESP_WIFI_NVS_ENABLED=y
+# 关省电:Web/SSE 要低延迟(设备由 USB 供电,不靠电池)。
+CONFIG_ESP_WIFI_SLP_IRAM_OPT=n
+
+# --- lwIP / HTTPD ------------------------------------------------------
+# 5 个 socket:2 个 SSE 长连接 + 3 个短请求。
+CONFIG_LWIP_MAX_SOCKETS=8
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
+CONFIG_HTTPD_MAX_URI_LEN=512
+CONFIG_HTTPD_PURGE_BUF_LEN=32
+
+# --- BLE:NimBLE(不是 Bluedroid)---------------------------------------
+# C3 只有 400KB SRAM,且要和 Wi-Fi/HTTP 共存;NimBLE 的占用小得多。
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1
+CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=247
+CONFIG_BT_NIMBLE_NVS_PERSIST=y
+CONFIG_BT_NIMBLE_LOG_LEVEL_NONE=y
+CONFIG_BT_NIMBLE_HS_STOP_TIMEOUT_MS=2000
+
+# --- 断言/看门狗 -------------------------------------------------------
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y

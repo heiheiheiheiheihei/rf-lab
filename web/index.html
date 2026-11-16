@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070906">
+<meta name="color-scheme" content="dark">
+<title>RF-LAB // FIELD TERMINAL</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070906'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23FFB000' stroke-width='2'/%3E%3Cpath d='M32 4v14M32 46v14M4 32h14M46 32h14' stroke='%23FFB000' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23FFB000'/%3E%3C/svg%3E">
+<style>/*__CSS__*/</style>
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="frame">
+  <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
+  <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
+
+  <header class="top">
+    <div class="brand-block">
+      <div class="eyebrow">FIELD TERMINAL // 315·433 FIXED CODE</div>
+      <h1 class="brand">RF<span>LAB</span></h1>
+      <div class="sub">LEARN · REPLAY · TRANSMIT <em>//</em> 固定码学习与回放</div>
+    </div>
+    <div class="clock-block">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="date" id="date">----</div>
+      <div class="zulu" id="uptime">UPTIME --</div>
+    </div>
+  </header>
+
+  <div class="statusbar" role="status" aria-live="polite">
+    <span class="chip"><i class="dot" id="linkDot"></i><b id="linkLabel">CONNECTING</b></span>
+    <span class="chip">FW <b id="fw">--</b></span>
+    <span class="chip">NET <b id="net">--</b></span>
+    <span class="chip">BLE <b id="ble">--</b></span>
+    <span class="chip">MOD <b id="modBaud">--</b></span>
+    <span class="chip">OLED <b id="oled">--</b></span>
+    <span class="spacer"></span>
+    <button class="chip arm" id="armChip" type="button" aria-pressed="false">
+      <i class="dot" id="armDot"></i><b id="armLabel">DISARMED</b>
+    </button>
+  </div>
+
+  <main>
+    <section class="panel hero" aria-labelledby="heroTitle">
+      <div class="panel-head"><h2 id="heroTitle">ACQUISITION <em>// 捕获</em></h2><span class="tag" id="listenTag">LISTENING</span></div>
+      <div class="hero-body">
+        <div class="reticle" aria-hidden="true">
+          <div class="ring"></div><div class="ring r2"></div>
+          <div class="cross"></div><div class="sweep"></div>
+        </div>
+        <div class="hero-info">
+          <div class="kicker">LAST SIGNAL <em>// 最近信号</em></div>
+          <div class="last-code" id="lastCode">--------</div>
+          <div class="last-meta"><span id="lastBand">NO SIGNAL</span><span id="lastId">ID --</span></div>
+          <div class="hero-actions">
+            <button id="armBtn" class="btn btn-arm" type="button">ARM TRANSMIT</button>
+            <button id="stopBtn" class="btn btn-stop" type="button" disabled>STOP</button>
+          </div>
+          <p class="hint" id="heroHint">按一下原遥控器 → 自动入库。发射前需 ARM。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel codebook" aria-labelledby="codeTitle">
+      <div class="panel-head"><h2 id="codeTitle">CODEBOOK <em>// 码库</em></h2><span class="tag" id="storeTag">0/32</span></div>
+      <div class="code-list" id="codeList" role="listbox" aria-label="码库" tabindex="0">
+        <div class="empty" id="emptyState">NO CODES<br><span>按一下原遥控器开始学习</span></div>
+      </div>
+      <div class="codebook-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span><span><kbd>⏎</kbd> 发射</span>
+        <span><kbd>L</kbd> 长发</span><span><kbd>D</kbd> 删除</span>
+      </div>
+    </section>
+
+    <section class="panel console-panel" aria-labelledby="logTitle">
+      <div class="panel-head"><h2 id="logTitle">EVENT LOG <em>// 事件台</em></h2><button class="mini" id="clearLog" type="button">CLEAR</button></div>
+      <div class="log" id="log" role="log" aria-live="polite" aria-relevant="additions"></div>
+    </section>
+
+    <aside class="panel telemetry" aria-labelledby="teleTitle">
+      <div class="panel-head"><h2 id="teleTitle">TELEMETRY <em>// 遥测</em></h2><span class="tag">LIVE</span></div>
+      <div class="cards">
+        <div class="card"><div class="card-k">T1 STORE</div><div class="card-v" id="tStore">--</div><div class="card-s">codes / 32</div></div>
+        <div class="card"><div class="card-k">T2 FRAMES</div><div class="card-v" id="tFrames">--</div><div class="card-s">decoded</div></div>
+        <div class="card"><div class="card-k">T3 ACKS</div><div class="card-v" id="tAcks">--</div><div class="card-s">F0/F1/FE</div></div>
+        <div class="card"><div class="card-k">T4 STRAY</div><div class="card-v" id="tStray">--</div><div class="card-s">bad bytes</div></div>
+        <div class="card"><div class="card-k">T5 UPLINK</div><div class="card-v small" id="tUplink">--</div><div class="card-s" id="tRssi">RSSI --</div></div>
+        <div class="card"><div class="card-k">T6 UPTIME</div><div class="card-v small" id="tUptime">--</div><div class="card-s">since boot</div></div>
+      </div>
+      <div class="panel-head sub-head"><h2>SETTINGS <em>// 设置</em></h2></div>
+      <div class="settings">
+        <button class="btn btn-ghost" type="button" data-cmd="MODE continuous">MODE CONT</button>
+        <button class="btn btn-ghost" type="button" data-cmd="MODE single">MODE SINGLE</button>
+        <button class="btn btn-ghost" type="button" data-cmd="DISP TEST 30">OLED TEST</button>
+        <button class="btn btn-ghost" type="button" data-cmd="BAUD 9600">BAUD 9600</button>
+      </div>
+      <form id="wifiForm" class="wifi-form">
+        <div class="kicker">STA UPLINK <em>// 配网</em></div>
+        <div class="wifi-row">
+          <input id="wifiSsid" placeholder="SSID" autocomplete="off" spellcheck="false">
+          <input id="wifiPass" type="password" placeholder="PASSWORD" autocomplete="off">
+          <button class="btn btn-ghost" type="submit">JOIN</button>
+        </div>
+        <div class="wifi-row second">
+          <button id="wifiClear" class="btn btn-ghost" type="button">FORGET / AP</button>
+          <div class="wifi-note" id="wifiNote">AP MODE // 输入 SSID 后接入局域网</div>
+        </div>
+      </form>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span><kbd>?</kbd> 帮助</span><span><kbd>R</kbd> 刷新</span><span><kbd>T</kbd> OLED TEST</span><span><kbd>A</kbd> ARM</span>
+    <span class="spacer"></span>
+    <span class="foot-tail" id="footTail">RF-LAB 0.6.0 // LOCAL</span>
+  </footer>
+</div>
+
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-head"><h2 id="helpTitle">FIELD MANUAL <em>// 键位</em></h2><button class="mini" data-close type="button">CLOSE</button></div>
+    <div class="key-grid">
+      <div><kbd>↑</kbd><kbd>↓</kbd><span>选择码 / 列表</span></div>
+      <div><kbd>Enter</kbd><span>单次发射 SEND</span></div>
+      <div><kbd>L</kbd><span>长发 LONG</span></div>
+      <div><kbd>S</kbd><span>停止 STOP</span></div>
+      <div><kbd>D</kbd><span>删除(按两次)</span></div>
+      <div><kbd>R</kbd><span>重新拉取状态</span></div>
+      <div><kbd>T</kbd><span>OLED 测试图案 30s</span></div>
+      <div><kbd>A</kbd><span>ARM / DISARM</span></div>
+      <div><kbd>?</kbd><span>本帮助</span></div>
+      <div><kbd>Esc</kbd><span>关闭弹层</span></div>
+    </div>
+    <p class="modal-note">BLE 模式需在设备 OLED 或串口 <code>PIN</code> 查看 4 位 PIN。ARM 只防误触,不是发射硬门控。</p>
+  </div>
+</div>
+
+<div class="modal" id="pinModal" hidden>
+  <div class="modal-panel narrow" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+    <div class="modal-head"><h2 id="pinTitle">BLE AUTH <em>// 配对</em></h2></div>
+    <p class="modal-note">输入设备 OLED 开机页或串口 <code>PIN</code> 显示的 4 位码。</p>
+    <form id="pinForm" class="pin-form">
+      <input id="pinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="0000" autocomplete="off">
+      <button class="btn btn-arm" type="submit">AUTH</button>
+    </form>
+    <div class="modal-foot" id="pinMsg"></div>
+  </div>
+</div>
+
+<div class="modal" id="scanModal" hidden>
+  <div class="modal-panel narrow" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+    <div class="modal-head"><h2 id="scanTitle">BLE SCAN <em>// 选择设备</em></h2><button class="mini" id="rescan" type="button">RESCAN</button></div>
+    <div class="scan-list" id="scanList"><div class="empty">SCANNING…</div></div>
+    <p class="modal-note">只显示广播 RF-LAB Service UUID 的设备。</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden role="status"></div>
+<script>/*__JS__*/</script>
+</body>
+</html>

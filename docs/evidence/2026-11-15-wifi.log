@@ -1,0 +1,110 @@
+# RF-Lab 0.6.0 Wi-Fi fallback self-test
+# 2026-11-15 13:02:04 +0800
+
+$ WIFI CLEAR
+OK wifi cleared; AP mode
+# net AP MODE 192.168.4.1
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=9 err=0 last_us=8714 max_us=8764
+# net mode=ap ap_on=1 has_creds=0 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ WIFI __rflab_missing_8928__ wrongpass
+OK wifi ssid=__rflab_missing_8928__ connecting (AP stays up)
+# net WIFI SET __rflab_miss
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=10 err=0 last_us=8712 max_us=8764
+# net mode=apsta ap_on=1 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=11 err=0 last_us=8718 max_us=8764
+# net mode=apsta ap_on=1 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ WEBTEST
+OK webtest 200 http://192.168.4.1/api/hello -> {"fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.4.1","auth":1}
+OK webtest 200 http://192.168.4.1/api/state -> {"fw":"0.6.0","proto":1,"uptime_ms":129545,"net":{"mode":"apsta","ap_on":1,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":false,"sta_ssid":"__rflab_missing_8928__","sta_ip":"","rssi":0},"ble
+OK webtest 200 http://192.168.4.1/api/events -> event: hello data: {"t":"hello","fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.4.1","auth":1}  event: state data: {"t":"state","seq":19,"data":{"fw":"0.6.0","proto":1,"uptime_ms":12954
+OK webtest POST 202 /api/cmd -> DISP TEST 1
+OK disp=test 1s (DISP ON to leave test)
+
+$ WIFI __rflab_missing_8928__ wrongpass
+OK wifi ssid=__rflab_missing_8928__ connecting (AP stays up)
+# net WIFI SET __rflab_miss
+
+$ RESET
+OK reset
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bedc
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x2fa4
+entry 0x403cbf10
+
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# stored 5 code(s)
+# net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
+# ble name=RF-Lab-1B59 pin=**** (serial PIN; also OLED 5s)
+# web: STA connecting; AP fallback opens after 15s if it fails
+# press a remote button to learn; HELP for commands
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=1 err=0 last_us=8764 max_us=8764
+# net mode=connecting ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ INFO
+# net AP FALLBACK 192.168.4.1
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=4 err=0 last_us=8730 max_us=8764
+# net mode=apsta ap_on=1 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
+
+$ WEBTEST
+OK webtest 200 http://192.168.4.1/api/hello -> {"fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.4.1","auth":1}
+OK webtest 200 http://192.168.4.1/api/state -> {"fw":"0.6.0","proto":1,"uptime_ms":22035,"net":{"mode":"apsta","ap_on":1,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":false,"sta_ssid":"__rflab_missing_8928__","sta_ip":"","rssi":0},"ble"
+OK webtest 200 http://192.168.4.1/api/events -> event: hello data: {"t":"hello","fw":"0.6.0","proto":1,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.4.1","auth":1}  event: state data: {"t":"state","seq":8,"data":{"fw":"0.6.0","proto":1,"uptime_ms":22035,
+OK webtest POST 202 /api/cmd -> DISP TEST 1
+OK disp=test 1s (DISP ON to leave test)
+
+$ WIFI CLEAR
+OK wifi cleared; AP mode
+# net AP MODE 192.168.4.1
+
+$ INFO
+# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=7 err=0 last_us=8713 max_us=8792
+# net mode=ap ap_on=1 has_creds=0 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+OK stored=5/32 rx_bytes=0 frames=0 acks=0 dups=0 stray=0 resync=0
