@@ -23,7 +23,7 @@ python3 -m http.server 8088 -d site
 | Hero | RF-LAB / 百元射频实验室、¥100–999 预算包线、5 个舱位示意 | Canvas 频谱、雷达扫描、滚动揭示 |
 | 01 配装台 | 4 档预设、9 个可选模块、实时物料小计/余量/能力矩阵 | 勾选、预算滑杆、随机配装、削到预算内、复制配装单 |
 | 02 模块阵列 | 对数频段覆盖图、模块规格表、三条设计判断 | 表格/频段条 |
-| 03 战术终端 | Web / APP / uConsole 实拍与 mock 布局验收图 | 标签切换、灯箱放大、模拟事件流(标 SIM) |
+| 03 战术终端 | Web / APP / uConsole 布局验收图(mock API,2026-11-16) | 标签切换、灯箱放大、模拟事件流(标 SIM) |
 | 04 无线上行 | 本地 MQTT + Home Assistant Discovery 拓扑与 topic 草案 | 强制 `ROADMAP / 未实现` 标识 |
 | 05 作战状态 | 构建 / 主机 / 上机分开列;版本线 | 无 |
 | Footer | 安全边界、文档入口、来源 | 键盘 `B/T/U/R/?` |
@@ -41,6 +41,12 @@ python3 -m http.server 8088 -d site
 
 改价格只改 `index.html` 里每个 `.mod-card` 的 `data-price`;总价/余量/预设由 `app.js` 计算。
 `tools/site_check.py` 会校验 9 个模块、基础价 ¥79、4 档预算不超支、全频段落在 ¥999 内。
+
+## 截图口径
+
+`terminal-*.webp` 与 `../docs/evidence/ui-2026-11-16-*.png` 是 **mock API 布局验收图**,
+不是新皮肤上机截图。真实 LAN 图 `../docs/evidence/ui-lan-live.png` 仍是 0.6.0 旧皮肤;
+新皮肤尚未重新烧录验证。不要把 mock 图写成设备截图。
 
 ## 现役 / 路线图边界(硬规则)
 

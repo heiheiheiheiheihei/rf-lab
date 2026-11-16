@@ -636,20 +636,20 @@
   /* --------------------------------------------------------------- tabs */
   const views = {
     web: {
-      src: "assets/terminal-web.webp", badge: "REAL LAN",
-      caption: "真实 LAN 页面 · 192.168.5.117 · Chromium 200",
-      meta: "1280×720 / WebP", w: 1280, h: 720, app: false,
-      alt: "RF-LAB 真实局域网 Web 终端页面，深色战术风格，显示最近信号、码库、事件台与遥测",
+      src: "assets/terminal-web.webp", badge: "MOCK / 2026-11-16",
+      caption: "布局验收图（mock API）· 0.6.0 UI refresh",
+      meta: "1440×900 / WebP", w: 1440, h: 900, app: false,
+      alt: "RF-LAB 0.6.0 UI refresh 布局验收图，深色战术风格，显示最近信号、码库、事件台与遥测",
     },
     app: {
-      src: "assets/terminal-mobile.webp", badge: "BUILT / MOCK",
+      src: "assets/terminal-mobile.webp", badge: "MOCK / WEBVIEW",
       caption: "Android WebView，同一份 UI；真机 BLE 连接未测",
       meta: "390×844 / WebP", w: 390, h: 844, app: true,
-      alt: "RF-LAB 手机端布局验收图，单列码库与粘性发射按钮",
+      alt: "RF-LAB 0.6.0 UI refresh 手机端布局验收图，单列码库与粘性发射按钮",
     },
     tui: {
       src: "assets/terminal-uconsole.webp", badge: "MOCK",
-      caption: "uConsole 1280×720 布局验收图（mock 数据）；真机未测",
+      caption: "uConsole 1280×720 布局验收图（mock API）；真机未测",
       meta: "1280×720 / WebP", w: 1280, h: 720, app: false,
       alt: "RF-LAB uConsole 1280×720 三栏键盘 TUI 布局验收图",
     },

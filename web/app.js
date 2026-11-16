@@ -665,6 +665,18 @@
 
   /* ---------------- boot ---------------- */
 
+  // Decorative RF spectrum rail: generated locally, no data path.
+  (() => {
+    const rail = $('railBars');
+    if (!rail) return;
+    for (let i = 0; i < 96; i++) {
+      const bar = document.createElement('i');
+      bar.style.setProperty('--h', (18 + ((i * 37 + 11) % 74)) + '%');
+      bar.style.setProperty('--d', ((i % 11) * -0.19).toFixed(2) + 's');
+      rail.append(bar);
+    }
+  })();
+
   setArmed(false);
   log('sys', 'RF-LAB FIELD TERMINAL // ' + S.transport.toUpperCase());
   if (S.transport === 'ble') {

@@ -55,7 +55,8 @@ body::before{
 .bl{left:8px; bottom:8px; transform:scaleY(-1)}.br{right:8px; bottom:8px; transform:scale(-1,-1)}
 
 /* ---------- header ---------- */
-.top{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex:0 0 auto}
+.top{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex:0 0 auto; min-width:0}
+.brand-block{min-width:0; flex:1 1 auto}
 .eyebrow{font-family:var(--f-mono); font-size:9px; letter-spacing:2.1px; color:var(--amber); margin-bottom:2px}
 .brand{
   margin:0; font-family:var(--f-display); font-size:40px; line-height:.95; letter-spacing:2.5px;
@@ -350,19 +351,86 @@ input:focus{border-color:var(--amber); box-shadow:inset 0 -2px 0 var(--amber)}
   .reticle .sweep{animation:none}
   *{transition:none !important}
 }
+
+/* ---------- 0.6.0 field-lab refresh ----------
+ * Brand lockup + a thin live spectrum rail. Decorative only: no new data
+ * paths, no extra HTTP requests, no change to the command contract.
+ */
+.eyebrow-tag{
+  display:inline-block; margin-right:7px; padding:1px 5px;
+  border:1px solid rgba(255,176,0,.45); color:var(--amber);
+  font-weight:700; letter-spacing:1.2px;
+}
+.brand{text-shadow:0 0 26px rgba(255,176,0,.12)}
+.brand span{display:inline-block; transform:translateY(-.04em); text-shadow:0 0 18px rgba(255,176,0,.25)}
+.sub{font-family:var(--f-cjk); font-size:10px; letter-spacing:.6px; color:var(--khaki)}
+.sub em{font-family:var(--f-mono); font-style:normal; color:var(--muted); letter-spacing:1px}
+.chip.bay{border-color:rgba(255,176,0,.3); background:rgba(255,176,0,.05)}
+.chip.bay b{color:var(--amber-hi)}
+
+.spectrum-rail{
+  flex:0 0 auto; display:flex; align-items:center; gap:10px;
+  height:22px; margin:0 2px; overflow:hidden;
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  opacity:.92;
+}
+.rail-label,.rail-scale{
+  font-family:var(--f-mono); font-size:6.5px; letter-spacing:.8px;
+  color:var(--muted); white-space:nowrap;
+}
+.rail-scale{color:var(--khaki)}
+.rail-bars{
+  flex:1; min-width:0; height:12px; display:flex; align-items:flex-end; justify-content:space-between; gap:2px;
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
+}
+.rail-bars i{
+  flex:1 1 0; min-width:1px; height:var(--h,50%);
+  background:linear-gradient(180deg,var(--amber-hi),rgba(255,176,0,.08));
+  opacity:.55; transform-origin:bottom;
+  animation:rail 2.6s ease-in-out infinite alternate;
+  animation-delay:var(--d,0s);
+}
+@keyframes rail{from{transform:scaleY(.35); opacity:.25}to{transform:scaleY(1); opacity:.8}}
+
+.scanbeam{position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden}
+.scanbeam::before{
+  content:""; position:absolute; left:0; right:0; top:-160px; height:140px;
+  background:linear-gradient(180deg,transparent,rgba(255,176,0,.075),transparent);
+  animation:scanbeam 9s linear infinite;
+}
+@keyframes scanbeam{to{transform:translateY(calc(100vh + 300px))}}
+
+@media (max-height:760px){
+  .spectrum-rail{display:none}
+}
+@media (max-width:760px){
+  .brand-block{max-width:calc(100% - 94px)}
+  .sub{font-size:8px}
+  .spectrum-rail{height:18px; gap:0}
+  .rail-label,.rail-scale{display:none}
+  .rail-bars{height:10px}
+  .eyebrow-tag{margin-right:5px; padding:0 3px}
+}
+@media (prefers-reduced-motion:reduce){
+  .rail-bars i,.scanbeam::before{animation:none}
+  .scanbeam{display:none}
+}
 </style>
 </head>
 <body>
 <div class="scanlines" aria-hidden="true"></div>
+<div class="scanbeam" aria-hidden="true"></div>
 <div class="frame">
   <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
   <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
 
   <header class="top">
     <div class="brand-block">
-      <div class="eyebrow">FIELD TERMINAL // 315·433 FIXED CODE</div>
-      <h1 class="brand">RF<span>LAB</span></h1>
-      <div class="sub">LEARN · REPLAY · TRANSMIT <em>//</em> 固定码学习与回放</div>
+      <div class="eyebrow"><span class="eyebrow-tag">RF-LAB</span>FIELD TERMINAL // 315·433 // LAB 100—999</div>
+      <h1 class="brand">RF<span>—</span>LAB</h1>
+      <div class="sub">百元射频实验室 <em>//</em> LEARN · REPLAY · TRANSMIT</div>
     </div>
     <div class="clock-block">
       <div class="clock" id="clock">--:--:--</div>
@@ -377,6 +445,7 @@ input:focus{border-color:var(--amber); box-shadow:inset 0 -2px 0 var(--amber)}
     <span class="chip">NET <b id="net">--</b></span>
     <span class="chip">BLE <b id="ble">--</b></span>
     <span class="chip">MOD <b id="modBaud">--</b></span>
+    <span class="chip bay">BAY <b>YS-RF34DL</b></span>
     <span class="chip">OLED <b id="oled">--</b></span>
     <span class="spacer"></span>
     <button class="chip arm" id="armChip" type="button" aria-pressed="false">
@@ -452,6 +521,12 @@ input:focus{border-color:var(--amber); box-shadow:inset 0 -2px 0 var(--amber)}
       </form>
     </aside>
   </main>
+
+  <div class="spectrum-rail" aria-hidden="true">
+    <span class="rail-label">RF SPECTRUM</span>
+    <div class="rail-bars" id="railBars"></div>
+    <span class="rail-scale">315 / 433 MHz</span>
+  </div>
 
   <footer class="foot">
     <span><kbd>?</kbd> 帮助</span><span><kbd>R</kbd> 刷新</span><span><kbd>T</kbd> OLED TEST</span><span><kbd>A</kbd> ARM</span>
@@ -1166,6 +1241,18 @@ input:focus{border-color:var(--amber); box-shadow:inset 0 -2px 0 var(--amber)}
   window.addEventListener('beforeunload', () => { if (S.es) S.es.close(); });
 
   /* ---------------- boot ---------------- */
+
+  // Decorative RF spectrum rail: generated locally, no data path.
+  (() => {
+    const rail = $('railBars');
+    if (!rail) return;
+    for (let i = 0; i < 96; i++) {
+      const bar = document.createElement('i');
+      bar.style.setProperty('--h', (18 + ((i * 37 + 11) % 74)) + '%');
+      bar.style.setProperty('--d', ((i % 11) * -0.19).toFixed(2) + 's');
+      rail.append(bar);
+    }
+  })();
 
   setArmed(false);
   log('sys', 'RF-LAB FIELD TERMINAL // ' + S.transport.toUpperCase());

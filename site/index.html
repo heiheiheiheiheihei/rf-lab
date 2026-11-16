@@ -431,14 +431,14 @@
         <h3>桌面用键盘，<br>手机用触控，<br>uConsole 用 TUI。</h3>
         <p>Web 是设备内嵌的单页，HTTP + SSE 推状态；Android 是单 Activity + WebView + 原生 BLE 桥；uConsole 是同一套 HTTP 契约上的键盘 TUI，断网回退 USB 串口。</p>
         <ul class="tick-list">
-          <li><b>WEB</b> HTTP + SSE，无外部请求，gzip 14.6 KB</li>
-          <li><b>APP</b> 单 Activity + WebView + BLE 桥，APK 1.2 MB</li>
+          <li><b>WEB</b> HTTP + SSE，无外部请求，gzip 15.5 KB</li>
+          <li><b>APP</b> 单 Activity + WebView + BLE 桥，APK 1.28 MB</li>
           <li><b>TUI</b> HTTP 优先、串口回退，12 项键位测试</li>
           <li><b>ARM</b> 默认关：防误触，不是安全门控</li>
         </ul>
         <div class="terminal-stats">
           <div><b>3</b><span>界面</span></div>
-          <div><b>14.6<small>KB</small></b><span>gzip</span></div>
+          <div><b>15.5<small>KB</small></b><span>gzip</span></div>
           <div><b>0</b><span>外部请求</span></div>
           <div><b>1,362</b><span>主机测试</span></div>
         </div>
@@ -453,13 +453,13 @@
         <div class="shot-wrap" id="shotPanel" role="tabpanel" aria-labelledby="tab-web">
           <div class="shot-corner tl" aria-hidden="true"></div><div class="shot-corner tr" aria-hidden="true"></div>
           <div class="shot-corner bl" aria-hidden="true"></div><div class="shot-corner br" aria-hidden="true"></div>
-          <img id="shot" src="assets/terminal-web.webp" width="1280" height="720" decoding="async" alt="RF-LAB 真实局域网 Web 终端页面，深色战术风格，显示最近信号、码库、事件台与遥测">
+          <img id="shot" src="assets/terminal-web.webp" width="1440" height="900" decoding="async" alt="RF-LAB 0.6.0 UI refresh 布局验收图，深色战术风格，显示最近信号、码库、事件台与遥测">
           <button class="shot-expand" id="shotExpand" type="button" aria-label="放大查看截图">EXPAND</button>
-          <span class="shot-badge" id="shotBadge">REAL LAN</span>
+          <span class="shot-badge" id="shotBadge">MOCK / 2026-11-16</span>
         </div>
         <div class="shot-caption">
-          <span id="shotCaption">真实 LAN 页面 · 192.168.5.117 · Chromium 200</span>
-          <span id="shotMeta">1280×720 / WebP</span>
+          <span id="shotCaption">布局验收图（mock API）· 0.6.0 UI refresh</span>
+          <span id="shotMeta">1440×900 / WebP</span>
         </div>
         <div class="feed">
           <div class="feed-head"><span><i class="dot ok"></i> EVENT LOG // 演示数据</span><span class="sim">SIM</span></div>
@@ -577,13 +577,13 @@ payload: "SEND 1"</code></pre>
     <div class="status-grid">
       <div class="status-board reveal">
         <div class="status-row status-head"><span>ITEM</span><span>STATE</span><span>NOTE</span></div>
-        <div class="status-row"><span>ESP32-C3 构建</span><span class="st live">● 通过</span><span>1,066,628 B / 2 MB 分区</span></div>
+        <div class="status-row"><span>ESP32-C3 构建</span><span class="st live">● 通过</span><span>1,067,804 B / 2 MB 分区</span></div>
         <div class="status-row"><span>主机测试</span><span class="st live">● 1,362 项</span><span>协议 76 · 事件环 53 · OLED/UI 1,286 · TUI 12</span></div>
         <div class="status-row"><span>学码 / 存码 / 发射</span><span class="st live">● 上机</span><span>2026-11-15</span></div>
         <div class="status-row"><span>Web HTTP / SSE / 命令</span><span class="st live">● 上机</span><span>设备内 + 真实 LAN</span></div>
         <div class="status-row"><span>真实 LAN / AP 回退</span><span class="st live">● 上机</span><span>192.168.5.117 · 15/15</span></div>
         <div class="status-row"><span>BLE 广播</span><span class="st live">● 已开</span><span>真实手机连接未测</span></div>
-        <div class="status-row"><span>Android APK</span><span class="st partial">◐ 已构建</span><span>1.2 MB / debug；真机未测</span></div>
+        <div class="status-row"><span>Android APK</span><span class="st partial">◐ 已构建</span><span>1.28 MB / debug；真机未测</span></div>
         <div class="status-row"><span>uConsole TUI</span><span class="st partial">◐ 主机通过</span><span>12 项 + PTY；真机未测</span></div>
         <div class="status-row"><span>MQTT / Home Assistant</span><span class="st none">○ 路线图</span><span>未实现</span></div>
         <div class="status-row"><span>多模块 / SPI 背板</span><span class="st none">○ 路线图</span><span>未实现</span></div>

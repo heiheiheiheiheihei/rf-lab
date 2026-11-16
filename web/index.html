@@ -11,15 +11,16 @@
 </head>
 <body>
 <div class="scanlines" aria-hidden="true"></div>
+<div class="scanbeam" aria-hidden="true"></div>
 <div class="frame">
   <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
   <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
 
   <header class="top">
     <div class="brand-block">
-      <div class="eyebrow">FIELD TERMINAL // 315·433 FIXED CODE</div>
-      <h1 class="brand">RF<span>LAB</span></h1>
-      <div class="sub">LEARN · REPLAY · TRANSMIT <em>//</em> 固定码学习与回放</div>
+      <div class="eyebrow"><span class="eyebrow-tag">RF-LAB</span>FIELD TERMINAL // 315·433 // LAB 100—999</div>
+      <h1 class="brand">RF<span>—</span>LAB</h1>
+      <div class="sub">百元射频实验室 <em>//</em> LEARN · REPLAY · TRANSMIT</div>
     </div>
     <div class="clock-block">
       <div class="clock" id="clock">--:--:--</div>
@@ -34,6 +35,7 @@
     <span class="chip">NET <b id="net">--</b></span>
     <span class="chip">BLE <b id="ble">--</b></span>
     <span class="chip">MOD <b id="modBaud">--</b></span>
+    <span class="chip bay">BAY <b>YS-RF34DL</b></span>
     <span class="chip">OLED <b id="oled">--</b></span>
     <span class="spacer"></span>
     <button class="chip arm" id="armChip" type="button" aria-pressed="false">
@@ -109,6 +111,12 @@
       </form>
     </aside>
   </main>
+
+  <div class="spectrum-rail" aria-hidden="true">
+    <span class="rail-label">RF SPECTRUM</span>
+    <div class="rail-bars" id="railBars"></div>
+    <span class="rail-scale">315 / 433 MHz</span>
+  </div>
 
   <footer class="foot">
     <span><kbd>?</kbd> 帮助</span><span><kbd>R</kbd> 刷新</span><span><kbd>T</kbd> OLED TEST</span><span><kbd>A</kbd> ARM</span>

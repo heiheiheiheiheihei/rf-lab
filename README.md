@@ -107,7 +107,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 | 项 | 状态 |
 |---|---|
-| 构建(ESP32-C3,0.6.0) | ✅ 主机;Flash 1,066,628B / RAM 55,732B |
+| 构建(ESP32-C3,0.6.0) | ✅ 主机;Flash 1,067,804B / RAM 55,732B |
 | 主机单测(协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
 | 上机:学码 / 存码 / 发射 / 改波特率 | ✅ 2026-11-15(0.5.0 证据仍有效) |
 | 上机:Web HTTP/SSE/命令 | ✅ 2026-11-15,设备内 `WEBTEST` hello/state/events 200 + POST 202 |
@@ -117,8 +117,9 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 上机:重启 AP 关闭 | ✅ `mode=sta ap_on=0`,LAN 仍可访问 |
 | 上机:AP 内配网 / CLEAR | ✅ 设备内;WebTest 经 AP 200,`WIFI CLEAR` 回 AP |
 | 上机:BLE 广播 | ✅ `INFO` `adv=yes`;⏳ **真实手机连接未测**(本机无 BT 适配器) |
-| Android APK | ✅ `assembleDebug` 1.2MB;⏳ 真机安装/BLE 未测 |
+| Android APK | ✅ `assembleDebug` 1,275,236B;⏳ 真机安装/BLE 未测 |
 | uConsole TUI | ✅ 主机解析/键位/PTY 布局;⏳ 真机未测 |
+| Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,504B;⏳ **新皮肤未上机** |
 | 官网 / 配装台(静态) | ✅ 2026-11-16 主机 Chromium 1440×900 / 390×844,无 console error;`tools/site_check.py` 通过;无外部请求 |
 | 路线图:MQTT / HA / 多模块 | ○ **未实现**,接口草案见官网 §04 |
 | 上机:距离 / 长发时接收器是否真持续 | ⏳ 未测,见规格 §7 |
@@ -155,16 +156,17 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 ## UI 截图
 
-以下为 mock API 的布局验收图(不是上机截图):
+2026-11-16 UI refresh 的 mock API 布局验收图(不是上机截图,新皮肤未烧录):
 
-![桌面 1440×900](docs/evidence/ui-desktop-1440.png)
-![uConsole 1280×720](docs/evidence/ui-1280x720.png)
-![手机 390×844](docs/evidence/ui-mobile-390.png)
+![桌面 1440×900](docs/evidence/ui-2026-11-16-desktop.png)
+![uConsole 1280×720](docs/evidence/ui-2026-11-16-uconsole.png)
+![手机 390×844](docs/evidence/ui-2026-11-16-mobile.png)
 
-真实设备 LAN 页面(非 mock,`192.168.5.117`):
+真实设备 LAN 页面(0.6.0 旧皮肤,`192.168.5.117`,非 mock)仍保留作为上机证据:
 
 ![真实 LAN](docs/evidence/ui-lan-live.png)
 
 真实 LAN 页面:[`ui-lan-live.png`](docs/evidence/ui-lan-live.png)(设备 `192.168.5.117`,非 mock)。
+新皮肤构建/布局/未验证项:[`2026-11-16-ui-refresh.md`](docs/evidence/2026-11-16-ui-refresh.md)。
 
 上机细节与取舍:[`docs/01-ui.md`](docs/01-ui.md) · [`docs/evidence/2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`docs/evidence/2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`docs/evidence/2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md)。

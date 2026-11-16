@@ -142,7 +142,7 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 
 | 项 | 结果 |
 |---|---|
-| 构建 | Flash 1,066,628B / RAM 55,732B;2MB 分区保护通过 |
+| 构建 | Flash 1,067,804B / RAM 55,732B;2MB 分区保护通过(2026-11-16 UI refresh) |
 | 设备内 HTTP | `/api/hello` 200、`/api/state` 200、`/api/events` 200、POST `/api/cmd` 202 |
 | 命令回归 | `SEND` 851ms / `LONG` 224ms / `STOP` 51ms |
 | BLE | `INFO` `adv=yes`;`BLE OFF/ON` 可停/启广播 |
