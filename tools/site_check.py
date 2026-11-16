@@ -38,7 +38,8 @@ REQUIRED_IDS = {
     "budgetRange", "total", "buildCode", "presetName", "sheetList",
     "shot", "shotPanel", "lightbox", "helpDialog", "helpBtn", "copyBom",
 }
-ALLOWED_EXTERNAL_HOSTS = {"github.com"}
+# Canonical/OG URLs point at the deployed site; they are metadata, not fetched resources.
+ALLOWED_EXTERNAL_HOSTS = {"github.com", "rf-lab-388.pages.dev"}
 
 
 class SiteParser(HTMLParser):

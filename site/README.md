@@ -1,5 +1,7 @@
 # site/ — RF-LAB 官网 / 配装台
 
+**线上:** <https://rf-lab-388.pages.dev/> · **部署:** Cloudflare Pages 直传 `site/`(见文末)
+
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
 无构建、无外部字体、无 CDN、无网络请求;直接打开 `site/index.html` 就能看。
 
@@ -94,8 +96,23 @@ CHROME="$HOME/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome"
 
 ## 发布说明
 
-- 当前用相对链接:`../README.md`、`../docs/...`。如果部署到 GitHub Pages 的 `site/` 根目录,
-  需要把这些改成 GitHub 绝对链接,并把 `og:image` 改成公网绝对 URL。
+- 官网页脚的文档位已改为页内锚点(`#modules` / `#terminal` / `#status` / `#uplink`),
+  避免部署到 Pages 根目录后 `../README.md` 404;完整规格仍在仓库里。
+- `og:image` 是相对路径;部署到 Pages 后如需社交平台绝对 URL,改成 `https://<domain>/assets/preview.jpg`。
 - 页面无 Cookie、无追踪、无分析脚本。
 - 改了设备端 UI 截图后,先跑 `python3 tools/build_web.py`,再按 `../docs/01-ui.md` 的视口重拍,
   替换 `assets/terminal-*.webp`。
+
+## Cloudflare Pages 部署
+
+当前线上地址:<https://rf-lab-388.pages.dev/>。项目 `rf-lab` 为直传(无 Git provider),
+部署命令(需要本机 `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID`,不要把 token 写进仓库):
+
+```bash
+wrangler pages deploy site --project-name=rf-lab --branch=master --commit-dirty=true
+```
+
+- 直传只上传 `site/`;文档位已改为页内锚点,不依赖 `../README.md`。
+- `og:image` / `canonical` 固定为 Pages 域名;换域名时同步改 `site/index.html`。
+- 部署后检查 `/`、`/style.css`、`/app.js`、`/assets/terminal-web.webp` 均 200。
+- 重新部署前先跑 `python3 tools/site_check.py` + `node --check site/app.js`。

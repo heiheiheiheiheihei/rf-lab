@@ -81,3 +81,13 @@ learn/send 事件;和 2026-11-15 的 mock 口径一致。不是上机图。
   APK/firmware 重新构建。
 - **避免的误修**:❌ 把新皮肤直接说成“已上机”;❌ 为了频谱带引入外部字体/CDN;
   ❌ 改 `web/app.js` 的传输或命令分支。
+
+## 7. 官网线上(2026-11-16)
+
+官网 `site/` 已直传到 Cloudflare Pages 项目 `rf-lab`:
+
+- 生产地址:<https://rf-lab-388.pages.dev/>
+- 部署方式:Direct Upload,只上传 `site/`;没有绑定 Git provider,不需要把 API Token 写进仓库。
+- 主机检查:`/`、`/style.css`、`/app.js`、`/assets/terminal-web.webp`、`/robots.txt`、
+  `/sitemap.xml` 均 **200**;Chromium 390×844 无 console error,配装器 100/272/988 正常。
+- 截图仍是 mock 布局图;线上地址不等于设备上机验证。
