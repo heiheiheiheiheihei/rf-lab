@@ -119,9 +119,9 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 上机:重启 AP 关闭 | ✅ `mode=sta ap_on=0`,LAN 仍可访问 |
 | 上机:AP 内配网 / CLEAR | ✅ 设备内;WebTest 经 AP 200,`WIFI CLEAR` 回 AP |
 | 上机:BLE 广播 | ✅ `INFO` `adv=yes`;⏳ **真实手机连接未测**(本机无 BT 适配器) |
-| Android APK | ✅ `assembleDebug` 1,275,236B;⏳ 真机安装/BLE 未测 |
+| Android APK | ✅ `assembleDebug` 1,275,234B;⏳ 真机安装/BLE 未测 |
 | uConsole TUI | ✅ 主机解析/键位/PTY 布局;⏳ 真机未测 |
-| Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,504B;⏳ **新皮肤未上机** |
+| Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,503B;⏳ **新皮肤未上机** |
 | 官网 / 配装台(静态) | ✅ 2026-11-16 主机 Chromium 1440×900 / 390×844,无 console error;`tools/site_check.py` 通过;无外部请求 |
 | 官网线上(Cloudflare Pages) | ✅ <https://rf-lab-388.pages.dev/>;`/`、CSS、JS、WebP、robots、sitemap 均 200 |
 | 路线图:MQTT / HA / 多模块 | ○ **未实现**,接口草案见官网 §04 |
@@ -161,9 +161,9 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 2026-11-16 UI refresh 的 mock API 布局验收图(不是上机截图,新皮肤未烧录):
 
-![桌面 1440×900](docs/evidence/ui-2026-11-16-desktop.png)
-![uConsole 1280×720](docs/evidence/ui-2026-11-16-uconsole.png)
-![手机 390×844](docs/evidence/ui-2026-11-16-mobile.png)
+![桌面 1440×900](docs/evidence/ui-2026-11-16b-desktop.png)
+![uConsole 1280×720](docs/evidence/ui-2026-11-16b-uconsole.png)
+![手机 390×844](docs/evidence/ui-2026-11-16b-mobile.png)
 
 真实设备 LAN 页面(0.6.0 旧皮肤,`192.168.5.117`,非 mock)仍保留作为上机证据:
 

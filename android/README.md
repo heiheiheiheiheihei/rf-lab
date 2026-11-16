@@ -33,7 +33,7 @@ cd android
 > `JAVA_TOOL_OPTIONS="-DsocksProxyHost=127.0.0.1 -DsocksProxyPort=10808" ./gradlew assembleDebug`。
 > 也可以直接用本机 Gradle 8.11.1:`gradle assembleDebug`。
 
-产物:`android/app/build/outputs/apk/debug/app-debug.apk`(1,275,236B,debug 签名)。
+产物:`android/app/build/outputs/apk/debug/app-debug.apk`(1,275,234B,debug 签名)。
 
 安装:
 
@@ -69,8 +69,8 @@ BLE 参数(与固件一致):
 
 | 项 | 状态 |
 |---|---|
-| `assembleDebug` 构建 | ✅ 2026-11-16,APK 1,275,236B,debug 签名 |
-| 资源内嵌 | ✅ `assets/index.html` 55,052B,与 `web/dist` 一致 |
+| `assembleDebug` 构建 | ✅ 2026-11-16,APK 1,275,234B,debug 签名 |
+| 资源内嵌 | ✅ `assets/index.html` 55,050B,与 `web/dist` 一致 |
 | Manifest/权限/包名 | ✅ `aapt2 dump badging` 检查 |
 | 真机安装/启动 | ⏳ 需要 Android 手机 |
 | 真机 BLE 扫描/连接/鉴权/发射 | ⏳ **未验证**;本机无蓝牙适配器,不能把构建成功写成链路验证 |

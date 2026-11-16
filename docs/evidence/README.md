@@ -13,6 +13,7 @@
 | [`2026-11-15-ui-serial.log`](2026-11-15-ui-serial.log) | `tools/device_selftest.py --tx` 串口全文 | 18 项上机检查的原始输出 |
 | [`ui-desktop-1440.png`](ui-desktop-1440.png) 等 | Playwright + mock API | 0.6.0 旧皮肤桌面/uConsole/手机布局;不是设备截图 |
 | [`ui-2026-11-16-desktop.png`](ui-2026-11-16-desktop.png) 等 | [`tools/ui_mock_server.py`](../tools/ui_mock_server.py) + Chromium | 2026-11-16 品牌/频谱带布局;不是设备截图;新皮肤未上机 |
+| [`ui-2026-11-16b-desktop.png`](ui-2026-11-16b-desktop.png) 等 | 同上,字标改为英文连字符 `RF-LAB` | 当前展示用图;仍是 mock,新皮肤未上机 |
 | [`2026-11-15-wifi.md`](2026-11-15-wifi.md) | `tools/wifi_selftest.py` 15/15 + 串口全文 | 有凭据 STA-only 启动(AP 关)→15s 超时 AP 回退;AP 内配网/`WIFI CLEAR` |
 | [`2026-11-15-wifi.log`](2026-11-15-wifi.log) | 串口全文 | STA 失败、AP 回退、回退后 Web 200 的原始输出 |
 | [`2026-11-15-wifi-lan.md`](2026-11-15-wifi-lan.md) | 主机 LAN ping/curl/SSE/POST + 真实 Chromium | 设备接入 `SSID-A`,DHCP `192.168.5.117`;重启后 `mode=sta ap_on=0`(AP 关) |

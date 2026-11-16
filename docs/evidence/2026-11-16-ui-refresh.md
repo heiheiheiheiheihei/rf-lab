@@ -20,7 +20,7 @@
 
 ## 2. 改了什么
 
-- 品牌锁定:`RF—LAB` 字标 + `百元射频实验室` 中文副标;顶部 `RF-LAB` 标与
+- 品牌锁定:`RF-LAB` 字标 + `百元射频实验室` 中文副标;顶部 `RF-LAB` 标与
   `LAB 100—999` 系列标识。
 - 状态栏新增 `BAY YS-RF34DL`:当前唯一射频舱位,不暗示其他模块已接入。
 - 底部新增 96 柱 `RF SPECTRUM // 315 / 433 MHz` 装饰带(纯 CSS 动画 + 本地生成 DOM)。
@@ -91,3 +91,20 @@ learn/send 事件;和 2026-11-15 的 mock 口径一致。不是上机图。
 - 主机检查:`/`、`/style.css`、`/app.js`、`/assets/terminal-web.webp`、`/robots.txt`、
   `/sitemap.xml` 均 **200**;Chromium 390×844 无 console error,配装器 100/272/988 正常。
 - 截图仍是 mock 布局图;线上地址不等于设备上机验证。
+
+
+## 8. 2026-11-16b 字标修正（英文连字符）
+
+按反馈把品牌字标从 `RF—LAB` 改为 `RF-LAB`（英文 `-`，保留琥珀色）:
+
+| 项 | 2026-11-16 | 2026-11-16b |
+|---|---|---|
+| Web 单页 | 55,052 B | 55,050 B |
+| gzip | 15,504 B | 15,503 B |
+| Android assets | 55,052 B | 55,050 B |
+| APK | 1,275,236 B | 1,275,234 B |
+
+截图更新为 [`ui-2026-11-16b-desktop.png`](ui-2026-11-16b-desktop.png)、
+[`ui-2026-11-16b-uconsole.png`](ui-2026-11-16b-uconsole.png)、
+[`ui-2026-11-16b-mobile.png`](ui-2026-11-16b-mobile.png)。仍是 mock 布局图;
+命令/API/元素 ID 未变,新皮肤仍未重新烧录上机。
