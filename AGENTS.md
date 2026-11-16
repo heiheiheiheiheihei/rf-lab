@@ -10,6 +10,7 @@
 | 改 Web / BLE / Android / uConsole UI | `docs/01-ui.md` |
 | 改 WiFi STA/AP 回退、配网 | `docs/01-ui.md` §3.1、`docs/evidence/2026-11-15-wifi.md` |
 | 看当前状态、上机证据、未验证项 | `README.md`、`docs/evidence/2026-11-15-ui.md` |
+| 看/改官网、配装器、价格与文案 | `site/README.md`、`site/index.html`、`site/app.js` |
 | 接线、引脚、上电检查 | `hardware/README.md` |
 | 固件构建、烧录、排障 | `firmware/README.md` |
 | Android APK 构建/权限/BLE 桥 | `android/README.md` |
@@ -34,6 +35,8 @@
    `tools/build_web.py` 生成 `web/dist/index.html`、固件 gzip、Android assets;
    改 UI 后先跑 `python3 tools/build_web.py`,再构建固件/APK。
 9. **app 分区余量**:镜像已 ~1.06MB/2MB;新增依赖先看 Flash/RAM 报告,不要把 2MB 用满。
+10. **官网不越权**:`site/` 是静态宣传/规划页;CC1101/NRF24L01/SI4463/LR1121、MQTT/HA
+    必须保持“路线图/未实现”标识,不得写成现役能力。改官网不动 `web/` 与固件。
 
 ## 验证命令
 
@@ -41,6 +44,8 @@
 ./tools/host_test.sh                 # 协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12
 node --check web/app.js
 python3 tools/build_web.py --check
+node --check site/app.js
+python3 tools/site_check.py           # 官网静态验收
 cd firmware && pio run -e esp32c3    # 构建(含 Web gzip + 分区校验)
 ./tools/flash.sh /dev/ttyACM0        # 上机(需硬件)
 python3 tools/device_selftest.py --port /dev/ttyACM0 --tx

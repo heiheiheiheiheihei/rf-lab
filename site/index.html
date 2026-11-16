@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070906">
+<meta name="color-scheme" content="dark">
+<title>RF-LAB // 百元射频实验室 · 丰俭由人</title>
+<meta name="description" content="RF-LAB 百元射频实验室：¥100–999 自由配装的模块化射频工作台。ESP32-C3 + YS-RF34DL 现役固定码链路，CC1101 / NRF24L01 / SI4463 / LR1121 路线图，战术风 Web/APP/uConsole，MQTT/Home Assistant 规划中。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="RF-LAB // 百元射频实验室">
+<meta property="og:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套战术终端。">
+<meta property="og:image" content="assets/preview.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="750">
+<meta property="og:image:alt" content="RF-LAB 百元射频实验室官网首屏">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="RF-LAB // 百元射频实验室">
+<meta name="twitter:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套战术终端。">
+<meta name="twitter:image" content="assets/preview.jpg">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070906'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23FFB000' stroke-width='2'/%3E%3Cpath d='M32 5v13M32 46v13M5 32h13M46 32h13' stroke='%23FFB000' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='3.5' fill='%23FFB000'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到正文</a>
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
+<div class="page-frame" aria-hidden="true">
+  <span class="pf-corner tl"></span><span class="pf-corner tr"></span>
+  <span class="pf-corner bl"></span><span class="pf-corner br"></span>
+</div>
+<div class="ambient" id="ambient" aria-hidden="true"></div>
+<div class="scanlines" aria-hidden="true"></div>
+
+<header class="nav" id="top">
+  <a class="nav-mark" href="#top" aria-label="RF-LAB 首页">
+    <span class="mark">RF<span>—</span>LAB</span>
+    <span class="mark-sub">百元射频实验室</span>
+  </a>
+  <nav class="nav-links" aria-label="主导航">
+    <a href="#budget"><b>01</b> 配装</a>
+    <a href="#modules"><b>02</b> 模块</a>
+    <a href="#terminal"><b>03</b> 终端</a>
+    <a href="#uplink"><b>04</b> 上行</a>
+    <a href="#status"><b>05</b> 状态</a>
+  </nav>
+  <div class="nav-meta">
+    <span class="nav-live"><i class="dot ok"></i> SYS 0.6.0</span>
+    <button class="nav-help" id="helpBtn" type="button" aria-haspopup="dialog">FIELD MANUAL</button>
+    <a class="nav-cta" href="#budget">开始配装</a>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" id="hero" aria-labelledby="heroTitle">
+    <canvas id="spectrum" aria-hidden="true"></canvas>
+    <div class="hero-shade" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow reveal"><span class="blink">●</span> FIELD LAB / OPEN HARDWARE / CN / 2026</p>
+        <h1 class="masthead reveal" id="heroTitle">RF<span class="dash">—</span>LAB</h1>
+        <div class="cn-title reveal">
+          <span class="cn-rule" aria-hidden="true"></span>
+          <span>百元射频实验室</span>
+          <em>HUNDRED-YUAN RF LAB</em>
+        </div>
+        <p class="lede reveal">丰俭由人。从 <b>¥100</b> 的固定码侦察包，到 <b>¥999</b> 的全频段工作台。一块 ESP32-C3，五个可换射频舱位——先买一块能用的板，再把它长成你的<span class="nowrap">实验室</span>。</p>
+        <div class="cta-row reveal">
+          <a class="btn btn-fill" href="#budget"><span>开始配装</span><b>¥100 →</b></a>
+          <a class="btn btn-line" href="#terminal"><span>查看战术终端</span><b>WEB / APP / TUI</b></a>
+        </div>
+        <dl class="hero-specs reveal">
+          <div><dt>BASE</dt><dd>ESP32-C3</dd></div>
+          <div><dt>RF BAYS</dt><dd>1 + 4 <small>现役 + 路线图</small></dd></div>
+          <div><dt>SURFACES</dt><dd>WEB · APP · TUI</dd></div>
+          <div><dt>BUILD</dt><dd>¥100—999</dd></div>
+        </dl>
+      </div>
+
+      <div class="hero-panel reveal" aria-label="射频舱位与预算示意">
+        <div class="panel-top">
+          <span><i class="dot ok"></i> RF BAY ARRAY // 5 SLOTS</span>
+          <span>LINK: LOCAL</span>
+        </div>
+        <div class="scope" aria-hidden="true">
+          <span class="scope-ring r1"></span>
+          <span class="scope-ring r2"></span>
+          <span class="scope-ring r3"></span>
+          <span class="scope-cross"></span>
+          <span class="scope-sweep"></span>
+          <span class="scope-core"><b>RF</b><small>C3</small></span>
+          <span class="blip b1"></span>
+          <span class="blip b2"></span>
+          <span class="blip b3"></span>
+        </div>
+        <span class="module-tag t1 live"><i></i><b>YS-RF34DL</b><small>315/433 · 现役</small></span>
+        <span class="module-tag t2"><i></i><b>CC1101</b><small>SUB-GHz · 计划</small></span>
+        <span class="module-tag t3"><i></i><b>NRF24L01</b><small>2.4G · 计划</small></span>
+        <span class="module-tag t4"><i></i><b>SI4463</b><small>远距 · 计划</small></span>
+        <span class="module-tag t5"><i></i><b>LR1121</b><small>LoRa · 计划</small></span>
+        <div class="budget-hud">
+          <div class="hud-k"><span>BUDGET ENVELOPE</span><span>丰俭由人</span></div>
+          <div class="hud-price"><small>¥</small>100<span>—</span><small>¥</small>999</div>
+          <div class="hud-bar"><i></i><i></i><i></i><i></i></div>
+          <div class="hud-scale"><span>SCOUT</span><span>ASSAULT</span><span>TACTICAL</span><span>ALL-IN</span></div>
+        </div>
+        <div class="panel-bottom">
+          <span><b>1</b> LIVE CHAIN</span>
+          <span><b>4</b> PLANNED</span>
+          <span><b>0</b> CLOUD</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-foot">
+      <span class="scroll-hint">SCROLL TO DEPLOY <i>↓</i></span>
+      <span>FIG. 01 / FIELD LAB</span>
+      <span>315.000 — 2400.000 MHz</span>
+    </div>
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker-track">
+        <span>315.000 MHz</span><b>//</b><span>433.920 MHz</span><b>//</b><span>SUB-GHz</span><b>//</b><span>2.400 GHz</span><b>//</b><span>LoRa</span><b>//</b><span>MQTT / ROADMAP</span><b>//</b><span>HOME ASSISTANT / ROADMAP</span><b>//</b><span>uConsole</span><b>//</b><span>BLE</span><b>//</b><span>SSE</span><b>//</b>
+        <span>315.000 MHz</span><b>//</b><span>433.920 MHz</span><b>//</b><span>SUB-GHz</span><b>//</b><span>2.400 GHz</span><b>//</b><span>LoRa</span><b>//</b><span>MQTT / ROADMAP</span><b>//</b><span>HOME ASSISTANT / ROADMAP</span><b>//</b><span>uConsole</span><b>//</b><span>BLE</span><b>//</b><span>SSE</span><b>//</b>
+      </div>
+    </div>
+  </section>
+
+  <section class="section budget" id="budget" aria-labelledby="budgetTitle">
+    <div class="section-head reveal">
+      <span class="sec-no">01</span>
+      <div class="sec-title">
+        <p class="kicker">MISSION BUILDER // 配装台</p>
+        <h2 id="budgetTitle">预算，就是你的战术。</h2>
+      </div>
+      <p class="sec-note">四种起手式，也可以自己拼。价格是参考物料价，不含运费与工具。</p>
+    </div>
+
+    <div class="presets reveal" role="group" aria-label="预算预设">
+      <button class="preset" type="button" data-preset="scout" data-budget="100" aria-pressed="true">
+        <span class="preset-no">01</span>
+        <span class="preset-name">侦察兵 <em>SCOUT</em></span>
+        <strong>¥100</strong>
+        <span class="preset-load">CORE + YS-RF34DL</span>
+        <span class="preset-cap">固定码 315/433</span>
+      </button>
+      <button class="preset" type="button" data-preset="assault" data-budget="299" aria-pressed="false">
+        <span class="preset-no">02</span>
+        <span class="preset-name">突击手 <em>ASSAULT</em></span>
+        <strong>¥299</strong>
+        <span class="preset-load">+ CC1101 + NRF24L01</span>
+        <span class="preset-cap">Sub-GHz + 2.4G</span>
+      </button>
+      <button class="preset" type="button" data-preset="tactical" data-budget="599" aria-pressed="false">
+        <span class="preset-no">03</span>
+        <span class="preset-name">战术组 <em>TACTICAL</em></span>
+        <strong>¥599</strong>
+        <span class="preset-load">+ SI4463 + LR1121</span>
+        <span class="preset-cap">全频段雏形</span>
+      </button>
+      <button class="preset" type="button" data-preset="allin" data-budget="999" aria-pressed="false">
+        <span class="preset-no">04</span>
+        <span class="preset-name">全频段 <em>ALL-IN</em></span>
+        <strong>¥999</strong>
+        <span class="preset-load">ALL MODULES + DOCK</span>
+        <span class="preset-cap">全模块 / 现场终端</span>
+      </button>
+    </div>
+
+    <div class="scope-banner reveal" role="note">
+      <span class="sb-tag">采购边界</span>
+      <p>配装器是预算规划工具。<b>当前固件只有 YS-RF34DL 固定码链路完成上机验证</b>；CC1101 / NRF24L01 / SI4463 / LR1121 与 MQTT / Home Assistant 均为路线图，不是现货能力。</p>
+    </div>
+
+    <div class="builder-grid">
+      <div class="rack reveal">
+        <div class="rack-head">
+          <span>MODULE RACK // 舱位</span>
+          <span id="selectedCount">1 / 9 SELECTED</span>
+        </div>
+
+        <div class="base-card">
+          <div class="base-main">
+            <span class="base-k">BASE / 主控底板</span>
+            <h3>CORE-C3</h3>
+            <p>ESP32-C3 · 0.96″ OLED · USB-C · Wi-Fi + BLE</p>
+          </div>
+          <div class="base-side"><b>¥79</b><span>ALWAYS ON</span></div>
+        </div>
+
+        <div class="rack-group">
+          <div class="rack-label"><span>02 / RF</span> 射频模块 <em>换模块 = 换任务</em></div>
+          <div class="mod-grid">
+            <label class="mod-card is-on" data-id="ys" data-price="21" data-band="fixed" data-status="live">
+              <input class="mod-check" type="checkbox" data-id="ys" aria-label="选择 YS-RF34DL 固定码模块" checked>
+              <span class="mod-top"><span class="mod-no">M-01</span><span class="mod-status live">现役</span></span>
+              <span class="mod-name">YS-RF34DL</span>
+              <span class="mod-cn">固定码编解码 · 315/433</span>
+              <span class="mod-desc">UART 9600 8N1，8 字节帧；学习、存码、单次发射、长发/停止。唯一完成上机验证的射频链路。</span>
+              <span class="mod-meta"><span>UART</span><span>315 / 433 MHz</span><b>¥21</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+
+            <label class="mod-card" data-id="cc1101" data-price="39" data-band="sub" data-status="planned">
+              <input class="mod-check" type="checkbox" data-id="cc1101" aria-label="选择 CC1101 Sub-GHz 模块">
+              <span class="mod-top"><span class="mod-no">M-02</span><span class="mod-status planned">路线图</span></span>
+              <span class="mod-name">CC1101</span>
+              <span class="mod-cn">Sub-GHz 收发</span>
+              <span class="mod-desc">OOK / 2-FSK / GFSK；把 315/433 之外的 Sub-GHz 频段纳入实验。SPI 接入，需模块抽象层。</span>
+              <span class="mod-meta"><span>SPI</span><span>300–928 MHz</span><b>¥39</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+
+            <label class="mod-card" data-id="nrf" data-price="25" data-band="g24" data-status="planned">
+              <input class="mod-check" type="checkbox" data-id="nrf" aria-label="选择 NRF24L01 2.4G 模块">
+              <span class="mod-top"><span class="mod-no">M-03</span><span class="mod-status planned">路线图</span></span>
+              <span class="mod-name">NRF24L01+</span>
+              <span class="mod-cn">2.4G 收发</span>
+              <span class="mod-desc">GFSK，2 Mbps；2.4G 遥控、键鼠与私有链路。把 2.4G 从“干扰源”变成可读的实验对象。</span>
+              <span class="mod-meta"><span>SPI</span><span>2.4 GHz</span><b>¥25</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+
+            <label class="mod-card" data-id="si4463" data-price="69" data-band="sub" data-status="planned">
+              <input class="mod-check" type="checkbox" data-id="si4463" aria-label="选择 SI4463 远距 Sub-GHz 模块">
+              <span class="mod-top"><span class="mod-no">M-04</span><span class="mod-status planned">路线图</span></span>
+              <span class="mod-name">SI4463</span>
+              <span class="mod-cn">远距 Sub-GHz</span>
+              <span class="mod-desc">+20 dBm 与高灵敏度；远距点对点、窄带 OOK。适合把“桌面能收到”推进到“楼下能收到”。</span>
+              <span class="mod-meta"><span>SPI</span><span>119–1050 MHz</span><b>¥69</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+
+            <label class="mod-card" data-id="lr1121" data-price="159" data-band="lora" data-status="planned">
+              <input class="mod-check" type="checkbox" data-id="lr1121" aria-label="选择 LR1121 双频 LoRa 模块">
+              <span class="mod-top"><span class="mod-no">M-05</span><span class="mod-status planned">路线图</span></span>
+              <span class="mod-name">LR1121</span>
+              <span class="mod-cn">双频 LoRa</span>
+              <span class="mod-desc">Sub-GHz + 2.4G，LoRa / (G)FSK；把实验从“按键”扩到“链路”。也是全频段方案里最贵的一舱。</span>
+              <span class="mod-meta"><span>SPI</span><span>SUB-GHz + 2.4G</span><b>¥159</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="rack-group">
+          <div class="rack-label"><span>03 / GEAR</span> 整备 <em>可选，不影响固件能力</em></div>
+          <div class="mod-grid gear-grid">
+            <label class="mod-card mod-gear" data-id="backplane" data-price="59" data-band="gear" data-status="planned">
+              <input class="mod-check" type="checkbox" data-id="backplane" aria-label="选择 RF-BP5 五槽背板">
+              <span class="mod-top"><span class="mod-no">G-01</span><span class="mod-status planned">路线图</span></span>
+              <span class="mod-name">RF-BP5</span>
+              <span class="mod-cn">五槽射频背板</span>
+              <span class="mod-desc">SPI / UART 切换与天线座；换模块不换底板。当前固件尚未定义背板协议。</span>
+              <span class="mod-meta"><span>5 × RF SLOT</span><span>整备</span><b>¥59</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+
+            <label class="mod-card mod-gear" data-id="antenna" data-price="49" data-band="gear" data-status="gear">
+              <input class="mod-check" type="checkbox" data-id="antenna" aria-label="选择 ANT-5 五频段天线包">
+              <span class="mod-top"><span class="mod-no">G-02</span><span class="mod-status gear">整备</span></span>
+              <span class="mod-name">ANT-5</span>
+              <span class="mod-cn">五频段天线包</span>
+              <span class="mod-desc">315 / 433 / 868 / 915 / 2.4G 天线与 SMA 转接。按频段换天线，不拿一根天线打天下。</span>
+              <span class="mod-meta"><span>SMA</span><span>5 BANDS</span><b>¥49</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+
+            <label class="mod-card mod-gear" data-id="case" data-price="89" data-band="gear" data-status="gear">
+              <input class="mod-check" type="checkbox" data-id="case" aria-label="选择 FIELD CASE 战术收纳盒">
+              <span class="mod-top"><span class="mod-no">G-03</span><span class="mod-status gear">整备</span></span>
+              <span class="mod-name">FIELD CASE</span>
+              <span class="mod-cn">战术收纳盒</span>
+              <span class="mod-desc">EVA 硬壳 + 模块槽；把工作台塞进背包。不是射频能力，是让你愿意带出门的理由。</span>
+              <span class="mod-meta"><span>EVA</span><span>整备</span><b>¥89</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+
+            <label class="mod-card mod-gear" data-id="dock" data-price="399" data-band="gear" data-status="gear">
+              <input class="mod-check" type="checkbox" data-id="dock" aria-label="选择 FIELD DOCK 现场终端套件">
+              <span class="mod-top"><span class="mod-no">G-04</span><span class="mod-status gear">整备</span></span>
+              <span class="mod-name">FIELD DOCK</span>
+              <span class="mod-cn">uConsole 现场终端套件</span>
+              <span class="mod-desc">支架、供电与 uConsole 键位；把 TUI 变成手持终端。uConsole 主机需自备。</span>
+              <span class="mod-meta"><span>uConsole</span><span>整备</span><b>¥399</b></span>
+              <span class="mod-mark" aria-hidden="true">ON</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <aside class="build-sheet reveal" aria-label="配装单">
+        <div class="sheet-head">
+          <span>BUILD SHEET // 配装单</span>
+          <span class="sheet-code" id="buildCode">SCOUT-100</span>
+        </div>
+        <div class="sheet-total">
+          <span class="sheet-k">BUILD COST / 物料小计</span>
+          <div class="sheet-price"><small>¥</small><span id="total">100</span></div>
+          <div class="sheet-preset" id="presetName">侦察兵 <em>SCOUT</em></div>
+        </div>
+        <div class="budget-control">
+          <div class="budget-line"><label for="budgetRange">预算上限 / BUDGET</label><b>¥<span id="budgetVal">100</span></b></div>
+          <input id="budgetRange" type="range" min="100" max="999" step="1" value="100" aria-label="预算上限，100 到 999 元">
+          <div class="budget-scale"><span>¥100</span><span>¥299</span><span>¥599</span><span>¥999</span></div>
+        </div>
+        <div class="gauge" aria-hidden="true"><i id="gaugeFill"></i><b id="gaugeMark"></b></div>
+        <div class="reserve" id="reserve"><span>余量 ¥0</span><span class="ok" id="budgetState">WITHIN BUDGET</span></div>
+        <div class="caps" aria-label="能力覆盖">
+          <div class="cap" data-cap="fixed"><i></i><span>固定码 315/433</span><b>YES</b></div>
+          <div class="cap" data-cap="sub"><i></i><span>Sub-GHz 通用</span><b>NO</b></div>
+          <div class="cap" data-cap="g24"><i></i><span>2.4G</span><b>NO</b></div>
+          <div class="cap" data-cap="lora"><i></i><span>LoRa</span><b>NO</b></div>
+          <div class="cap cap-roadmap" data-cap="mqtt"><i></i><span>MQTT / HA</span><b>ROADMAP</b></div>
+        </div>
+        <div class="sheet-list" id="sheetList">
+          <div class="sheet-row"><span>CORE-C3</span><b>¥79</b></div>
+          <div class="sheet-row"><span>YS-RF34DL</span><b>¥21</b></div>
+        </div>
+        <div class="sheet-warn" id="sheetWarn" hidden></div>
+        <div class="sheet-actions">
+          <button class="btn btn-fill btn-copy" id="copyBom" type="button"><span>复制配装单</span><b>COPY</b></button>
+          <button class="btn btn-line btn-small" id="randomize" type="button"><span>随机配装</span><b>R</b></button>
+          <button class="btn btn-line btn-small" id="fitBudget" type="button" hidden><span>削到预算内</span><b>FIT</b></button>
+        </div>
+        <p class="sheet-note">参考物料价，不含运费与工具。<b>只有 YS-RF34DL 完成上机验证</b>；其余射频模块为路线图。配装器只做规划，不代表可下单。</p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section modules" id="modules" aria-labelledby="modulesTitle">
+    <div class="section-head reveal">
+      <span class="sec-no">02</span>
+      <div class="sec-title">
+        <p class="kicker">MODULE BAY // 模块阵列</p>
+        <h2 id="modulesTitle">五个舱位，<br>一条现役链路。</h2>
+      </div>
+      <p class="sec-note">模块不是焊死的。背板与天线座是路线图；YS-RF34DL 是今天就能跑的起点。</p>
+    </div>
+
+    <div class="band-chart reveal" aria-label="频段覆盖示意，按对数频率轴排列">
+      <div class="band-axis-row">
+        <span></span>
+        <div class="band-axis" aria-hidden="true">
+          <span style="--x:0%;--tx:0">150M</span>
+          <span style="--x:27.5%">315</span>
+          <span style="--x:41%">433</span>
+          <span style="--x:65.5%">868</span>
+          <span style="--x:67.7%">915</span>
+          <span style="--x:97.4%">2.4G</span>
+        </div>
+        <span></span>
+      </div>
+      <div class="band-rows">
+        <div class="band-row">
+          <span class="band-name">YS-RF34DL <em class="live">现役</em></span>
+          <span class="band-track"><i class="range live" style="--l:27.5%;--w:3.2%"></i><i class="range live" style="--l:41%;--w:3.2%"></i></span>
+          <span class="band-note">315 / 433</span>
+        </div>
+        <div class="band-row">
+          <span class="band-name">CC1101 <em>计划</em></span>
+          <span class="band-track"><i class="range planned" style="--l:24.6%;--w:40.1%"></i></span>
+          <span class="band-note">300–928</span>
+        </div>
+        <div class="band-row">
+          <span class="band-name">NRF24L01+ <em>计划</em></span>
+          <span class="band-track"><i class="range planned" style="--l:97.4%;--w:2.4%"></i></span>
+          <span class="band-note">2.4G</span>
+        </div>
+        <div class="band-row">
+          <span class="band-name">SI4463 <em>计划</em></span>
+          <span class="band-track"><i class="range planned" style="--l:0%;--w:72.5%"></i></span>
+          <span class="band-note">119–1050</span>
+        </div>
+        <div class="band-row">
+          <span class="band-name">LR1121 <em>计划</em></span>
+          <span class="band-track"><i class="range planned" style="--l:0%;--w:69.7%"></i><i class="range planned" style="--l:97.4%;--w:2.4%"></i></span>
+          <span class="band-note">SUB-GHz + 2.4G</span>
+        </div>
+      </div>
+      <p class="band-foot">对数频率轴 · 仅示意覆盖范围，不代表灵敏度 / 功率 / 法规许可。发射前确认当地频段与功率限制。</p>
+    </div>
+
+    <div class="spec-wrap reveal">
+      <table class="spec-table">
+        <caption class="sr-only">射频模块规格与状态</caption>
+        <thead>
+          <tr><th scope="col">MODULE</th><th scope="col">BAND</th><th scope="col">IF</th><th scope="col">ROLE</th><th scope="col">TODAY</th></tr>
+        </thead>
+        <tbody>
+          <tr class="row-live">
+            <th scope="row">YS-RF34DL</th><td>315 / 433 MHz</td><td>UART 9600</td><td>固定码学习 / 回放</td><td><span class="st live">上机</span></td>
+          </tr>
+          <tr>
+            <th scope="row">CC1101</th><td>300–928 MHz</td><td>SPI</td><td>Sub-GHz 通用收发</td><td><span class="st planned">路线图</span></td>
+          </tr>
+          <tr>
+            <th scope="row">NRF24L01+</th><td>2.400–2.525 GHz</td><td>SPI</td><td>2.4G 私有链路</td><td><span class="st planned">路线图</span></td>
+          </tr>
+          <tr>
+            <th scope="row">SI4463</th><td>119–1050 MHz</td><td>SPI</td><td>远距 / 窄带</td><td><span class="st planned">路线图</span></td>
+          </tr>
+          <tr>
+            <th scope="row">LR1121</th><td>150–960 MHz + 2.4G</td><td>SPI</td><td>LoRa / (G)FSK</td><td><span class="st planned">路线图</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="spec-note">Datasheet typical values；以模块实物与当地法规为准。路线图模块未接入 0.6.0 固件。</p>
+    </div>
+
+    <div class="module-notes reveal">
+      <article><span>01</span><h3>换模块 = 换任务</h3><p>固定码、Sub-GHz、2.4G、LoRa 不是四台仪器，而是同一块底板上的四个舱位。先在 YS-RF34DL 上把链路跑通，再决定下一个舱位。</p></article>
+      <article><span>02</span><h3>一套命令，四个入口</h3><p>Web、BLE、串口、uConsole 最终都只提交同一行 <code>SEND 1</code>。新增界面不复制时序，新增模块不复制业务逻辑。</p></article>
+      <article><span>03</span><h3>不锁云</h3><p>没有账户、没有订阅、没有强制公网。设备先在你的局域网里可用；MQTT / HA 是下一步，不是前置条件。</p></article>
+    </div>
+  </section>
+
+  <section class="section terminal" id="terminal" aria-labelledby="terminalTitle">
+    <div class="section-head reveal">
+      <span class="sec-no">03</span>
+      <div class="sec-title">
+        <p class="kicker">FIELD TERMINAL // 战术终端</p>
+        <h2 id="terminalTitle">一套 UI，<br>三种打法。</h2>
+      </div>
+      <p class="sec-note">同一份 HTML/CSS/JS，进浏览器、Android WebView 和 uConsole；同一套命令契约。</p>
+    </div>
+
+    <div class="terminal-grid">
+      <div class="terminal-copy reveal">
+        <p class="kicker">ONE UI / THREE SURFACES</p>
+        <h3>桌面用键盘，<br>手机用触控，<br>uConsole 用 TUI。</h3>
+        <p>Web 是设备内嵌的单页，HTTP + SSE 推状态；Android 是单 Activity + WebView + 原生 BLE 桥；uConsole 是同一套 HTTP 契约上的键盘 TUI，断网回退 USB 串口。</p>
+        <ul class="tick-list">
+          <li><b>WEB</b> HTTP + SSE，无外部请求，gzip 14.6 KB</li>
+          <li><b>APP</b> 单 Activity + WebView + BLE 桥，APK 1.2 MB</li>
+          <li><b>TUI</b> HTTP 优先、串口回退，12 项键位测试</li>
+          <li><b>ARM</b> 默认关：防误触，不是安全门控</li>
+        </ul>
+        <div class="terminal-stats">
+          <div><b>3</b><span>界面</span></div>
+          <div><b>14.6<small>KB</small></b><span>gzip</span></div>
+          <div><b>0</b><span>外部请求</span></div>
+          <div><b>1,362</b><span>主机测试</span></div>
+        </div>
+      </div>
+
+      <div class="terminal-stage reveal">
+        <div class="tabs" role="tablist" aria-label="终端视图">
+          <button class="tab active" id="tab-web" role="tab" aria-selected="true" aria-controls="shotPanel" tabindex="0" data-view="web">WEB <em>// LAN</em></button>
+          <button class="tab" id="tab-app" role="tab" aria-selected="false" aria-controls="shotPanel" tabindex="-1" data-view="app">APP <em>// WEBVIEW</em></button>
+          <button class="tab" id="tab-tui" role="tab" aria-selected="false" aria-controls="shotPanel" tabindex="-1" data-view="tui">UCONSOLE <em>// 1280×720</em></button>
+        </div>
+        <div class="shot-wrap" id="shotPanel" role="tabpanel" aria-labelledby="tab-web">
+          <div class="shot-corner tl" aria-hidden="true"></div><div class="shot-corner tr" aria-hidden="true"></div>
+          <div class="shot-corner bl" aria-hidden="true"></div><div class="shot-corner br" aria-hidden="true"></div>
+          <img id="shot" src="assets/terminal-web.webp" width="1280" height="720" decoding="async" alt="RF-LAB 真实局域网 Web 终端页面，深色战术风格，显示最近信号、码库、事件台与遥测">
+          <button class="shot-expand" id="shotExpand" type="button" aria-label="放大查看截图">EXPAND</button>
+          <span class="shot-badge" id="shotBadge">REAL LAN</span>
+        </div>
+        <div class="shot-caption">
+          <span id="shotCaption">真实 LAN 页面 · 192.168.5.117 · Chromium 200</span>
+          <span id="shotMeta">1280×720 / WebP</span>
+        </div>
+        <div class="feed">
+          <div class="feed-head"><span><i class="dot ok"></i> EVENT LOG // 演示数据</span><span class="sim">SIM</span></div>
+          <div class="feed-body" id="feedBody" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section uplink" id="uplink" aria-labelledby="uplinkTitle">
+    <div class="section-head reveal">
+      <span class="sec-no">04</span>
+      <div class="sec-title">
+        <p class="kicker">UPLINK // 无线上行</p>
+        <h2 id="uplinkTitle">把遥控器，<br>接进你的自动化。</h2>
+      </div>
+      <p class="sec-note">目标：本地 MQTT + Home Assistant Discovery。下面全是路线图，不是 0.6.0 的能力。</p>
+    </div>
+
+    <div class="roadmap-banner reveal">
+      <span class="rb-stamp">ROADMAP / 0.8.0</span>
+      <div>
+        <strong>未实现 / NOT IMPLEMENTED</strong>
+        <p>0.6.0 只有 HTTP/SSE + BLE，没有 MQTT 客户端，也不能接入 Home Assistant。这里展示的是下一步的接口草案，不是可售能力。</p>
+      </div>
+    </div>
+
+    <div class="uplink-grid">
+      <div class="uplink-copy reveal">
+        <h3>设备 → 本地 Broker → HA。</h3>
+        <p>计划中的 0.8.0：设备通过 Wi-Fi 连接你自己拥有的 Mosquitto，把最近信号、码库与发射结果发布成 retained topic；Home Assistant 用 MQTT Discovery 自动出现实体。无云账户、无订阅、断网仍可用。</p>
+        <ul class="tick-list">
+          <li><b>LOCAL</b> Broker 只开在局域网，不端口转发</li>
+          <li><b>DISCOVERY</b> HA 自动出现最近信号 / 码库 / 发射按钮</li>
+          <li><b>ONE CONTRACT</b> topic 里仍然是 <code>SEND 1</code>，不复制时序</li>
+          <li><b>HONEST</b> 先有上机证据，再写“支持”</li>
+        </ul>
+        <div class="topics">
+          <div class="topic"><code>rflab/&lt;node&gt;/state</code><span>retained · JSON 状态快照</span></div>
+          <div class="topic"><code>rflab/&lt;node&gt;/event</code><span>learn / tx / log</span></div>
+          <div class="topic"><code>rflab/&lt;node&gt;/cmd</code><span>subscribe · SEND 1</span></div>
+          <div class="topic"><code>rflab/&lt;node&gt;/availability</code><span>LWT · online / offline</span></div>
+        </div>
+      </div>
+
+      <div class="topology reveal" aria-label="MQTT 与 Home Assistant 拓扑示意，路线图">
+        <div class="topo-row main">
+          <div class="node rf"><span class="node-k">NODE 01</span><b>RF-LAB</b><small>ESP32-C3 · 315/433</small></div>
+          <div class="conn"><span>Wi-Fi</span><i></i></div>
+          <div class="node broker"><span class="node-k">NODE 02</span><b>MOSQUITTO</b><small>local broker · 1883</small></div>
+          <div class="conn"><span>LAN</span><i></i></div>
+          <div class="node ha"><span class="node-k">NODE 03</span><b>HOME ASSISTANT</b><small>MQTT Discovery</small></div>
+        </div>
+        <div class="topo-branch">
+          <span class="branch-line"></span>
+          <div class="node aux"><span class="node-k">OPTIONAL</span><b>NODE-RED / GRAFANA</b><small>本地自动化与可视化</small></div>
+        </div>
+        <div class="topo-foot"><span><i class="dot warn"></i> PLANNED</span><span>没有云账户 / 没有公网暴露</span></div>
+      </div>
+    </div>
+
+    <div class="uplink-detail">
+      <div class="code-card reveal">
+        <div class="code-head"><span>PLANNED CONFIG // 草案</span><span>YAML / 0.8.0</span></div>
+        <pre><code><span class="c"># 路线图草案 · 不是现有功能</span>
+mqtt:
+  broker: 192.168.1.10
+  port: 1883
+  base_topic: rflab/c3-ab12
+  discovery: true
+
+<span class="c"># HA 自动发现（计划）</span>
+homeassistant:
+  discovery_prefix: homeassistant
+  entities:
+    - sensor.rflab_last_code
+    - sensor.rflab_store_count
+    - button.rflab_send_last
+    - button.rflab_stop
+
+<span class="c"># 命令仍然只有一行</span>
+topic: rflab/c3-ab12/cmd
+payload: "SEND 1"</code></pre>
+      </div>
+
+      <div class="ha-card reveal" aria-label="Home Assistant 卡片概念图，未实现">
+        <div class="ha-head"><span>RF-LAB · 现场终端</span><span class="ha-online"><i class="dot ok"></i> 概念</span></div>
+        <div class="ha-code">5555 034C <em>315M</em></div>
+        <div class="ha-rows">
+          <div><span>码库</span><b>5</b><em>/ 32</em></div>
+          <div><span>最近发射</span><b>852</b><em>ms</em></div>
+          <div><span>链路</span><b>LAN</b><em>-57 dBm</em></div>
+        </div>
+        <div class="ha-actions"><button type="button" disabled>发射</button><button type="button" disabled>长发</button><button type="button" disabled>停止</button></div>
+        <div class="ha-foot">MQTT DISCOVERY · CONCEPT ONLY</div>
+      </div>
+    </div>
+
+    <div class="sec-warning reveal">
+      <b>安全边界</b>
+      <span>不要端口转发 1883；Broker 只开在局域网，ACL 按 topic 限权。MQTT 不是鉴权替代品，HTTP 无登录、BLE 只有 4 位应用层 PIN 的现状也不会因此改变。</span>
+    </div>
+  </section>
+
+  <section class="section status" id="status" aria-labelledby="statusTitle">
+    <div class="section-head reveal">
+      <span class="sec-no">05</span>
+      <div class="sec-title">
+        <p class="kicker">STATUS BOARD // 作战状态</p>
+        <h2 id="statusTitle">能跑的说能跑，<br>没跑的说没跑。</h2>
+      </div>
+      <p class="sec-note">构建 / 主机 / 上机分开报告。这一页的“支持”只认证据，不认愿景。</p>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-board reveal">
+        <div class="status-row status-head"><span>ITEM</span><span>STATE</span><span>NOTE</span></div>
+        <div class="status-row"><span>ESP32-C3 构建</span><span class="st live">● 通过</span><span>1,066,628 B / 2 MB 分区</span></div>
+        <div class="status-row"><span>主机测试</span><span class="st live">● 1,362 项</span><span>协议 76 · 事件环 53 · OLED/UI 1,286 · TUI 12</span></div>
+        <div class="status-row"><span>学码 / 存码 / 发射</span><span class="st live">● 上机</span><span>2026-11-15</span></div>
+        <div class="status-row"><span>Web HTTP / SSE / 命令</span><span class="st live">● 上机</span><span>设备内 + 真实 LAN</span></div>
+        <div class="status-row"><span>真实 LAN / AP 回退</span><span class="st live">● 上机</span><span>192.168.5.117 · 15/15</span></div>
+        <div class="status-row"><span>BLE 广播</span><span class="st live">● 已开</span><span>真实手机连接未测</span></div>
+        <div class="status-row"><span>Android APK</span><span class="st partial">◐ 已构建</span><span>1.2 MB / debug；真机未测</span></div>
+        <div class="status-row"><span>uConsole TUI</span><span class="st partial">◐ 主机通过</span><span>12 项 + PTY；真机未测</span></div>
+        <div class="status-row"><span>MQTT / Home Assistant</span><span class="st none">○ 路线图</span><span>未实现</span></div>
+        <div class="status-row"><span>多模块 / SPI 背板</span><span class="st none">○ 路线图</span><span>未实现</span></div>
+        <div class="status-row"><span>距离 / 长发持续</span><span class="st none">○ 未测</span><span>见规格 §7</span></div>
+      </div>
+
+      <div class="roadmap reveal">
+        <div class="roadmap-head">RELEASE TRACK // 版本线</div>
+        <div class="track done"><i></i><b>0.5.0</b><span>固定码上机 / OLED / 长发修正</span></div>
+        <div class="track done"><i></i><b>0.6.0</b><span>Web / BLE / uConsole / STA-AP 回退</span></div>
+        <div class="track next"><i></i><b>0.7.0</b><span>模块抽象层 + SPI 背板</span></div>
+        <div class="track next"><i></i><b>0.8.0</b><span>MQTT bridge + HA Discovery</span></div>
+        <div class="track next"><i></i><b>1.0</b><span>多模块外壳 / 小批量</span></div>
+        <div class="legend"><span><i class="dot ok"></i> 已发生</span><span><i class="dot warn"></i> 计划中</span></div>
+      </div>
+    </div>
+
+    <div class="security reveal">
+      <span class="sec-tag">FIELD RULES // 安全边界</span>
+      <p>固定码本身可被复制：测试只对<b>自有</b>设备做，结论只对固定码成立。Web 的 <code>ARM</code> 只防误触，不是发射硬门控；HTTP 无登录，AP 密码 / 局域网可达性是门槛；BLE 只有 4 位应用层 PIN，不是强安全边界。发射前确认当地频段与功率法规。</p>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-cta reveal">
+    <p class="kicker">DEPLOY SMALL / ITERATE FAST</p>
+    <h2>先花 ¥100，<br>把第一串信号抓下来。</h2>
+    <div class="cta-row">
+      <a class="btn btn-fill" href="#budget"><span>回到配装台</span><b>¥100 →</b></a>
+      <a class="btn btn-line" href="../README.md"><span>读项目 README</span><b>DOCS</b></a>
+    </div>
+  </div>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <span class="mark">RF<span>—</span>LAB</span>
+      <p>百元射频实验室。丰俭由人，先让它可用，再让它更强。</p>
+      <span class="footer-status"><i class="dot ok"></i> 0.6.0 / FIELD LAB / 2026</span>
+    </div>
+    <div class="footer-links">
+      <div><b>BUILD</b><a href="#budget">配装台</a><a href="#modules">模块阵列</a><a href="#terminal">战术终端</a></div>
+      <div><b>DOCS</b><a href="../README.md">README</a><a href="../docs/00-mvp.md">射频规格</a><a href="../docs/01-ui.md">UI 规格</a><a href="../hardware/README.md">接线</a></div>
+      <div><b>SOURCE</b><a href="https://github.com/heiheiheiheiheihei/rf-lab" rel="noopener">GitHub</a><a href="#status">状态与证据</a><a href="#uplink">MQTT 路线图</a></div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>RF-LAB 0.6.0 // LOCAL FIRST // NO CLOUD ACCOUNT</span>
+    <span>静态页面 · 无外部请求 · 无追踪 · 无 Cookie</span>
+    <span>仅限自有设备 / 遵守当地法规</span>
+  </div>
+</footer>
+
+<dialog class="lightbox" id="lightbox" aria-labelledby="lightboxTitle">
+  <div class="lightbox-head"><h2 id="lightboxTitle">TERMINAL VIEW // 截图</h2><button id="lightboxClose" type="button" aria-label="关闭">CLOSE ×</button></div>
+  <img id="lightboxImg" src="assets/terminal-web.webp" alt="RF-LAB 终端截图">
+  <p id="lightboxCaption"></p>
+</dialog>
+
+<dialog class="manual" id="helpDialog" aria-labelledby="helpTitle">
+  <div class="manual-head"><h2 id="helpTitle">FIELD MANUAL // 键位</h2><button id="helpClose" type="button" aria-label="关闭">CLOSE ×</button></div>
+  <p class="manual-note">这页不是设备终端，但保留了同样的键盘习惯。输入框或滑杆聚焦时，快捷键会让位。</p>
+  <div class="key-grid">
+    <div><kbd>B</kbd><span>跳到配装台</span></div>
+    <div><kbd>T</kbd><span>跳到战术终端</span></div>
+    <div><kbd>U</kbd><span>跳到 MQTT 路线图</span></div>
+    <div><kbd>R</kbd><span>随机配装</span></div>
+    <div><kbd>?</kbd><span>打开本帮助</span></div>
+    <div><kbd>Esc</kbd><span>关闭弹层</span></div>
+  </div>
+  <p class="manual-note">配装器里的价格是参考物料价；路线图模块未接入固件。别把愿景当现货。</p>
+</dialog>
+
+<dialog class="manual copy-dialog" id="copyDialog" aria-labelledby="copyTitle">
+  <div class="manual-head"><h2 id="copyTitle">BUILD SHEET // 手动复制</h2><button id="copyClose" type="button" aria-label="关闭">CLOSE ×</button></div>
+  <p class="manual-note">浏览器拒绝了剪贴板写入。按 <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>C</kbd> 复制下面的配装单。</p>
+  <textarea id="copyText" readonly rows="15" spellcheck="false" aria-label="配装单文本"></textarea>
+  <div class="copy-actions"><button id="copySelect" class="btn btn-line btn-small" type="button"><span>全选</span><b>SELECT</b></button></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<noscript><div class="noscript">配装器需要 JavaScript。静态内容仍可阅读；现役能力与路线图边界见“状态”一节。</div></noscript>
+
+<script src="app.js" defer></script>
+</body>
+</html>

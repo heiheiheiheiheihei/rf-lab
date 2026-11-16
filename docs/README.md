@@ -9,6 +9,7 @@
 | [`../firmware/README.md`](../firmware/README.md) | 构建、烧录、排障、未验证清单 |
 | [`../android/README.md`](../android/README.md) | Android APK 构建、权限、BLE 桥、未验证项 |
 | [`../uconsole/README.md`](../uconsole/README.md) | uConsole 安装、键位、`Ctrl+Alt+R` 绑定 |
+| [`../site/README.md`](../site/README.md) | 官网/配装台:页面结构、价格、现役/路线图边界、发布说明 |
 
 新文档要么并入上面某一处,要么不加。旧的 `01`–`06`、`protocol/schemas` 已删除(git 历史保留);
 `docs/01-ui.md` 是 2026-11-15 新增的 UI 规格,编号不复用旧文档。
