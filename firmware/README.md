@@ -13,6 +13,7 @@
 | 文件 | 职责 |
 |---|---|
 | [`src/rf34dl.h`](src/rf34dl.h) / [`src/rf34dl.c`](src/rf34dl.c) | **纯协议层**:8 字节帧组帧/解帧、`F0/F1/F2/F3/FE/FF` 应答识别。不依赖 ESP-IDF |
+| [`src/wiring_config.h`](src/wiring_config.h) | **生成物**:引脚/波特率宏,来自 `hardware/wiring.json`;勿手改 |
 | [`src/oled_panel.h`](src/oled_panel.h) | 72×40 面板参数(列偏移 28、MUX/COM/IREF、初始化序列),几何的唯一数据源 |
 | [`src/oled_gfx.h`](src/oled_gfx.h) / [`src/oled_gfx.c`](src/oled_gfx.c) | **纯帧缓冲**:360B 页式显存、画点/线/框、5×7 ASCII、ASCII dump |
 | [`src/font5x7.h`](src/font5x7.h) | 5×7 字库(Adafruit GFX 子集,BSD 声明在文件头) |
@@ -37,7 +38,8 @@ cd firmware
 pio run -e esp32c3
 ```
 
-构建前会自动跑 `scripts/embed_web.py`(把 `web/` 打成 gzip、EMBED_FILES,并注入
+构建前会自动跑 `tools/gen_wiring.py --check`(**接线 JSON ↔ 代码头 ↔ 表 ↔ SVG**)
+和 `scripts/embed_web.py`(把 `web/` 打成 gzip、EMBED_FILES,并注入
 `RFLAB_BUILD_ID` / `RFLAB_UI_HASH`);构建后 `scripts/check_partitions.py` 校验
 **otadata + 两个 ≥0x1E0000 的 OTA 槽**,且镜像放得下。
 

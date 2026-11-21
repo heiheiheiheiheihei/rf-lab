@@ -40,7 +40,16 @@ MQTT 与 Home Assistant 是路线图,不是现货能力。
 按一下原遥控器 → 模块解码 → ESP32 存码 → 板载 OLED 显示状态 → **Web / BLE / 串口 / uConsole**
 发射 → 原接收器动作。
 
+![抽象接线图:两块板,四根线](docs/evidence/hw-2026-11-21-wiring.png)
 
+硬件视觉是**抽象接线图**,不画 3D/PCB:只保留两块功能块、4 根线和必须正确的引脚。
+唯一源是 [`hardware/wiring.json`](hardware/wiring.json);`tools/gen_wiring.py` 同时生成
+`firmware/src/wiring_config.h`、`hardware/README.md` / `docs/00-mvp.md` 的接线表和
+4 张 SVG,`gen_wiring.py --check` 在主机测试与固件构建前校验一致性。
+官网 §01 用宽图(窄屏切竖图)、§02 放主控/模块引脚图;设备 UI 顶栏 `HW` 芯片(或按 `H`)
+打开同一张图,`ZOOM/FIT` 缩放。
+**3.3V ONLY**、共地、`GPIO3→RXD` / `GPIO4←TXD` 由接线表保证;图不是比例图,
+引脚/供电仍以 [`hardware/README.md`](hardware/README.md) 为准。参考照片不入库。
 
 同一块 C3 现在同时提供:
 
@@ -75,6 +84,7 @@ AP 下可以直接用,也可以重新配网或 `WIFI CLEAR`。AP 里配网成功
 ![配装台:四档预算 + 实时物料小计](site/assets/preview-builder.webp)
 
 ```bash
+python3 tools/gen_wiring.py --check    # JSON -> 代码头/表/SVG 一致性
 python3 tools/build_web.py             # 同步生成 site/assets/terminal.html
 python3 -m http.server 8088 -d site    # http://127.0.0.1:8088/
 python3 tools/site_check.py            # 静态验收(含 demo 资源)
@@ -118,7 +128,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 | 项 | 状态 |
 |---|---|
-| 构建(ESP32-C3,0.6.0) | ✅ 主机;Flash ~1.08MB / 2,031,616B OTA 槽(2026-11-21,OTA) |
+| 构建(ESP32-C3,0.6.0) | ✅ 主机;Flash 1,086,800B / 2,031,616B OTA 槽;RAM 56,412B(2026-11-21,接线图 + OTA) |
 | 主机单测(协议 76 + 事件环 53 + OTA 41 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
 | 上机:学码 / 存码 / 发射 / 改波特率 | ✅ 2026-11-15(0.5.0 证据仍有效) |
 | 上机:Web HTTP/SSE/命令 | ✅ 2026-11-15,设备内 `WEBTEST` hello/state/events 200 + POST 202 |
@@ -196,6 +206,6 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 真实 LAN 页面:[`ui-lan-live.png`](docs/evidence/ui-lan-live.png)(设备 `192.168.5.117`,非 mock)。
 新皮肤构建/布局/未验证项:[`2026-11-21-ui-unify.md`](docs/evidence/2026-11-21-ui-unify.md)(上一版:[`2026-11-16-ui-refresh.md`](docs/evidence/2026-11-16-ui-refresh.md))。
 官网交互 demo:[`2026-11-21-site-live-demo.md`](docs/evidence/2026-11-21-site-live-demo.md) ·
-
+接线图/硬件效果图:[`2026-11-21-wiring-diagram.md`](docs/evidence/2026-11-21-wiring-diagram.md)。
 
 上机细节与取舍:[`docs/01-ui.md`](docs/01-ui.md) · [`docs/evidence/2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`docs/evidence/2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`docs/evidence/2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md)。

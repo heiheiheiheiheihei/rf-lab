@@ -13,6 +13,7 @@
 | [`2026-11-21-pages.md`](2026-11-21-pages.md) | 仓库转 public + GitHub Actions Pages + URL/资源 200 | 官方入口切到 GitHub Pages;设备/固件无变更 |
 | [`2026-11-21-ui-unify.md`](2026-11-21-ui-unify.md) | `build_web` + `pio run` + `assembleDebug` + mock API CDP 布局/交互 | `web/` 与官网同源 token/组件;gzip 16,418B;新皮肤**未上机** |
 | [`2026-11-21-site-live-demo.md`](2026-11-21-site-live-demo.md) | 官网 iframe 真 UI + 本地传输 shim;CDP 交互/网络审计 | 终端区不再放截图;21/21 交互、0 `/api`、0 外部;gzip 16,745B;**未上机**;Pages 已部署 |
+| [`2026-11-21-wiring-diagram.md`](2026-11-21-wiring-diagram.md) | `gen_wiring` + `build_web` + `site_check` + `host_test` + 本地 Chromium/CDP 1440×900 / 390×844 | 表驱动抽象接线图(宽/竖/两张引脚图);代码头/文档表/SVG 同源;零外部请求;新资源**未上机** |
 | [`2026-11-21-ota.md`](2026-11-21-ota.md) | 串口 `OTA` + `tools/ota.py`/curl 真机;A→B→A→final;401/500/断流 | 4MB 单 app 迁到 `otadata+双1.94MB槽`;三次 Wi-Fi OTA;错 token/坏镜像/断流不换槽;NVS 9 条码保留;**崩溃回滚未实测** |
 | [`2026-11-21-send-no-ack.md`](2026-11-21-send-no-ack.md) | 真机串口(115200)+ `MON`/`INFO`/`RECOVER` 逐条命令 | `SEND` 全 WARN 的根因:模块命令方向 0 应答、`acks=0`;排除 433M/超时窗口/波特率;**GPIO3→RXD 待量** |
 | [`2026-11-15-ui-serial.log`](2026-11-15-ui-serial.log) | `tools/device_selftest.py --tx` 串口全文 | 18 项上机检查的原始输出 |

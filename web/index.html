@@ -179,9 +179,10 @@
   <div class="modal-panel hw" role="dialog" aria-modal="true" aria-labelledby="hwModalTitle">
     <div class="modal-head"><h2 id="hwModalTitle">HARDWARE <em>// 硬件链路</em></h2><div class="hw-tools"><button class="mini" id="hwZoom" type="button" aria-pressed="false">ZOOM</button><button class="mini" data-close type="button">CLOSE</button></div></div>
     <div class="hw-modal-body">
-      <!--__HW_ASSEMBLY__-->
+      <div class="hw-wide"><!--__HW_ASSEMBLY__--></div>
+      <div class="hw-narrow"><!--__HW_ASSEMBLY_M__--></div>
     </div>
-    <p class="modal-note">CORE-C3 + YS-RF34DL:VCC 接 <code>3V3</code>,GND 共地,TXD→<code>GPIO4</code>、RXD→<code>GPIO3</code>。<b>3.3V ONLY</b>;示意图非比例,接线以 <code>hardware/README.md</code> 为准。窄屏点 ZOOM 放大。</p>
+    <p class="modal-note">CORE-C3 + YS-RF34DL:VCC 接 <code>3V3</code>,GND 共地;模块 <code>TXD</code>→<code>GPIO4</code>、<code>RXD</code>→<code>GPIO3</code>。<b>3.3V ONLY</b>;抽象图非比例,由 <code>hardware/wiring.json</code> 生成。窄屏点 ZOOM 放大。</p>
   </div>
 </div>
 

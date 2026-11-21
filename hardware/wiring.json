@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "updated": "2026-11-21",
+  "board": {
+    "name": "CORE-C3",
+    "mcu": "ESP32-C3",
+    "oled": "0.42\" SSD1306 72x40 I2C 0x3C",
+    "usb": "native USB",
+    "radio": "Wi-Fi 2.4G + BLE 5"
+  },
+  "module": {
+    "name": "YS-RF34DL",
+    "mcu": "STC15",
+    "bands": "315 / 433 MHz",
+    "uart": "9600 8N1",
+    "antenna": "17-23 cm wire"
+  },
+  "pins": {
+    "console_tx": 21,
+    "console_rx": 20,
+    "module_tx": 3,
+    "module_rx": 4,
+    "oled_sda": 5,
+    "oled_scl": 6
+  },
+  "constants": {
+    "console_baud": 115200,
+    "module_baud": 9600,
+    "oled_i2c_hz": 400000
+  },
+  "uart_port": 1,
+  "connections": [
+    {
+      "net": "3V3",
+      "esp32": "3V3",
+      "esp32_role": "3.3V rail",
+      "module": "VCC",
+      "module_role": "power",
+      "direction": "power",
+      "note": "3.3V ONLY / never 5V",
+      "wire": "amber",
+      "note_zh": "3.3V ONLY,不要接 5V"
+    },
+    {
+      "net": "GND",
+      "esp32": "GND",
+      "esp32_role": "ground",
+      "module": "GND",
+      "module_role": "ground",
+      "direction": "ground",
+      "note": "common ground required",
+      "wire": "khaki",
+      "note_zh": "必须共地,否则串口乱码"
+    },
+    {
+      "net": "UART1_TX",
+      "esp32": "GPIO3",
+      "esp32_role": "UART1 TX",
+      "module": "RXD",
+      "module_role": "module RX",
+      "direction": "esp32->module",
+      "note": "cross TX -> RX",
+      "wire": "green",
+      "note_zh": "交叉:GPIO3 TX → RXD"
+    },
+    {
+      "net": "UART1_RX",
+      "esp32": "GPIO4",
+      "esp32_role": "UART1 RX",
+      "module": "TXD",
+      "module_role": "module TX",
+      "direction": "module->esp32",
+      "note": "cross RX <- TX",
+      "wire": "green",
+      "note_zh": "交叉:GPIO4 RX ← TXD"
+    }
+  ],
+  "reserved": [
+    {
+      "pins": "GPIO5 / GPIO6",
+      "role": "on-board OLED I2C",
+      "why": "SDA/SCL fixed, 0x3C"
+    },
+    {
+      "pins": "GPIO18 / GPIO19",
+      "role": "native USB D- / D+",
+      "why": "console"
+    },
+    {
+      "pins": "GPIO20 / GPIO21",
+      "role": "UART0 console",
+      "why": "command line"
+    },
+    {
+      "pins": "GPIO8 / GPIO9",
+      "role": "LED / BOOT",
+      "why": "strapping"
+    },
+    {
+      "pins": "GPIO2",
+      "role": "strapping",
+      "why": "boot level"
+    }
+  ]
+}

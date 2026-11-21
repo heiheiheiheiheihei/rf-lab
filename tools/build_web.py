@@ -42,8 +42,9 @@ SITE_DEMO = ROOT / "site" / "assets" / "terminal.html"
 SITE_DEMO_SCRIPT = '<script src="terminal-demo.js"></script>\n'
 ART = ROOT / "web" / "art"
 SITE_ASSETS = ROOT / "site" / "assets"
-HW_ART = ("hw-assembly.svg", "hw-core.svg", "hw-rf.svg")
+HW_ART = ("hw-assembly.svg", "hw-assembly-m.svg", "hw-core.svg", "hw-rf.svg")
 HW_PLACEHOLDER = "<!--__HW_ASSEMBLY__-->"
+HW_PLACEHOLDER_M = "<!--__HW_ASSEMBLY_M__-->"
 UI_HASH_TOKEN = "__UI_HASH__"
 
 # Only these absolute URLs are allowed in the generated page. They are XML
@@ -74,13 +75,15 @@ def build_html() -> bytes:
     if external:
         raise SystemExit("external resource(s) not allowed: " + ", ".join(sorted(set(external))))
 
-    if HW_PLACEHOLDER not in html:
-        raise SystemExit("web/index.html is missing <!--__HW_ASSEMBLY__-->")
-    art = (ART / "hw-assembly.svg").read_text(encoding="utf-8")
-    art = re.sub(r"^<\?xml[^>]*>\s*", "", art)
-    if "<script" in art.lower():
-        raise SystemExit("hardware plate SVG must not contain script")
-    html = html.replace(HW_PLACEHOLDER, art)
+    if HW_PLACEHOLDER not in html or HW_PLACEHOLDER_M not in html:
+        raise SystemExit("web/index.html is missing hardware placeholders")
+    for placeholder, name in ((HW_PLACEHOLDER, "hw-assembly.svg"),
+                              (HW_PLACEHOLDER_M, "hw-assembly-m.svg")):
+        art = (ART / name).read_text(encoding="utf-8")
+        art = re.sub(r"^<\?xml[^>]*>\s*", "", art)
+        if "<script" in art.lower():
+            raise SystemExit(f"hardware plate {name} must not contain script")
+        html = html.replace(placeholder, art)
 
     # Content fingerprint: the page tells the user which build it is, on both
     # the device and the APK. Hash the page with the placeholder still in
@@ -153,7 +156,7 @@ def main() -> int:
         print(f"gzip   {len(packed):7d} B  sha256 {hashlib.sha256(packed).hexdigest()[:16]}")
         print(f"ratio  {100.0 * len(packed) / len(html):5.1f}%")
         print(f"demo   {len(demo):7d} B  {SITE_DEMO.relative_to(ROOT)}")
-        print(f"art    3 SVGs -> site/assets/ (hw-assembly, hw-core, hw-rf)")
+        print(f"art    4 SVGs -> site/assets/ (wiring wide/portrait, core, rf)")
     if args.check and not ok:
         return 1
     return 0

@@ -25,8 +25,8 @@ python3 -m http.server 8088 -d site
 | 区块 | 内容 | 交互 |
 |---|---|---|
 | Hero | RF-LAB / 百元射频实验室、¥100–999 预算包线、5 个舱位示意 | Canvas 频谱、雷达扫描、滚动揭示 |
-| 01 配装台 | 4 档预设、9 个可选模块、实时物料小计/余量/能力矩阵 | 勾选、预算滑杆、随机配装、削到预算内、复制配装单 |
-| 02 模块阵列 | 对数频段覆盖图、模块规格表、三条设计判断 | 表格/频段条 |
+| 01 配装台 | **硬件链路图**(CORE-C3 + YS-RF34DL,四线)、4 档预设、9 个可选模块、实时物料小计/余量/能力矩阵 | 勾选、预算滑杆、随机配装、削到预算内、复制配装单;点图打开 SVG 原图 |
+| 02 模块阵列 | 对数频段覆盖图、模块规格表、**主控/模块两张硬件细节卡**、三条设计判断 | 表格/频段条;点图打开 SVG 原图 |
 | 03 战术终端 | **内嵌真实单页 UI**(iframe,`assets/terminal.html`);WEB/APP/UCONSOLE 三视口 | 直接 ARM/SEND/LONG/STOP/ERASE;模拟遥控器/重置;事件流(标 SIM) |
 | 04 无线上行 | 本地 MQTT + Home Assistant Discovery 拓扑与 topic 草案 | 强制 `ROADMAP / 未实现` 标识 |
 | 05 作战状态 | 构建 / 主机 / 上机分开列;版本线 | 无 |
@@ -69,6 +69,28 @@ python3 -m http.server 8088 -d site
 `../docs/evidence/ui-2026-11-21-*.png` 仍是 **mock API 布局验收图**,不是新皮肤上机截图;
 真实 LAN 图 `../docs/evidence/ui-lan-live.png` 仍是 0.6.0 旧皮肤。2026-11-21 视觉尚未重新烧录验证。
 
+## 硬件效果图 / 接线图
+
+`hardware/wiring.json` 是唯一源;`tools/gen_wiring.py` 生成代码头、两张文档表与 4 张
+抽象 SVG,`tools/build_web.py` 再把 SVG 复制到 `site/assets/` 并内联进设备页:
+
+| 文件 | 用途 | 尺寸 |
+|---|---|---|
+| `web/art/hw-assembly.svg` | 官网 §01 宽图;设备 UI `HW` 宽屏 | 1200×760 |
+| `web/art/hw-assembly-m.svg` | 官网/UI 窄屏竖图 | 720×1200 |
+| `web/art/hw-core.svg` | 官网 §02 CORE-C3 引脚图 | 720×760 |
+| `web/art/hw-rf.svg` | 官网 §02 YS-RF34DL 引脚图 | 720×760 |
+
+- 图是**抽象功能块**,不是 3D/PCB 写实图;只保留核心元件与 4 根线
+  (3V3→VCC、GND→GND、GPIO3→RXD、GPIO4←TXD),以及必须保留的 OLED/USB/strapping 说明。
+- 官网 §01 用 `<picture>` 在窄屏切竖图;§02 两张引脚图;点图打开 SVG 原图。
+- 设备 UI 顶栏 `HW` 芯片 / `H` 键打开模态;宽屏内联宽图,≤760px 内联竖图;
+  `ZOOM` 放大、`FIT` 适应,`ESC` 关闭。只读静态 SVG,不发网络请求、不新增命令。
+- 改接线:只改 `hardware/wiring.json` → `python3 tools/gen_wiring.py` → 构建;
+  代码头、文档表、SVG 必须一起变。`gen_wiring.py --check` 在主机测试与固件构建前执行。
+- 现役只画 CORE-C3 + YS-RF34DL;CC1101 / NRF24L01 / SI4463 / LR1121 不进入这张
+  “现役链路”图,避免把路线图写成已接入。
+
 ## 现役 / 路线图边界(硬规则)
 
 - **现役**:YS-RF34DL 315/433 固定码学习/发射;Web HTTP+SSE;BLE 广播;Android APK 构建;
@@ -96,13 +118,16 @@ shim 只替换 `fetch`/`EventSource`,命令与事件格式仍由 `web/` 决定�
 - ❌ 官网直接改 `web/index.html`:会破坏 `tools/build_web.py`、固件 gzip、Android assets 的单一来源。
 - ❌ 首屏堆满自动播放视频:移动端耗电、不可控。→ 一个 Canvas 频谱 + CSS 雷达,尊重 `prefers-reduced-motion`。
 - ❌ 把“可接入 Home Assistant”写成现在时。→ 整段套 `ROADMAP / 0.8.0` 边框与“未实现”文案。
+- ❌ 用产品照片或外链图撑首屏:离线会裂图、风格不统一,还可能把路线图模块拍成现役。
+  → `web/art/` 矢量重绘,只用项目 token;照片不进仓库。
 
 ## 验证
 
 ```bash
 node --check site/app.js
 node --check site/assets/terminal-demo.js
-python3 tools/build_web.py            # 同时生成 site/assets/terminal.html
+python3 tools/build_web.py            # 同时生成 terminal.html 与 site/assets/hw-*.svg
+python3 tools/build_web.py --check    # 校验生成物(含内联 SVG)
 python3 tools/site_check.py
 ```
 
@@ -118,6 +143,7 @@ CHROME="$HOME/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome"
 人工检查项:1440×900 首屏、390×844 单列、配装器 4 档/超预算/削减、终端三视口、
 在终端内 ARM/SEND/LONG/STOP/ERASE、模拟遥控器/重置、`prefers-reduced-motion`、
 键盘 `B/T/U/R/?`、无 console error、无外部请求(iframe 的 `/api/*` 只走本地 shim)。
+硬件图另查:§01/§02 的 SVG 加载、点图开原图;设备 UI `HW` 打开、`ZOOM/FIT`、`H`/`ESC`。
 页面与 iframe 都不发起外部网络请求。
 
 ## 发布说明

@@ -52,6 +52,7 @@ class SiteParser(HTMLParser):
         self.images: list[dict] = []
         self.links: list[dict] = []
         self.scripts: list[dict] = []
+        self.sources: list[dict] = []
         self.labels: list[dict] = []
         self.modules: list[dict] = []
         self.inputs: list[dict] = []
@@ -71,6 +72,8 @@ class SiteParser(HTMLParser):
             self.links.append(a)
         elif tag == "script":
             self.scripts.append(a)
+        elif tag == "source":
+            self.sources.append(a)
         elif tag == "link":
             self.links.append(a)
         elif tag == "label":
@@ -129,8 +132,8 @@ def main() -> int:
             errors.append(f"anchor target missing: {href}")
 
     # local files
-    for tag in parser.images + parser.links + parser.scripts:
-        ref = tag.get("src") or tag.get("href") or ""
+    for tag in parser.images + parser.links + parser.scripts + parser.sources:
+        ref = tag.get("src") or tag.get("href") or tag.get("srcset") or ""
         target = local_target(ref)
         if target is not None and not target.exists():
             errors.append(f"local file missing: {ref}")

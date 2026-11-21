@@ -8,11 +8,12 @@
 |---|---|
 | 改射频行为、命令语义、硬件/供电 | `docs/00-mvp.md` |
 | 改 Web / BLE / Android / uConsole UI | `docs/01-ui.md` |
+| 改接线图 / 硬件效果图 / 官网插图 | `hardware/wiring.json`、`tools/gen_wiring.py`、`docs/01-ui.md` §5.3、`site/README.md` |
 | 改 WiFi STA/AP 回退、配网 | `docs/01-ui.md` §3.1、`docs/evidence/2026-11-15-wifi.md` |
 | 改 OTA / 分区 / 回滚 | `docs/01-ui.md` §3.4、`firmware/README.md`、`firmware/partitions.csv` |
 | 看当前状态、上机证据、未验证项 | `README.md`、`docs/evidence/2026-11-15-ui.md` |
 | 看/改官网、配装器、价格与文案 | `site/README.md`、`site/index.html`、`site/app.js` |
-| 接线、引脚、上电检查 | `hardware/README.md` |
+| 接线、引脚、上电检查 | `hardware/wiring.json`、`hardware/README.md` |
 | 固件构建、烧录、排障 | `firmware/README.md` |
 | Android APK 构建/权限/BLE 桥 | `android/README.md` |
 | uConsole 安装/键位/`Ctrl+Alt+R` | `uconsole/README.md` |
@@ -46,11 +47,16 @@
 11. **OTA 边界**:`POST /api/ota` 默认关闭,只有串口 `OTA` armed 后才接受;token 是应用层门,
     不是签名/加密,没有 secure boot。**OTA 只更新设备,不更新 APK**;不要把 UI 单独更新
     或 APP 自更新写成已实现。
+12. **接线单一源**:`hardware/wiring.json` 同时生成 `firmware/src/wiring_config.h`、
+    两张文档接线表和 `web/art/hw-*.svg`;改引脚只改 JSON,再跑 `python3 tools/gen_wiring.py`。
+    `--check` 已进主机测试与固件构建前;不要手改生成物,也不要让图/表/代码各写一套。
+
 ## 验证命令
 
 ```bash
 ./tools/host_test.sh                 # 协议 76 + 事件环 53 + OTA 41 + OLED/UI 1286 + TUI 12
 node --check web/app.js
+python3 tools/gen_wiring.py --check   # JSON -> 代码头/表/SVG
 python3 tools/build_web.py --check
 node --check site/app.js
 node --check site/assets/terminal-demo.js

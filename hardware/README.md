@@ -2,8 +2,8 @@
 
 > 0.6.0 的 Wi-Fi/BLE UI 只用 ESP32-C3 内部射频,**不增加任何接线**;YS-RF34DL 仍是下面这 4 根。
 
-状态:`draft` · 2026-11-15 · 上游规格:[`docs/00-mvp.md`](../docs/00-mvp.md) §3–4
-**本文件是引脚与接线的唯一权威**;改引脚先改这里,再改 `firmware/src/main.c` 的 `PIN_*` 宏(模块 2 + OLED 2 + 控制台 2)。
+状态:`draft` · 2026-11-21(JSON 生成接线表/图) · 上游规格:[`docs/00-mvp.md`](../docs/00-mvp.md) §3–4
+**接线唯一源是 [`wiring.json`](wiring.json)**;本文件 §2 的表、`firmware/src/wiring_config.h` 与官网 SVG 都由它生成。改引脚先改 JSON,再跑 `python3 tools/gen_wiring.py`;不要手改生成物。
 
 ## 1. 物料
 
@@ -18,23 +18,20 @@
 
 ## 2. 接线(就这 4 根)
 
+<!-- WIRING:START -->
+<!-- generated from hardware/wiring.json; do not edit -->
 | 模块引脚 | 接到 ESP32-C3 | 方向 | 说明 |
 |---|---|---|---|
-| **VCC** | `3V3` | — | **不要接 5V**,理由见 §4 |
-| **GND** | `GND` | — | 必须共地,否则串口必乱码 |
-| **TXD** | `GPIO4`(UART1 RX) | 模块 → ESP32 | 交叉:`TXD` 对 `RX` |
-| **RXD** | `GPIO3`(UART1 TX) | ESP32 → 模块 | 交叉:`RXD` 对 `TX` |
+| **VCC** | `3V3` | 电源 | 3.3V ONLY,不要接 5V |
+| **GND** | `GND` | 地 | 必须共地,否则串口乱码 |
+| **RXD** | `GPIO3` | ESP32 → 模块 | 交叉:GPIO3 TX → RXD |
+| **TXD** | `GPIO4` | 模块 → ESP32 | 交叉:GPIO4 RX ← TXD |
+<!-- WIRING:END -->
 
-```
-   YS-RF34DL              ESP32-C3(0.42" OLED 板)
-   ┌────────┐             ┌──────────────────┐
-   │ VCC ───┼─────────────┤ 3V3              │
-   │ GND ───┼─────────────┤ GND              │
-   │ TXD ───┼─────────────┤ GPIO4  (UART1 RX)│
-   │ RXD ───┼─────────────┤ GPIO3  (UART1 TX)│
-   └────────┘             └──────────────────┘
-        └── 天线 17–23cm
-```
+[抽象接线图 SVG](../web/art/hw-assembly.svg) · [竖版](../web/art/hw-assembly-m.svg)
+
+> 图/表由 `hardware/wiring.json` 生成,不是手画:改线先改 JSON,再跑
+> `python3 tools/gen_wiring.py`;**表、代码头、官网图必须一起变**。
 
 ## 3. 为什么是 GPIO3 / GPIO4
 
@@ -111,3 +108,23 @@
 
 参数来源:U8g2 `u8x8_d_ssd1306_72x40.c`(EastRising 0.42")与 Zephyr
 `boards/01space/esp32c3_042_oled` 的 DTS。**换屏/换批次先改 `oled_panel.h`,再重跑 `DISP TEST`**。
+
+## 9. 接线图(展示用,抽象/非比例)
+
+接线图不是产品照片,也不替代本文的引脚/供电表;它由接线表生成,只画功能块和 4 根线:
+
+| 文件 | 内容 | 用途 |
+|---|---|---|
+| `web/art/hw-assembly.svg` | 宽图:两块功能块 + 4 根水平线 + 接线表 | 官网 §01、设备 UI `HW`(宽屏) |
+| `web/art/hw-assembly-m.svg` | 竖图:ESP32 在上、模块在下 + 4 根垂直线 | 官网/UI 窄屏 |
+| `web/art/hw-core.svg` | CORE-C3 引脚图:3V3/GND/GPIO3/GPIO4 + 保留脚 | 官网 §02 |
+| `web/art/hw-rf.svg` | YS-RF34DL 引脚图:VCC/GND/RXD/TXD + 天线 | 官网 §02 |
+
+- **唯一源**:`hardware/wiring.json`。它同时生成 `firmware/src/wiring_config.h`、
+  §2 的表、`docs/00-mvp.md` §3 的表和上面 4 个 SVG。
+- 改线:改 `wiring.json` → 跑 `python3 tools/gen_wiring.py` → 构建。不要手改生成物;
+  `tools/host_test.sh` 和固件构建前都会跑 `gen_wiring.py --check`。
+- 图只画**现役** CORE-C3 + YS-RF34DL;CC1101 / NRF24L01 / SI4463 / LR1121 是路线图,
+  不要画进“现役链路”。
+- 图中 `3.3V ONLY`、共地、GPIO3→RXD / GPIO4←TXD 必须与 §2/§4 一致;图不是比例图。
+- 参考照片只用于核对几何与丝印,不提交到仓库;仓库里只有抽象矢量图。

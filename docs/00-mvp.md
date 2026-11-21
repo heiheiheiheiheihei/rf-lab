@@ -44,14 +44,17 @@
 
 ## 3. 接线
 
-**唯一权威是 [`hardware/README.md`](../hardware/README.md)**,这里只留结论:
+**机器可读源是 [`hardware/wiring.json`](../hardware/wiring.json)**;下表、`firmware/src/wiring_config.h` 与官网接线图都由它生成,人读说明见 [`hardware/README.md`](../hardware/README.md)。
 
+<!-- WIRING:START -->
+<!-- generated from hardware/wiring.json; do not edit -->
 | 模块脚 | 接到 ESP32-C3 | 说明 |
 |---|---|---|
-| VCC | `3V3` | 见 §4,不要接 5V |
-| GND | `GND` | 必须共地 |
-| TXD | `GPIO4`(UART1 RX) | 模块发 → ESP32 收 |
-| RXD | `GPIO3`(UART1 TX) | ESP32 发 → 模块收 |
+| VCC | `3V3` | 3.3V ONLY,不要接 5V |
+| GND | `GND` | 必须共地,否则串口乱码 |
+| RXD | `GPIO3` | 交叉:GPIO3 TX → RXD |
+| TXD | `GPIO4` | 交叉:GPIO4 RX ← TXD |
+<!-- WIRING:END -->
 
 **为什么不是 GPIO5/6**:那是板载 OLED 的 I2C 引脚(SDA=GPIO5 / SCL=GPIO6,0x3C);这两根线焊死在板上,不能挪作模块串口。
 

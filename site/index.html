@@ -139,6 +139,24 @@
       <p class="sec-note">四种起手式，也可以自己拼。价格是参考物料价，不含运费与工具。</p>
     </div>
 
+
+    <figure class="hw-plate reveal" id="hardware">
+      <div class="hw-plate-head">
+        <span class="hw-plate-kicker"><b>FIG. 02</b> CORE HARDWARE // 现役链路</span>
+        <span class="hw-plate-state"><i class="dot ok"></i> CORE-C3 + YS-RF34DL</span>
+      </div>
+      <a class="hw-plate-media" href="assets/hw-assembly.svg" target="_blank" rel="noopener" aria-label="打开抽象接线图">
+        <picture>
+          <source media="(max-width:760px)" srcset="assets/hw-assembly-m.svg">
+          <img src="assets/hw-assembly.svg" width="1200" height="760" alt="由接线表生成的抽象接线图：ESP32-C3 的 3V3、GND、GPIO3、GPIO4 连接到 YS-RF34DL 的 VCC、GND、RXD、TXD" loading="lazy" decoding="async">
+        </picture>
+      </a>
+      <figcaption>
+        <p><b>两块板，四根线。</b>ESP32-C3 的 <code>GPIO3</code>（UART1 TX）接模块 <code>RXD</code>，<code>GPIO4</code>（UART1 RX）接模块 <code>TXD</code>；<code>3V3</code> 接 <code>VCC</code>，<code>GND</code> 共地。图由 <code>hardware/wiring.json</code> 生成，和代码头、接线表同源。<span class="hw-warn">3.3V ONLY</span></p>
+        <a class="hw-open" href="assets/hw-assembly.svg" target="_blank" rel="noopener">打开原图 <span>↗</span></a>
+      </figcaption>
+    </figure>
+
     <div class="presets reveal" role="group" aria-label="预算预设">
       <button class="preset" type="button" data-preset="scout" data-budget="100" aria-pressed="true">
         <span class="preset-no">01</span>
@@ -186,7 +204,7 @@
           <div class="base-main">
             <span class="base-k">BASE / 主控底板</span>
             <h3>CORE-C3</h3>
-            <p>ESP32-C3 · 0.96″ OLED · USB-C · Wi-Fi + BLE</p>
+            <p>ESP32-C3 · 0.42″ OLED · USB-C · Wi-Fi + BLE</p>
           </div>
           <div class="base-side"><b>¥79</b><span>ALWAYS ON</span></div>
         </div>
@@ -409,6 +427,24 @@
         </tbody>
       </table>
       <p class="spec-note">Datasheet typical values；以模块实物与当地法规为准。路线图模块未接入 0.6.0 固件。</p>
+    </div>
+
+
+    <div class="hw-anatomy reveal" aria-label="硬件细节图">
+      <figure class="hw-card">
+        <div class="hw-card-head"><span>PLATE A</span><b>CORE-C3</b><span class="st live">现役</span></div>
+        <a class="hw-card-media" href="assets/hw-core.svg" target="_blank" rel="noopener" aria-label="打开 CORE-C3 硬件细节图">
+          <img src="assets/hw-core.svg" width="720" height="760" alt="CORE-C3 抽象引脚图：3V3、GND、GPIO3、GPIO4 四个已用引脚，以及 GPIO5/6 等保留引脚" loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>ESP32-C3 · 0.42″ OLED · USB-C</span><a class="hw-open" href="assets/hw-core.svg" target="_blank" rel="noopener">原图 ↗</a></figcaption>
+      </figure>
+      <figure class="hw-card">
+        <div class="hw-card-head"><span>PLATE B</span><b>YS-RF34DL</b><span class="st live">现役</span></div>
+        <a class="hw-card-media" href="assets/hw-rf.svg" target="_blank" rel="noopener" aria-label="打开 YS-RF34DL 硬件细节图">
+          <img src="assets/hw-rf.svg" width="720" height="760" alt="YS-RF34DL 抽象引脚图：VCC、GND、RXD、TXD 四个引脚与 315/433 天线" loading="lazy" decoding="async">
+        </a>
+        <figcaption><span>315 / 433 MHz · UART 9600 · 3.3V</span><a class="hw-open" href="assets/hw-rf.svg" target="_blank" rel="noopener">原图 ↗</a></figcaption>
+      </figure>
     </div>
 
     <div class="module-notes reveal">

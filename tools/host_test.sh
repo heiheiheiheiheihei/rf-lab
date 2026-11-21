@@ -34,6 +34,9 @@ echo "== ota_ticket:token 格式 / 过期 / 错误次数 / 一次性"
     -o "$TMP/test_ota_ticket"
 "$TMP/test_ota_ticket"
 
+echo "== wiring:JSON -> 代码头 / 表 / SVG 一致性"
+python3 "$ROOT/tools/gen_wiring.py" --check
+
 echo "== web:单页构建 / 内嵌 gzip / 无外部请求"
 python3 "$ROOT/tools/build_web.py" --check
 if command -v node >/dev/null 2>&1; then

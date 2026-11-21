@@ -50,6 +50,7 @@
 #include "rf34dl.h"
 #include "ui.h"
 #include "web_server.h"
+#include "wiring_config.h"
 
 #ifndef RFLAB_FW_VERSION
 #define RFLAB_FW_VERSION "0.6.0"
@@ -62,21 +63,8 @@
 #endif
 
 /* ---------------- 引脚与参数 ---------------- */
-
-#define CONSOLE_BAUD 115200
-#define PIN_CONSOLE_TX 21 /* UART0,板载 USB-TTL 时可用 */
-#define PIN_CONSOLE_RX 20
-
+/* 引脚/波特率来自 hardware/wiring.json -> wiring_config.h;勿手改。 */
 #define MODULE_UART UART_NUM_1
-#define PIN_MODULE_TX 3 /* ESP32 发 → 模块 RXD */
-#define PIN_MODULE_RX 4 /* 模块 TXD → ESP32 收 */
-
-/* 板载 0.42" OLED:SSD1306 72×40,I2C 地址 0x3C */
-#define PIN_OLED_SDA 5
-#define PIN_OLED_SCL 6
-#define OLED_I2C_HZ 400000 /* 失败时驱动自动退回 100000 */
-
-#define MODULE_BAUD_DEFAULT 9600
 #define MAX_CODES 32
 #define DEDUP_MS 600
 /*
