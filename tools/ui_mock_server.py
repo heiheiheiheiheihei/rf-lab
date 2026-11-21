@@ -23,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 HTML = ROOT / "web" / "dist" / "index.html"
 STATE = {
-    "fw": "0.6.0", "proto": 1, "uptime_ms": 3725000,
+    "fw": "0.7.1", "proto": 1, "uptime_ms": 3725000,
     "net": {
         "mode": "sta", "ap_on": 0, "has_creds": 1,
         "ap_ssid": "RF-Lab-1B59", "ap_ip": "192.168.4.1",
@@ -33,19 +33,19 @@ STATE = {
     "ble": {"on": 1, "conn": 0, "name": "RF-Lab-1B59", "pin_set": 1},
     "module": {"baud": 9600, "rx_bytes": 296, "frames": 37, "acks": 15,
                "dups": 3, "stray": 0, "resync": 0},
-    "store": {"count": 5, "max": 32},
+    "store": {"count": 5, "max": 32, "ver": 2},
     "oled": {"present": 1, "on": 1, "flush": 43, "err": 0, "max_us": 8747},
     "tx": {"active": 0, "kind": "idle", "id": 0, "ok": 0, "ms": 0},
     "last": {"kind": "rx", "id": 2, "band": "315M", "code": "5555034C", "ms": 123},
 }
 CODES = [
-    {"id": 1, "band": "315M", "code": "5555034C"},
-    {"id": 2, "band": "315M", "code": "5555033C"},
-    {"id": 3, "band": "315M", "code": "5555034B"},
-    {"id": 4, "band": "433M", "code": "A1B2C3D4"},
-    {"id": 5, "band": "433M", "code": "5555033C"},
+    {"id": 1, "band": "315M", "code": "5555034C", "name": "客厅大门", "group": "家门", "sym": "🚪"},
+    {"id": 2, "band": "315M", "code": "5555033C", "name": "车库卷帘", "group": "车库", "sym": "🚗"},
+    {"id": 3, "band": "315M", "code": "5555034B", "name": "玄关灯", "group": "家门", "sym": "💡"},
+    {"id": 4, "band": "433M", "code": "A1B2C3D4", "name": "后院插座", "group": "户外", "sym": "⚡", "manual": 1},
+    {"id": 5, "band": "433M", "code": "5555033C", "name": "未知遥控", "group": "", "sym": "", "edited": 1},
 ]
-HELLO = {"fw": "0.6.0", "proto": 1, "name": "RF-Lab-1B59",
+HELLO = {"fw": "0.7.1", "proto": 1, "codebook": 2, "name": "RF-Lab-1B59",
          "ap_ssid": "RF-Lab-1B59", "ip": "192.168.4.1", "auth": 1}
 
 
@@ -102,7 +102,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
 
             try:
-                event("hello", {"t": "hello", "fw": "0.6.0", "proto": 1, "name": "RF-Lab-1B59", "auth": 1})
+                event("hello", {"t": "hello", "fw": "0.7.1", "proto": 1, "codebook": 2, "name": "RF-Lab-1B59", "auth": 1})
                 event("state", {"t": "state", "seq": 1, "data": STATE})
                 event("codes", {"t": "codes", "seq": 2, "items": CODES})
                 time.sleep(0.15)

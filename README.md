@@ -19,7 +19,7 @@ MQTT 与 Home Assistant 是路线图,不是现货能力。
 | 战术组 TACTICAL | ¥599 | + SI4463 + LR1121 + 收纳盒 | 全频段雏形(路线图) |
 | 全频段 ALL-IN | ¥999 | 全模块 + FIELD DOCK | 全舱位 / 现场终端(路线图) |
 
-> 价格为**参考物料价**,不含运费与工具;路线图模块未接入 0.6.0 固件,不能下单即用。
+> 价格为**参考物料价**,不含运费与工具;路线图模块未接入 0.7.1 固件,不能下单即用。
 > 交互式配装器:[`site/index.html`](site/index.html);预算/边界/发布说明:[`site/README.md`](site/README.md)。
 
 ### 射频模块
@@ -121,7 +121,7 @@ cd android && ./gradlew assembleDebug
 # android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-主机单测:`./tools/host_test.sh`(协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12)。
+主机单测:`./tools/host_test.sh`(协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12)。
 APP 自更新逻辑主机测试:`./tools/app_update_test.sh`(版本比较 + `SHA256SUMS` 查表,36 checks)。
 Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15 项)。
 
@@ -129,8 +129,8 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 | 项 | 状态 |
 |---|---|
-| 构建(ESP32-C3,0.6.0) | ✅ 主机;Flash 1,086,800B / 2,031,616B OTA 槽;RAM 56,412B(2026-11-21,接线图 + OTA) |
-| 主机单测(协议 76 + 事件环 53 + OTA 41 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
+| 构建(ESP32-C3,0.7.1) | ✅ 主机;Flash 1,098,608B / 2,031,616B OTA 槽;RAM 73,540B(2026-11-21,码库 v2) |
+| 主机单测(协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
 | 上机:学码 / 存码 / 发射 / 改波特率 | ✅ 2026-11-15(0.5.0 证据仍有效) |
 | 上机:Web HTTP/SSE/命令 | ✅ 2026-11-15,设备内 `WEBTEST` hello/state/events 200 + POST 202 |
 | 上机:Wi-Fi STA 接 LAN | ✅ **真实** `SSID-A` → `192.168.5.117`;主机 ping/HTTP/SSE/POST 全通;STA 模式基础自检 18/18 |
@@ -138,9 +138,11 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 上机:真实浏览器 | ✅ Chromium 打开 `http://192.168.5.117/`,200,`NET LAN`,无 console error |
 | 上机:重启 AP 关闭 | ✅ `mode=sta ap_on=0`,LAN 仍可访问 |
 | 上机:AP 内配网 / CLEAR | ✅ 设备内;WebTest 经 AP 200,`WIFI CLEAR` 回 AP |
-| 上机:BLE 广播 | ✅ `INFO` `adv=yes`;⏳ **真实手机连接未测**(本机无 BT 适配器) |
-| Android APK | ✅ 0.7.0 已发 [GitHub Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.0);CI 1,027,080B,release 签名 v2;⏳ 真机安装/BLE 未测 |
+| 上机:BLE 广播 | ✅ `INFO` `adv=yes`;✅ **真机 BLE 连接/鉴权/命令回显/码表 9 条/状态栏刷新**(2026-11-21);⏳ nRF 逐帧抓包未做 |
+| Android APK | ✅ **0.7.1 构建** 1,050,176B/versionCode 3/release 签名 v2;0.7.0 已发 [Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.0);⏳ 0.7.1 Release/真机安装;0.7.1 APK 的 BLE 码库编辑未测 |
 | APP 自更新(2026-11-21) | ✅ 查 Release + 一键更新/忽略此版本 + SHA-256/签名自检 + 系统安装器;主机 36 checks + 真实 Release 资产校验;✅ v0.7.0 已发布;⏳ **真机弹窗/下载/安装未测** |
+| BLE 下行分帧(0.7.1) | ✅ 构建 + 主机 9418 checks;✅ **手机 BLE 端到端**(0 条 JSON 警告、命令回显、状态栏/码表刷新);⏳ nRF 逐帧 `0A` 未抓包;证据 [`2026-11-21-ble-framing.md`](docs/evidence/2026-11-21-ble-framing.md) |
+| 码库 v2(0.7.1) | ✅ 真机 9 条码 OTA 迁移(`LIST` 逐字节一致)、UTF-8 名称/分组/符号、手工新建、编辑 band/code、删除、重启保留;✅ Web 1440/390 + APK 0.7.1 构建;⏳ **0.7.1 Release/BLE 码库编辑写入未单独验证**;证据 [`2026-11-21-codebook.md`](docs/evidence/2026-11-21-codebook.md) |
 | uConsole TUI | ✅ 主机解析/键位/PTY 布局;⏳ 真机未测 |
 | Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,503B;⏳ 新皮肤未上机 |
 | Web/固件 UI 视觉统一(2026-11-21) | ✅ 构建 + 主机 + mock 布局(1440/1280/390);gzip 16,745B;固件 1,069,052B;⏳ **新皮肤未上机** |
@@ -151,7 +153,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 官网 APK 下载入口 | ✅ 导航 / 首屏 / 页脚指向 `releases/latest/download/rf-lab-android.apk`;⏳ 真机下载安装未测 |
 | 路线图:MQTT / HA / 多模块 | ○ **未实现**,接口草案见官网 §04 |
 | 上机:距离 / 长发时接收器是否真持续 | ⏳ 未测,见规格 §7 |
-| 上机证据 | [`2026-11-21-app-update.md`](docs/evidence/2026-11-21-app-update.md) · [`2026-11-21-ota.md`](docs/evidence/2026-11-21-ota.md) · [`2026-11-21-android-release.md`](docs/evidence/2026-11-21-android-release.md) · [`2026-11-15-bringup.md`](docs/evidence/2026-11-15-bringup.md) · [`2026-11-15-oled.md`](docs/evidence/2026-11-15-oled.md) · [`2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md) |
+| 上机证据 | [`2026-11-21-codebook.md`](docs/evidence/2026-11-21-codebook.md) · [`2026-11-21-app-update.md`](docs/evidence/2026-11-21-app-update.md) · [`2026-11-21-ota.md`](docs/evidence/2026-11-21-ota.md) · [`2026-11-21-android-release.md`](docs/evidence/2026-11-21-android-release.md) · [`2026-11-15-bringup.md`](docs/evidence/2026-11-15-bringup.md) · [`2026-11-15-oled.md`](docs/evidence/2026-11-15-oled.md) · [`2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md) |
 
 ## 范围
 
@@ -159,6 +161,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 |---|---|
 | 315/433 固定码学习 / 解码 / 存 / 发 | 滚动码克隆 / 重放 |
 | 单次发射、长发 / 停止 | 原始 OOK 波形记录 |
+| 码库命名/分组/手工建码/改 band+4B code | 协议位解析 / 模块 TX 时长编辑 / `.sub` 导入 |
 | 改模块波特率 / 输出模式 | 扫频 / RSSI / 频谱 |
 | Wi-Fi STA 接 LAN + AP 回退(HTTP + SSE) | 公网/云账户 |
 | 双槽 OTA(Web/串口,整包含页面) | BLE 上传固件 / 云推送 / 固件签名校验 |
@@ -177,8 +180,9 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 | 版本 | 目标 | 状态 |
 |---|---|---|
-| 0.7.0 | 模块抽象层 + SPI 背板;CC1101 / NRF24L01 / SI4463 / LR1121 | ○ 设计目标 |
-| 0.8.0 | 本地 MQTT bridge + Home Assistant Discovery | ○ 设计目标 |
+| 0.7.1 | 码库 v2:名称/符号/单分组/原始参数编辑/手工建码 | ✅ 实现 + 真机验证;**待发版** |
+| 0.8.0 | 模块抽象层 + SPI 背板;CC1101 / NRF24L01 / SI4463 / LR1121 | ○ 设计目标 |
+| 0.9.0 | 本地 MQTT bridge + Home Assistant Discovery | ○ 设计目标 |
 | 1.0 | 多模块外壳 / 小批量 | ○ 设计目标 |
 
 > 官网 §04 的 MQTT / HA 拓扑与 topic 是**接口草案**,不是可售能力。

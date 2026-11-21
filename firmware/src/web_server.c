@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "codebook.h"
 #include "esp_http_server.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -14,7 +15,7 @@
 #include "ota.h"
 
 #ifndef RFLAB_FW_VERSION
-#define RFLAB_FW_VERSION "0.6.0"
+#define RFLAB_FW_VERSION "0.7.1"
 #endif
 #ifndef RFLAB_BUILD_ID
 #define RFLAB_BUILD_ID "dev"
@@ -66,9 +67,10 @@ static esp_err_t hello_get(httpd_req_t *req)
     net_get_info(&ni);
     char buf[384];
     snprintf(buf, sizeof(buf),
-             "{\"fw\":\"%s\",\"build\":\"%s\",\"ui\":\"%s\",\"proto\":1,\"name\":\"%s\","
+             "{\"fw\":\"%s\",\"build\":\"%s\",\"ui\":\"%s\",\"proto\":1,\"codebook\":%d,\"name\":\"%s\","
              "\"ap_ssid\":\"%s\",\"ip\":\"%s\",\"auth\":1}",
-             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, app_name(), ni.ap_ssid, net_ip());
+             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, CODEBOOK_VERSION,
+             app_name(), ni.ap_ssid, net_ip());
     return send_json(req, buf);
 }
 
@@ -81,9 +83,16 @@ static esp_err_t state_get(httpd_req_t *req)
 
 static esp_err_t codes_get(httpd_req_t *req)
 {
-    char buf[APP_CODES_JSON_MAX];
-    app_copy_codes(buf, sizeof(buf));
-    return send_json(req, buf);
+    /* 6144B 超过 HTTP task 的 6KB 栈:按请求分配,避免栈溢出导致连接被重置。 */
+    char *buf = malloc(APP_CODES_JSON_MAX);
+    if (!buf) {
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        return send_json(req, "{\"error\":\"oom\"}");
+    }
+    app_copy_codes(buf, APP_CODES_JSON_MAX);
+    esp_err_t r = send_json(req, buf);
+    free(buf);
+    return r;
 }
 
 static esp_err_t net_get(httpd_req_t *req)
@@ -365,8 +374,9 @@ static void sse_task(void *arg)
     net_get_info(&ni);
     snprintf(hello, sizeof(hello),
              "{\"t\":\"hello\",\"fw\":\"%s\",\"build\":\"%s\",\"ui\":\"%s\",\"proto\":1,"
-             "\"name\":\"%s\",\"ap_ssid\":\"%s\",\"ip\":\"%s\",\"auth\":1}",
-             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, app_name(), ni.ap_ssid, net_ip());
+             "\"codebook\":%d,\"name\":\"%s\",\"ap_ssid\":\"%s\",\"ip\":\"%s\",\"auth\":1}",
+             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, CODEBOOK_VERSION,
+             app_name(), ni.ap_ssid, net_ip());
     if (!sse_send(req, "hello", hello)) {
         goto done;
     }

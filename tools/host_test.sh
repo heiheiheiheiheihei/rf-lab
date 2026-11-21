@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 主机单测:只编纯 C 源码(rf34dl / link / ota_ticket / oled_gfx / ui),不碰 ESP-IDF,秒级完成。
+# 主机单测:只编纯 C 源码(rf34dl / codebook / link / ota_ticket / oled_gfx / ui),不碰 ESP-IDF,秒级完成。
 #   ./tools/host_test.sh          # 普通编译
 #   SAN=1 ./tools/host_test.sh    # 加 ASan/UBSan
 set -euo pipefail
@@ -19,6 +19,15 @@ echo "== rf34dl:协议层(真模块抓包回归、重同步、ACK、fuzz)"
     "$ROOT/firmware/test/host/test_rf34dl.c" \
     -o "$TMP/test_rf34dl"
 "$TMP/test_rf34dl"
+
+echo "== codebook:记录校验 / v1→v2 迁移 / JSON / UTF-8"
+"$CC" "${CFLAGS[@]}" \
+    "$ROOT/firmware/src/codebook.c" \
+    "$ROOT/firmware/src/rf34dl.c" \
+    "$ROOT/firmware/src/link.c" \
+    "$ROOT/firmware/test/host/test_codebook.c" \
+    -o "$TMP/test_codebook"
+"$TMP/test_codebook"
 
 echo "== link:事件环回绕 / 多消费者 / JSON 转义"
 "$CC" "${CFLAGS[@]}" \

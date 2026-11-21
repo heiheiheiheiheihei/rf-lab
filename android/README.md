@@ -39,7 +39,7 @@ cd android
 > `JAVA_TOOL_OPTIONS="-DsocksProxyHost=127.0.0.1 -DsocksProxyPort=10808" ./gradlew assembleRelease`。
 > 也可以直接用本机 Gradle 8.11.1:`gradle assembleRelease`。
 
-产物:`android/app/build/outputs/apk/release/app-release.apk`(0.7.0:1,027,080B)。
+产物:`android/app/build/outputs/apk/release/app-release.apk`(0.7.1:`1,050,176B`,versionCode 3)。
 
 ### release 签名
 
@@ -85,7 +85,7 @@ debug 包仍可用 `./gradlew assembleDebug` 构建(`app-debug.apk`),但与 rele
 ≤11 为蓝牙 + 精确定位)。APP 自动扫描 `RF-Lab-*`,点设备连接;PIN 看设备 OLED
 开机页 5s 或串口 `PIN`。
 
-### APP 自更新(0.7.0 起)
+### APP 自更新(0.7.0 起;0.7.1 沿用)
 
 APP 不再等用户手动回来下载:每次冷启动/回前台,节流 6 小时查一次 GitHub Releases,
 有新版本就弹「一键更新 / 忽略此版本 / 稍后」。
@@ -135,9 +135,9 @@ BLE 参数(与固件一致):
 
 | 项 | 状态 |
 |---|---|
-| `assembleRelease` + 签名 | ✅ 2026-11-21(0.7.0),1,027,080B,release 密钥 v2 签名,`apksigner verify` 通过 |
+| `assembleRelease` + 签名 | ✅ 2026-11-21(0.7.1),1,050,176B,versionCode 3,release 密钥 v2 签名,`apksigner verify` 通过;0.7.0 为 1,027,080B |
 | 资源内嵌 | ✅ `assets/index.html` 106,274B,与 `web/dist` 一致 |
-| Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 2/0.7.0,minSdk 26,targetSdk 35,INTERNET + REQUEST_INSTALL_PACKAGES |
+| Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 3/0.7.1,minSdk 26,targetSdk 35,INTERNET + REQUEST_INSTALL_PACKAGES |
 | 自更新逻辑(主机) | ✅ `./tools/app_update_test.sh` 36 checks;真实 Release 的 `./name` SUMS 查表与实际哈希一致 |
 | 自更新真机链路 | ⏳ **未验证**:弹窗/下载/设置跳转/系统安装器/覆盖安装都需要 Android 手机 |
 | GitHub Release 发布 | ✅ [v0.7.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.0)(CI run 44914572503,1,027,080B,`SHA256SUMS.txt` 与实际哈希一致);官网按钮指向 `latest/download` |
@@ -151,7 +151,8 @@ BLE 参数(与固件一致):
 - APP 只走 BLE,不提供 Wi-Fi 配网;配网请用浏览器打开 `http://192.168.4.1`。
 - BLE PIN 是应用层鉴权,不加密链路;见 [`../docs/01-ui.md`](../docs/01-ui.md) §4。
 - **固件 OTA 不更新 APK**:OTA 只换设备端整包(含设备页面);APP 里的页面是 APK 构建时
-  冻结的副本。APP 的更新走 GitHub Release(0.7.0 起可在 APP 内一键更新),两条版本线互不
+  冻结的副本。APP 的更新走 GitHub Release(0.7.0 起可在 APP 内一键更新);0.7.1 起允许
+  固件/APK 同号,但两条更新链路仍互不
   覆盖;设备与 APP 的 `build`/`ui` 可在帮助面板或 `/api/hello` 对比。APP 走 BLE,
   不提供 OTA 上传入口(Web 的帮助面板 `U` 才有)。
 - 自更新检查需要联网;被墙/限流时静默跳过,不阻塞 BLE 与控制功能。

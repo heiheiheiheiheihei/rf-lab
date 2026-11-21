@@ -68,14 +68,19 @@
     </section>
 
     <section class="panel codebook" aria-labelledby="codeTitle">
-      <div class="panel-head"><span class="panel-no" aria-hidden="true">02</span><h2 id="codeTitle">CODEBOOK <em>// 码库</em></h2><span class="tag" id="storeTag">0/32</span></div>
-      <div class="code-head" aria-hidden="true"><span>ID</span><span>BAND</span><span>CODE</span><span>ACT</span></div>
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">02</span><h2 id="codeTitle">CODEBOOK <em>// 码库</em></h2><button class="mini" id="newCode" type="button" title="新建自定义码" disabled>+ NEW</button><span class="tag" id="storeTag">0/32</span></div>
+      <div class="code-tools">
+        <input id="codeSearch" class="code-search" type="search" placeholder="SEARCH // 名称 / HEX" autocomplete="off" spellcheck="false" aria-label="搜索码">
+        <div class="group-chips" id="groupChips" role="group" aria-label="分组筛选"></div>
+        <div class="code-gate" id="codebookGate" hidden>设备固件不支持码库编辑 // 需 OTA 0.7.1</div>
+      </div>
+      <div class="code-head" aria-hidden="true"><span>ID</span><span>BAND</span><span>NAME / CODE</span><span>ACT</span></div>
       <div class="code-list" id="codeList" role="listbox" aria-label="码库" tabindex="0">
         <div class="empty" id="emptyState">NO CODES<br><span>按一下原遥控器开始学习</span></div>
       </div>
       <div class="codebook-foot">
         <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span><span><kbd>⏎</kbd> 发射</span>
-        <span><kbd>L</kbd> 长发</span><span><kbd>D</kbd> 删除</span>
+        <span><kbd>L</kbd> 长发</span><span><kbd>E</kbd> 编辑</span><span><kbd>N</kbd> 新建</span><span><kbd>D</kbd> 删除</span>
       </div>
     </section>
 
@@ -138,6 +143,9 @@
       <div><kbd>L</kbd><span>长发 LONG</span></div>
       <div><kbd>S</kbd><span>停止 STOP</span></div>
       <div><kbd>D</kbd><span>删除(按两次)</span></div>
+      <div><kbd>E</kbd><span>编辑选中码</span></div>
+      <div><kbd>N</kbd><span>新建自定义码</span></div>
+      <div><kbd>/</kbd><span>搜索码库</span></div>
       <div><kbd>R</kbd><span>重新拉取状态</span></div>
       <div><kbd>T</kbd><span>OLED 测试图案 30s</span></div>
       <div><kbd>A</kbd><span>ARM / DISARM</span></div>
@@ -197,6 +205,34 @@
       <div class="ota-status" id="otaStatus">IDLE // 等待镜像</div>
       <button class="btn btn-arm" id="otaStart" type="button">UPLOAD &amp; REBOOT</button>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="codeModal" hidden>
+  <div class="modal-panel code-editor" role="dialog" aria-modal="true" aria-labelledby="codeModalTitle">
+    <div class="modal-head"><h2 id="codeModalTitle">CODE // 新建</h2><button class="mini" data-close type="button">CLOSE</button></div>
+    <form id="codeForm" class="code-form" novalidate>
+      <div class="code-grid">
+        <label class="field wide"><span>NAME <em id="nameCount">0/24B</em></span><input id="codeName" maxlength="32" autocomplete="off" spellcheck="false" placeholder="例如 客厅大门"></label>
+        <label class="field"><span>SYMBOL <em id="symCount">0/8B</em></span><input id="codeSym" maxlength="8" autocomplete="off" spellcheck="false" placeholder="🚪"></label>
+        <label class="field"><span>GROUP <em id="groupCount">0/16B</em></span><input id="codeGroup" maxlength="16" list="groupOptions" autocomplete="off" spellcheck="false" placeholder="例如 家门"></label>
+      </div>
+      <datalist id="groupOptions"></datalist>
+      <div class="sym-palette" id="symPalette" role="group" aria-label="预设符号"></div>
+      <div class="band-pick" role="group" aria-label="频段"><span>BAND</span>
+        <button type="button" class="band-btn" data-band="315M">315M</button>
+        <button type="button" class="band-btn" data-band="433M">433M</button>
+      </div>
+      <label class="field raw-field"><span>RAW CODE <em>8 HEX</em></span><input id="codeHex" maxlength="8" inputmode="text" autocomplete="off" spellcheck="false" placeholder="5555033C"></label>
+      <div class="raw-frame"><span>FRAME</span><code id="framePreview">FD F3 03 -- -- -- -- DF</code></div>
+      <div class="code-error" id="codeError" role="alert"></div>
+      <p class="modal-note" id="codeNote">固定码可被复制。修改 band/code 会让条目指向另一个物理遥控器,只对自有接收器测试。</p>
+      <div class="code-form-foot">
+        <button type="button" class="btn btn-ghost" id="codeDelete">DELETE</button>
+        <button type="button" class="btn btn-ghost" id="codeReset">RESET</button>
+        <button type="submit" class="btn btn-arm" id="codeSave">SAVE</button>
+      </div>
+    </form>
   </div>
 </div>
 

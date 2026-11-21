@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "codebook.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
@@ -19,7 +20,7 @@
 extern void ble_store_config_init(void);
 
 #ifndef RFLAB_FW_VERSION
-#define RFLAB_FW_VERSION "0.6.0"
+#define RFLAB_FW_VERSION "0.7.1"
 #endif
 #ifndef RFLAB_BUILD_ID
 #define RFLAB_BUILD_ID "dev"
@@ -164,8 +165,9 @@ static void send_hello(void)
 {
     snprintf(s_line, sizeof(s_line),
              "{\"t\":\"hello\",\"fw\":\"%s\",\"build\":\"%s\",\"ui\":\"%s\","
-             "\"proto\":1,\"name\":\"%s\",\"auth\":%d}",
-             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, app_name(), s_authed ? 1 : 0);
+             "\"proto\":1,\"codebook\":%d,\"name\":\"%s\",\"auth\":%d}",
+             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, CODEBOOK_VERSION,
+             app_name(), s_authed ? 1 : 0);
     notify_line(s_line);
 }
 

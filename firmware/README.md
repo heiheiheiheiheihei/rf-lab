@@ -1,8 +1,8 @@
 # 固件(ESP32-C3 / ESP-IDF 5.5.5)
 
-**状态**:0.6.0 · 可构建 · 协议/OLED/事件环/TUI/OTA 门票有主机单测 · **2026-11-15 已上机**
-(见文末「上机结果」)。0.6.0 增加 Wi-Fi APSTA + HTTP/SSE + NimBLE;同日加入
-**双槽 OTA**(Web 上传 + 回滚 + 串口 token);规格见
+**状态**:0.7.1 · 可构建 · 协议/码库/OLED/事件环/TUI/OTA 门票有主机单测 · **2026-11-21 已上机**
+(见文末「上机结果」)。0.7.1 在 0.6.0 的 Wi-Fi APSTA + HTTP/SSE + NimBLE 基础上加入码库 v2;
+0.6.0 同日加入**双槽 OTA**(Web 上传 + 回滚 + 串口 token);规格见
 [`../docs/01-ui.md`](../docs/01-ui.md) §3.4,射频行为仍以 [`../docs/00-mvp.md`](../docs/00-mvp.md) 为准。
 
 目标板:ESP32-C3 0.42" OLED(4MB Flash,原生 USB)。板载 SSD1306 72×40 由本版驱动,
@@ -57,7 +57,7 @@ pio run -e esp32c3
 ## 主机单测(不接硬件)
 
 ```bash
-./tools/host_test.sh        # 协议 76 + 事件环 53 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh        # 协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh  # 加 ASan/UBSan
 ```
 
@@ -94,7 +94,7 @@ APK**;网页端和 APP 的 `build` / `ui` 可在帮助面板或 `/api/hello` 对
 错 token 401、随机镜像 500、中途断流后仍运行旧槽;NVS 9 条码与 Wi-Fi 凭据保持。
 证据:[`../docs/evidence/2026-11-21-ota.md`](../docs/evidence/2026-11-21-ota.md)。
 
-## 跨平台 UI(0.6.0)
+## 跨平台 UI(0.6.0 起,0.7.1 扩码库)
 
 | 项 | 值 |
 |---|---|
@@ -144,6 +144,10 @@ UI 的 ARM 是防误触,不是硬门控;BLE PIN 是应用层,不是链路加密�
 | `WIFI [status]\|[ssid pass]\|CLEAR` | 配 STA / 忘掉 STA;凭据存 NVS |
 | `BLE [on\|off]` | BLE 广播开关/状态(`adv=yes/no`) |
 | `PIN` | 显示 BLE PIN(仅串口) |
+| `LIST LONG` | id/band/code + name/group/sym/flags |
+| `NEW <band> <hex> [name]` | 手工建码 |
+| `NAME/SYM/GROUP <id> [text]` | 设/清名称/符号/分组 |
+| `EDIT <id> band\|code <v>` | 改原始频段/4B payload |
 | `STATE` | 打印完整 JSON 状态快照 |
 | `WEBTEST` | 设备内 GET `/api/hello`、`/api/events`,POST `/api/cmd` |
 
@@ -153,7 +157,7 @@ UI 的 ARM 是防误触,不是硬门控;BLE PIN 是应用层,不是链路加密�
 ## 一次完整流程
 
 ```text
-# RF-Lab fw=0.6.0 (ESP32-C3 + YS-RF34DL)
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
 # oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
 # net mode=ap ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1
 # ble name=RF-Lab-1B59 pin=**** (serial PIN; also OLED 5s)
@@ -166,6 +170,17 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 ```
 
 ## 上机结果(2026-11-15)
+
+### 0.7.1 码库 v2
+
+| 项 | 结果 |
+|---|---|
+| 构建 | Flash 1,098,608B / RAM 73,540B;gzip 30,068B;ui 85a1a9b4 |
+| v1→v2 迁移 | 9 条旧码 OTA 后 `LIST` 逐字节一致;`INFO` `codebook ver=2 … migrated=yes`;重启 `migrated=no` |
+| 元数据 | HTTP UTF-8 `客厅大门`/`家门`/`🚪`;`/api/codes`、`LIST LONG`、Web 同步;重启保留 |
+| 新建/编辑/删除 | 真机 UI 测试码新建、改 band/code、删除;测试后恢复 9 条 |
+| 回归 | `LIST` 不变;`SEND 1` F0 814ms |
+| 证据 | [`../docs/evidence/2026-11-21-codebook.md`](../docs/evidence/2026-11-21-codebook.md) |
 
 ### 0.6.0 跨平台 UI
 

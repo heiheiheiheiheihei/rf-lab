@@ -10,11 +10,11 @@
   "use strict";
 
   const PRIMARY = [
-    { id: 1, band: "315M", code: "5555034C" },
-    { id: 2, band: "315M", code: "5555033C" },
-    { id: 3, band: "315M", code: "5555034B" },
-    { id: 4, band: "433M", code: "A1B2C3D4" },
-    { id: 5, band: "433M", code: "5555033C" },
+    { id: 1, band: "315M", code: "5555034C", name: "客厅大门", group: "家门", sym: "🚪" },
+    { id: 2, band: "315M", code: "5555033C", name: "车库卷帘", group: "车库", sym: "🚗" },
+    { id: 3, band: "315M", code: "5555034B", name: "玄关灯", group: "家门", sym: "💡" },
+    { id: 4, band: "433M", code: "A1B2C3D4", name: "后院插座", group: "户外", sym: "⚡", manual: 1 },
+    { id: 5, band: "433M", code: "5555033C", name: "未知遥控", group: "", sym: "", edited: 1 },
   ];
   const LEARN_POOL = [
     ["315M", "5555031A"],
@@ -22,10 +22,10 @@
     ["315M", "5555034D"],
     ["433M", "0F1E2D3C"],
   ];
-  const HELLO = { t: "hello", fw: "0.6.0", proto: 1, name: "RF-Lab-1B59", auth: 1 };
+  const HELLO = { t: "hello", fw: "0.7.1", proto: 1, codebook: 2, name: "RF-Lab-1B59", auth: 1 };
 
   const INITIAL_STATE = {
-    fw: "0.6.0", proto: 1, uptime_ms: 3725000,
+    fw: "0.7.1", proto: 1, uptime_ms: 3725000,
     net: {
       mode: "sta", ap_on: 0, has_creds: 1,
       ap_ssid: "RF-Lab-1B59", ap_ip: "192.168.4.1",
@@ -34,7 +34,7 @@
     },
     ble: { on: 1, conn: 0, name: "RF-Lab-1B59", pin_set: 1 },
     module: { baud: 9600, rx_bytes: 296, frames: 37, acks: 15, dups: 3, stray: 0, resync: 0 },
-    store: { count: 5, max: 32 },
+    store: { count: 5, max: 32, ver: 2 },
     oled: { present: 1, on: 1, flush: 43, err: 0, max_us: 8747 },
     tx: { active: 0, kind: "idle", id: 0, ok: 0, ms: 0 },
     last: { kind: "rx", id: 2, band: "315M", code: "5555033C", ms: 123 },
@@ -191,6 +191,66 @@
           emitSnapshot("state");
         }, 140);
         break;
+      case "NEW": {
+        const rawBand = String(parts[1] || "").toUpperCase();
+        const band = rawBand.startsWith("433") ? "433M" : (rawBand.startsWith("315") ? "315M" : "");
+        const hex = String(parts[2] || "").toUpperCase();
+        const name = parts.slice(3).join(" ");
+        if (!band || !/^[0-9A-F]{8}$/.test(hex)) {
+          emitLog("ERR usage: NEW <315|433> <8 hex> [name]");
+          break;
+        }
+        if (codes.length >= 32) { emitLog("ERR new: full"); break; }
+        if (codes.some((c) => c.band === band && c.code === hex)) {
+          emitLog("ERR new: dup");
+          break;
+        }
+        const newId = nextId++;
+        codes.push({ id: newId, band, code: hex, name, group: "", sym: "", manual: 1 });
+        syncStore();
+        emitLog(`OK new id=${newId} band=${band} code=${hex}`);
+        emitSnapshot("codes");
+        emitSnapshot("state");
+        break;
+      }
+      case "NAME":
+      case "SYM":
+      case "GROUP": {
+        const code = codeOf(id);
+        if (!codes.some((c) => c.id === id)) { emitLog(`ERR ${verb.toLowerCase()}: range (id=${id})`); break; }
+        const value = parts.slice(2).join(" ");
+        if (verb === "NAME") code.name = value;
+        else if (verb === "SYM") code.sym = value;
+        else code.group = value;
+        emitLog(`OK ${verb.toLowerCase()} id=${id}`);
+        emitSnapshot("codes");
+        break;
+      }
+      case "EDIT": {
+        const code = codeOf(id);
+        if (!codes.some((c) => c.id === id)) { emitLog(`ERR edit: range (id=${id})`); break; }
+        const field = String(parts[2] || "").toLowerCase();
+        const value = String(parts[3] || "").toUpperCase();
+        if (field === "band") {
+          const band = value.startsWith("433") ? "433M" : (value.startsWith("315") ? "315M" : "");
+          if (!band) { emitLog("ERR band must be 315/433"); break; }
+          if (codes.some((c) => c.id !== id && c.band === band && c.code === code.code)) { emitLog("ERR edit: dup"); break; }
+          code.band = band;
+          code.edited = 1;
+        } else if (field === "code") {
+          if (!/^[0-9A-F]{8}$/.test(value)) { emitLog("ERR code must be 8 hex digits"); break; }
+          if (codes.some((c) => c.id !== id && c.band === code.band && c.code === value)) { emitLog("ERR edit: dup"); break; }
+          code.code = value;
+          code.edited = 1;
+        } else {
+          emitLog("ERR field must be band|code");
+          break;
+        }
+        emitLog(`OK edit id=${id} ${field}=${value}`);
+        emitSnapshot("codes");
+        emitSnapshot("state");
+        break;
+      }
       case "ERASE":
         erase(id);
         break;

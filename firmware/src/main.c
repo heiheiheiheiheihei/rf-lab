@@ -41,6 +41,7 @@
 
 #include "app.h"
 #include "ble_link.h"
+#include "codebook.h"
 #include "link.h"
 #include "net.h"
 #include "oled.h"
@@ -53,7 +54,7 @@
 #include "wiring_config.h"
 
 #ifndef RFLAB_FW_VERSION
-#define RFLAB_FW_VERSION "0.6.0"
+#define RFLAB_FW_VERSION "0.7.1"
 #endif
 #ifndef RFLAB_BUILD_ID
 #define RFLAB_BUILD_ID "dev"
@@ -65,7 +66,7 @@
 /* ---------------- 引脚与参数 ---------------- */
 /* 引脚/波特率来自 hardware/wiring.json -> wiring_config.h;勿手改。 */
 #define MODULE_UART UART_NUM_1
-#define MAX_CODES 32
+#define MAX_CODES CODEBOOK_MAX
 #define DEDUP_MS 600
 /*
  * 发射应答 F0 的实测延迟:0.7–1.0s(2026-11-15,315M,单帧 dur=03)。
@@ -75,22 +76,8 @@
 #define ACK_WAIT_MS 1500
 
 #define NVS_NS "rf34dl"
-#define NVS_KEY "codes"
-#define STORE_MAGIC0 'R'
-#define STORE_MAGIC1 '3'
-#define STORE_VER 1
-
-typedef struct {
-    uint8_t band;
-    uint8_t code[RF34DL_CODE_LEN];
-} saved_t;
-
-typedef struct {
-    uint8_t magic[2];
-    uint8_t ver;
-    uint8_t count;
-    saved_t items[MAX_CODES];
-} store_t;
+#define NVS_KEY_V1 "codes"
+#define NVS_KEY_V2 "codes2"
 
 /* ---------------- 状态 ---------------- */
 
@@ -100,8 +87,10 @@ static bool s_echo = true;  /* 打印解码事件 */
 static bool s_mon = false;  /* 打印模块原始字节 */
 static int s_mod_baud = MODULE_BAUD_DEFAULT;
 
-static saved_t s_saved[MAX_CODES];
-static int s_count = 0;
+static codebook_t s_codebook;
+static codebook_t s_backup;
+static uint8_t s_nvs_blob[CODEBOOK_BLOB_MAX];
+static uint8_t s_nvs_verify[CODEBOOK_BLOB_MAX];
 
 static rf34dl_parser_t s_parser;
 
@@ -272,13 +261,14 @@ static void build_state_json(char *out, size_t cap)
     o = jappend(out, cap, o,
                 "\"module\":{\"baud\":%d,\"rx_bytes\":%lu,\"frames\":%lu,\"acks\":%lu,"
                 "\"dups\":%lu,\"stray\":%lu,\"resync\":%lu},"
-                "\"store\":{\"count\":%d,\"max\":%d},"
+                "\"store\":{\"count\":%d,\"max\":%d,\"ver\":%d},"
                 "\"oled\":{\"present\":%d,\"on\":%d,\"flush\":%lu,\"err\":%lu,"
                 "\"last_us\":%lu,\"max_us\":%lu},",
                 s_mod_baud, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
                 (unsigned long)s_acks, (unsigned long)s_dups,
                 (unsigned long)s_parser.stray, (unsigned long)s_parser.dropped,
-                s_count, MAX_CODES, s_oled_ok ? 1 : 0, s_ui.enabled ? 1 : 0,
+                s_codebook.count, MAX_CODES, CODEBOOK_VERSION,
+                s_oled_ok ? 1 : 0, s_ui.enabled ? 1 : 0,
                 ost ? (unsigned long)ost->flush_count : 0UL,
                 ost ? (unsigned long)ost->flush_err : 0UL,
                 ost ? (unsigned long)ost->last_us : 0UL,
@@ -301,17 +291,7 @@ static void build_state_json(char *out, size_t cap)
 
 static void build_codes_json(char *out, size_t cap)
 {
-    int o = 0;
-
-    o = jappend(out, cap, o, "[");
-    for (int i = 0; i < s_count; i++) {
-        char hex[9];
-        hex4(s_saved[i].code, hex);
-        o = jappend(out, cap, o, "%s{\"id\":%d,\"band\":\"%s\",\"code\":\"%s\"}",
-                    i ? "," : "", i + 1, rf34dl_band_name(s_saved[i].band), hex);
-    }
-    o = jappend(out, cap, o, "]");
-    out[o] = 0;
+    codebook_codes_json(&s_codebook, out, cap);
 }
 
 static void snapshot_task(void *arg)
@@ -611,53 +591,129 @@ static void init_module(void)
 
 /* ---------------- NVS ---------------- */
 
-static bool store_load(void)
+static bool s_store_migrated = false;
+
+static bool store_write(const codebook_t *cb)
+{
+    size_t n = codebook_serialize(cb, s_nvs_blob, sizeof(s_nvs_blob));
+    if (n == 0) {
+        return false;
+    }
+
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) {
+        return false;
+    }
+    esp_err_t e = nvs_set_blob(h, NVS_KEY_V2, s_nvs_blob, n);
+    if (e == ESP_OK) {
+        e = nvs_commit(h);
+    }
+    nvs_close(h);
+    return e == ESP_OK;
+}
+
+/* 1 = 读到合法 v2;0 = key 不存在; -1 = 存在但损坏(不能拿旧 v1 覆盖)。 */
+static int store_read_v2(codebook_t *out)
 {
     nvs_handle_t h;
-    store_t st;
-    size_t len = sizeof(st);
+    size_t len = sizeof(s_nvs_blob);
+
+    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) {
+        return 0;
+    }
+    esp_err_t e = nvs_get_blob(h, NVS_KEY_V2, s_nvs_blob, &len);
+    nvs_close(h);
+    if (e == ESP_ERR_NVS_NOT_FOUND) {
+        return 0;
+    }
+    if (e != ESP_OK || len != sizeof(codebook_blob_t)) {
+        return -1;
+    }
+    return codebook_deserialize(out, s_nvs_blob, len) == CODEBOOK_OK ? 1 : -1;
+}
+
+/* 读 v1(164B),迁移到 v2 新 key;写后读回校验,失败仍保留 v1 原值。 */
+static bool store_migrate_v1(void)
+{
+    uint8_t v1[4 + CODEBOOK_MAX * 5];
+    nvs_handle_t h;
+    size_t len = sizeof(v1);
 
     if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) {
         return false;
     }
-    esp_err_t e = nvs_get_blob(h, NVS_KEY, &st, &len);
+    esp_err_t e = nvs_get_blob(h, NVS_KEY_V1, v1, &len);
     nvs_close(h);
-
-    if (e != ESP_OK || len != sizeof(st)) {
-        return false;
-    }
-    if (st.magic[0] != STORE_MAGIC0 || st.magic[1] != STORE_MAGIC1 ||
-        st.ver != STORE_VER || st.count > MAX_CODES) {
+    if (e != ESP_OK) {
         return false;
     }
 
-    memcpy(s_saved, st.items, sizeof(saved_t) * st.count);
-    s_count = st.count;
+    codebook_t tmp;
+    codebook_err_t ce = codebook_migrate_v1(&tmp, v1, len);
+    if (ce != CODEBOOK_OK) {
+        out("# codebook v1 ignored (%s)\n", codebook_err_name(ce));
+        return false;
+    }
+    if (!store_write(&tmp)) {
+        out("# codebook v1 found but v2 write failed; keeping v1 only\n");
+        s_codebook = tmp; /* 内存里可用,但重启会回到 v1 */
+        return true;
+    }
+
+    /* 读回校验:不信任 nvs_set_blob 的返回值,防止写半截。 */
+    size_t vlen = sizeof(s_nvs_verify);
+    if (nvs_open(NVS_NS, NVS_READONLY, &h) == ESP_OK) {
+        e = nvs_get_blob(h, NVS_KEY_V2, s_nvs_verify, &vlen);
+        nvs_close(h);
+    } else {
+        e = ESP_FAIL;
+    }
+    if (e != ESP_OK || vlen != sizeof(codebook_blob_t) ||
+        memcmp(s_nvs_blob, s_nvs_verify, vlen) != 0) {
+        out("# codebook migration verify failed; v1 kept, in-memory only\n");
+        s_codebook = tmp;
+        return true;
+    }
+
+    s_codebook = tmp;
+    s_store_migrated = true;
+    out("# codebook migrated v1 -> v2 (%d code(s))\n", s_codebook.count);
     return true;
 }
 
-static void store_save(void)
+static bool store_load(void)
 {
-    store_t st;
-    nvs_handle_t h;
-
-    memset(&st, 0, sizeof(st));
-    st.magic[0] = STORE_MAGIC0;
-    st.magic[1] = STORE_MAGIC1;
-    st.ver = STORE_VER;
-    st.count = (uint8_t)s_count;
-    memcpy(st.items, s_saved, sizeof(saved_t) * (size_t)s_count);
-
-    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) {
-        out("ERR nvs open failed\n");
-        return;
+    codebook_init(&s_codebook);
+    int v2 = store_read_v2(&s_codebook);
+    if (v2 == 1) {
+        return true;
     }
-    if (nvs_set_blob(h, NVS_KEY, &st, sizeof(st)) == ESP_OK) {
-        nvs_commit(h);
-    } else {
-        out("ERR nvs write failed\n");
+    if (v2 == -1) {
+        /* v2 存在但损坏:不要用过期 v1 覆盖它;保留现场供串口排查。 */
+        out("# codebook v2 corrupt; keeping it, codes unavailable this boot\n");
+        codebook_init(&s_codebook);
+        return false;
     }
-    nvs_close(h);
+    if (store_migrate_v1()) {
+        return true;
+    }
+    codebook_init(&s_codebook);
+    return false;
+}
+
+static void store_backup(void)
+{
+    s_backup = s_codebook;
+}
+
+static bool store_commit(void)
+{
+    if (store_write(&s_codebook)) {
+        return true;
+    }
+    s_codebook = s_backup;
+    out("ERR nvs write failed; change rolled back\n");
+    return false;
 }
 
 static bool init_store(void)
@@ -674,17 +730,6 @@ static bool init_store(void)
     }
     store_load(); /* 空库/格式不符都返回 false,这里只关心 NVS 是否可用 */
     return true;
-}
-
-static int find_code(uint8_t band, const uint8_t *code)
-{
-    for (int i = 0; i < s_count; i++) {
-        if (s_saved[i].band == band &&
-            memcmp(s_saved[i].code, code, RF34DL_CODE_LEN) == 0) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 /* ---------------- 模块收发 ---------------- */
@@ -724,7 +769,7 @@ static void handle_frame_locked(const rf34dl_frame_t *f)
     s_last_band = f->band;
     memcpy(s_last_code, f->code, RF34DL_CODE_LEN);
 
-    int idx = find_code(f->band, f->code);
+    int idx = codebook_find(&s_codebook, f->band, f->code);
     if (idx >= 0) {
         snprintf(s_last_kind, sizeof(s_last_kind), "rx");
         s_last_id = idx + 1;
@@ -742,7 +787,7 @@ static void handle_frame_locked(const rf34dl_frame_t *f)
         return;
     }
 
-    if (s_count >= MAX_CODES) {
+    if (s_codebook.count >= MAX_CODES) {
         snprintf(s_last_kind, sizeof(s_last_kind), "full");
         s_last_id = 0;
         s_last_event_ms = now;
@@ -758,25 +803,30 @@ static void handle_frame_locked(const rf34dl_frame_t *f)
         return;
     }
 
-    s_saved[s_count].band = f->band;
-    memcpy(s_saved[s_count].code, f->code, RF34DL_CODE_LEN);
-    s_count++;
-    store_save();
+    int new_id = 0;
+    store_backup();
+    codebook_err_t ce = codebook_add(&s_codebook, f->band, f->code, NULL, false, &new_id);
+    if (ce != CODEBOOK_OK || !store_commit()) {
+        if (ce != CODEBOOK_OK) {
+            out("ERR learn store: %s\n", codebook_err_name(ce));
+        }
+        return;
+    }
 
     snprintf(s_last_kind, sizeof(s_last_kind), "learn");
-    s_last_id = s_count;
+    s_last_id = new_id;
     s_last_event_ms = now;
-    ui_note_learn(&s_ui, s_count, f->band, f->code);
-    ui_note_count(&s_ui, s_count);
+    ui_note_learn(&s_ui, new_id, f->band, f->code);
+    ui_note_count(&s_ui, s_codebook.count);
     ui_mark_dirty();
     app_mark_codes_dirty();
     link_publishf("{\"t\":\"event\",\"seq\":%lu,\"kind\":\"learn\",\"id\":%d,"
                   "\"band\":\"%s\",\"code\":\"%s\"}",
-                  (unsigned long)(link_head() + 1), s_count,
+                  (unsigned long)(link_head() + 1), new_id,
                   rf34dl_band_name(f->band), hex);
 
     if (s_echo) {
-        out("LEARN id=%d band=%s code=%s\n", s_count, rf34dl_band_name(f->band), hex);
+        out("LEARN id=%d band=%s code=%s\n", new_id, rf34dl_band_name(f->band), hex);
     }
 }
 
@@ -950,10 +1000,16 @@ static void cmd_help(void)
     out("  HELP                  this list\n");
     out("  INFO                  fw / module baud / counters\n");
     out("  LIST                  stored codes: id band code\n");
+    out("  LIST LONG             id band code name group sym flags\n");
     out("  SEND <id>             transmit once (frame dur=03)\n");
     out("  LONG <id>             start continuous transmit (dur=FE)\n");
     out("  STOP <id>             stop continuous transmit (dur=FF)\n");
-    out("  ERASE <id|all>        delete one code / all codes\n");
+    out("  ERASE <id|all>        delete one code / all codes (ids shift)\n");
+    out("  NEW <band> <hex> [name]  add a manual code (315/433, 8 hex)\n");
+    out("  NAME <id> [text]      set/clear UTF-8 name (max 24 bytes)\n");
+    out("  SYM <id> [text]       set/clear symbol (max 8 bytes)\n");
+    out("  GROUP <id> [text]     set/clear single group (max 16 bytes)\n");
+    out("  EDIT <id> band|code <v>  edit raw band / 4-byte payload\n");
     out("  MODE single|continuous  module decode output mode\n");
     out("  BAUD <n>              module baud 4800/9600/57600/115200\n");
     out("  RECOVER               scan module baud and force it back to 9600\n");
@@ -998,23 +1054,274 @@ static void cmd_info(void)
         ni.sta_connected ? ni.sta_ssid : "-", ni.sta_ip, ni.rssi);
     out("# ble on=%s adv=%s conn=%s name=%s pin=set\n", ble_link_is_on() ? "on" : "off",
         ble_link_advertising() ? "yes" : "no", ble_link_connected() ? "yes" : "no", s_dev_name);
+    out("# codebook ver=%d count=%d/%d migrated=%s\n", CODEBOOK_VERSION,
+        s_codebook.count, CODEBOOK_MAX, s_store_migrated ? "yes" : "no");
     out("OK stored=%d/%d rx_bytes=%lu frames=%lu acks=%lu dups=%lu stray=%lu resync=%lu\n",
-        s_count, MAX_CODES, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
+        s_codebook.count, MAX_CODES, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
         (unsigned long)s_acks, (unsigned long)s_dups, (unsigned long)s_parser.stray,
         (unsigned long)s_parser.dropped);
 }
 
 static void cmd_list(void)
 {
-    if (s_count == 0) {
+    if (s_codebook.count == 0) {
         out("(empty; press a remote button and watch for LEARN)\n");
         return;
     }
-    for (int i = 0; i < s_count; i++) {
+    for (int i = 0; i < s_codebook.count; i++) {
         char hex[9];
-        hex4(s_saved[i].code, hex);
-        out("%2d  %-4s %s\n", i + 1, rf34dl_band_name(s_saved[i].band), hex);
+        hex4(s_codebook.recs[i].code, hex);
+        out("%2d  %-4s %s\n", i + 1, rf34dl_band_name(s_codebook.recs[i].band), hex);
     }
+}
+
+static char *skip_ws(char *p)
+{
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    return p;
+}
+
+static char *trim_ws(char *p)
+{
+    p = skip_ws(p);
+    size_t n = strlen(p);
+    while (n > 0 && (p[n - 1] == ' ' || p[n - 1] == '\t')) {
+        p[--n] = 0;
+    }
+    return p;
+}
+
+/* 取一个空格分隔的 token;过长直接失败(避免截断后被当成合法 id/hex)。 */
+static bool take_token(char **p, char *tok, size_t cap)
+{
+    char *s = skip_ws(*p);
+    if (*s == 0) {
+        *p = s;
+        return false;
+    }
+    size_t n = 0;
+    while (*s && *s != ' ' && *s != '\t') {
+        if (n + 1 >= cap) {
+            while (*s && *s != ' ' && *s != '\t') {
+                s++;
+            }
+            *p = s;
+            return false;
+        }
+        tok[n++] = *s++;
+    }
+    tok[n] = 0;
+    *p = s;
+    return true;
+}
+
+static bool parse_id_token(const char *s, int *out)
+{
+    if (!s || !*s) {
+        return false;
+    }
+    int v = 0;
+    for (const char *p = s; *p; p++) {
+        if (*p < '0' || *p > '9') {
+            return false;
+        }
+        v = v * 10 + (*p - '0');
+        if (v > 9999) {
+            return false;
+        }
+    }
+    if (v < 1) {
+        return false;
+    }
+    *out = v;
+    return true;
+}
+
+static bool parse_band_token(const char *s, uint8_t *band)
+{
+    if (arg_eq(s, "315") || arg_eq(s, "315M")) {
+        *band = RF34DL_BAND_315;
+        return true;
+    }
+    if (arg_eq(s, "433") || arg_eq(s, "433M")) {
+        *band = RF34DL_BAND_433;
+        return true;
+    }
+    return false;
+}
+
+static bool parse_code8(const char *s, uint8_t code[RF34DL_CODE_LEN])
+{
+    if (!s || strlen(s) != 8) {
+        return false;
+    }
+    for (int i = 0; i < 4; i++) {
+        int hi = hex_val(s[i * 2]);
+        int lo = hex_val(s[i * 2 + 1]);
+        if (hi < 0 || lo < 0) {
+            return false;
+        }
+        code[i] = (uint8_t)((hi << 4) | lo);
+    }
+    return true;
+}
+
+static void snap_take(void)
+{
+    if (s_snap_lock) {
+        xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+    }
+}
+
+static void snap_give(void)
+{
+    if (s_snap_lock) {
+        xSemaphoreGive(s_snap_lock);
+    }
+}
+
+static void cmd_list_long(void)
+{
+    if (s_codebook.count == 0) {
+        out("(empty; press a remote button and watch for LEARN)\n");
+        return;
+    }
+    for (int i = 0; i < s_codebook.count; i++) {
+        const codebook_rec_t *r = &s_codebook.recs[i];
+        char hex[9];
+        hex4(r->code, hex);
+        out("%2d  %-4s %s  name=\"%s\" group=\"%s\" sym=\"%s\"%s%s\n",
+            i + 1, rf34dl_band_name(r->band), hex,
+            r->name[0] ? r->name : "-", r->group[0] ? r->group : "-",
+            r->sym[0] ? r->sym : "-",
+            (r->flags & CODEBOOK_FLAG_MANUAL) ? " manual" : "",
+            (r->flags & CODEBOOK_FLAG_EDITED) ? " edited" : "");
+    }
+}
+
+static void cmd_set_text(const char *args, int field)
+{
+    char *p = (char *)args;
+    char tok[16];
+    int id = 0;
+    if (!take_token(&p, tok, sizeof(tok)) || !parse_id_token(tok, &id)) {
+        out("ERR usage: <NAME|SYM|GROUP> <id> [text]\n");
+        return;
+    }
+    char *text = trim_ws(p);
+    snap_take();
+    store_backup();
+    codebook_err_t e = field == 0 ? codebook_set_name(&s_codebook, id, text)
+                       : field == 1 ? codebook_set_sym(&s_codebook, id, text)
+                                    : codebook_set_group(&s_codebook, id, text);
+    if (e != CODEBOOK_OK) {
+        snap_give();
+        out("ERR %s: %s (id=%d)\n",
+            field == 0 ? "name" : field == 1 ? "sym" : "group",
+            codebook_err_name(e), id);
+        return;
+    }
+    if (!store_commit()) {
+        snap_give();
+        return;
+    }
+    app_mark_codes_dirty();
+    snap_give();
+    out("OK %s id=%d\n", field == 0 ? "name" : field == 1 ? "sym" : "group", id);
+}
+
+static void cmd_new(const char *args)
+{
+    char *p = (char *)args;
+    char band_tok[16];
+    char code_tok[16];
+    uint8_t band = 0;
+    uint8_t code[RF34DL_CODE_LEN];
+    int id = 0;
+
+    if (!take_token(&p, band_tok, sizeof(band_tok)) ||
+        !parse_band_token(band_tok, &band) ||
+        !take_token(&p, code_tok, sizeof(code_tok)) ||
+        !parse_code8(code_tok, code)) {
+        out("ERR usage: NEW <315|433> <8 hex> [name]\n");
+        return;
+    }
+    char *name = trim_ws(p);
+    snap_take();
+    store_backup();
+    codebook_err_t e = codebook_add(&s_codebook, band, code, name, true, &id);
+    if (e != CODEBOOK_OK) {
+        snap_give();
+        out("ERR new: %s\n", codebook_err_name(e));
+        return;
+    }
+    if (!store_commit()) {
+        snap_give();
+        return;
+    }
+    ui_note_count(&s_ui, s_codebook.count);
+    app_mark_codes_dirty();
+    snap_give();
+    out("OK new id=%d band=%s code=%s\n", id, codebook_band_name(band), code_tok);
+}
+
+static void cmd_edit(const char *args)
+{
+    char *p = (char *)args;
+    char id_tok[16];
+    char field_tok[16];
+    char value_tok[16];
+    int id = 0;
+
+    if (!take_token(&p, id_tok, sizeof(id_tok)) || !parse_id_token(id_tok, &id) ||
+        !take_token(&p, field_tok, sizeof(field_tok)) ||
+        !take_token(&p, value_tok, sizeof(value_tok))) {
+        out("ERR usage: EDIT <id> band|code <value>\n");
+        return;
+    }
+    if (s_tx_active) {
+        out("ERR tx active; STOP first\n");
+        return;
+    }
+
+    snap_take();
+    store_backup();
+    codebook_err_t e;
+    if (arg_eq(field_tok, "band")) {
+        uint8_t band = 0;
+        if (!parse_band_token(value_tok, &band)) {
+            snap_give();
+            out("ERR band must be 315/433\n");
+            return;
+        }
+        e = codebook_set_band(&s_codebook, id, band);
+    } else if (arg_eq(field_tok, "code")) {
+        uint8_t code[RF34DL_CODE_LEN];
+        if (!parse_code8(value_tok, code)) {
+            snap_give();
+            out("ERR code must be 8 hex digits\n");
+            return;
+        }
+        e = codebook_set_code(&s_codebook, id, code);
+    } else {
+        snap_give();
+        out("ERR field must be band|code\n");
+        return;
+    }
+    if (e != CODEBOOK_OK) {
+        snap_give();
+        out("ERR edit: %s (id=%d)\n", codebook_err_name(e), id);
+        return;
+    }
+    if (!store_commit()) {
+        snap_give();
+        return;
+    }
+    app_mark_codes_dirty();
+    snap_give();
+    out("OK edit id=%d %s=%s\n", id, field_tok, value_tok);
 }
 
 static void do_tx(const char *args, uint8_t dur, const char *what)
@@ -1023,12 +1330,12 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
     uint8_t f[RF34DL_FRAME_LEN];
     char hex[9];
 
-    if (id < 1 || id > s_count) {
-        out("ERR id must be 1..%d (LIST)\n", s_count);
+    if (id < 1 || id > s_codebook.count) {
+        out("ERR id must be 1..%d (LIST)\n", s_codebook.count);
         return;
     }
 
-    saved_t *c = &s_saved[id - 1];
+    const codebook_rec_t *c = codebook_get(&s_codebook, id);
     hex4(c->code, hex);
     if (rf34dl_build_tx(f, c->band, dur, c->code) != RF34DL_FRAME_LEN) {
         out("ERR build failed\n");
@@ -1086,10 +1393,14 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
 
 static void cmd_erase_locked(const char *args)
 {
+    store_backup();
+
     if (arg_eq(args, "all")) {
-        s_count = 0;
-        store_save();
-        ui_note_count(&s_ui, s_count);
+        codebook_init(&s_codebook);
+        if (!store_commit()) {
+            return;
+        }
+        ui_note_count(&s_ui, s_codebook.count);
         ui_note_forget(&s_ui);
         ui_note_idle(&s_ui);
         ui_mark_dirty();
@@ -1099,25 +1410,28 @@ static void cmd_erase_locked(const char *args)
     }
 
     int id = atoi(args);
-    if (id < 1 || id > s_count) {
-        out("ERR id must be 1..%d or 'all'\n", s_count);
+    if (id < 1 || id > s_codebook.count) {
+        out("ERR id must be 1..%d or 'all'\n", s_codebook.count);
         return;
     }
-    for (int i = id - 1; i < s_count - 1; i++) {
-        s_saved[i] = s_saved[i + 1];
+    codebook_err_t ce = codebook_erase(&s_codebook, id);
+    if (ce != CODEBOOK_OK) {
+        out("ERR erase: %s\n", codebook_err_name(ce));
+        return;
     }
-    s_count--;
-    store_save();
-    ui_note_count(&s_ui, s_count);
-    if (s_count > 0) {
-        ui_note_seed(&s_ui, s_count, s_saved[s_count - 1].band, s_saved[s_count - 1].code);
+    if (!store_commit()) {
+        return;
+    }
+    ui_note_count(&s_ui, s_codebook.count);
+    if (s_codebook.count > 0) {
+        ui_note_seed(&s_ui, s_codebook.count, s_codebook.recs[s_codebook.count - 1].band, s_codebook.recs[s_codebook.count - 1].code);
     } else {
         ui_note_forget(&s_ui);
     }
     ui_note_idle(&s_ui);
     ui_mark_dirty();
     app_mark_codes_dirty();
-    out("OK erased id=%d (%d left)\n", id, s_count);
+    out("OK erased id=%d (%d left)\n", id, s_codebook.count);
 }
 
 static void cmd_erase(const char *args)
@@ -1594,7 +1908,21 @@ static void handle_line(char *line, app_src_t src)
     } else if (strcmp(cmd, "INFO") == 0) {
         cmd_info();
     } else if (strcmp(cmd, "LIST") == 0) {
-        cmd_list();
+        if (arg_eq(p, "long")) {
+            cmd_list_long();
+        } else {
+            cmd_list();
+        }
+    } else if (strcmp(cmd, "NEW") == 0) {
+        cmd_new(p);
+    } else if (strcmp(cmd, "NAME") == 0) {
+        cmd_set_text(p, 0);
+    } else if (strcmp(cmd, "SYM") == 0) {
+        cmd_set_text(p, 1);
+    } else if (strcmp(cmd, "GROUP") == 0) {
+        cmd_set_text(p, 2);
+    } else if (strcmp(cmd, "EDIT") == 0) {
+        cmd_edit(p);
     } else if (strcmp(cmd, "SEND") == 0) {
         do_tx(p, RF34DL_DUR_NORMAL, "send");
     } else if (strcmp(cmd, "LONG") == 0) {
@@ -1821,7 +2149,7 @@ void app_main(void)
     load_ble_pin();
     make_device_name();
     ota_init();
-    out("# stored %d code(s)%s\n", s_count, nvs_ok ? "" : " (NVS unavailable)");
+    out("# stored %d code(s)%s\n", s_codebook.count, nvs_ok ? "" : " (NVS unavailable)");
     out("# build=%s ui=%s ota_slot=%d pending_verify=%d\n",
         RFLAB_BUILD_ID, RFLAB_UI_HASH, ota_running_slot(), ota_pending_verify() ? 1 : 0);
 
@@ -1844,10 +2172,10 @@ void app_main(void)
 
     char title[UI_COLS + 1];
     snprintf(title, sizeof(title), "RF-Lab %s", RFLAB_FW_VERSION);
-    ui_init(&s_ui, title, s_count, MAX_CODES, s_oled_ok);
+    ui_init(&s_ui, title, s_codebook.count, MAX_CODES, s_oled_ok);
     ui_note_counters(&s_ui, (unsigned)s_frames, (unsigned)s_acks, (unsigned)s_parser.stray);
-    if (s_count > 0) {
-        ui_note_seed(&s_ui, s_count, s_saved[s_count - 1].band, s_saved[s_count - 1].code);
+    if (s_codebook.count > 0) {
+        ui_note_seed(&s_ui, s_codebook.count, s_codebook.recs[s_codebook.count - 1].band, s_codebook.recs[s_codebook.count - 1].code);
     }
     if (!nvs_ok) {
         ui_note_error(&s_ui, "NVS FAIL");
