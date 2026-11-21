@@ -39,7 +39,12 @@ secrets.json
 # Android
 android/.gradle/
 android/local.properties
+android/keystore.properties
 android/app/build/
 *.apk
 *.aab
 android/build/
+
+# 签名材料
+*.jks
+*.keystore

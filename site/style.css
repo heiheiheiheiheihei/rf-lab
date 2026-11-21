@@ -202,6 +202,7 @@ code,kbd,pre{font-family:var(--f-mono)}
 .btn-fill:hover::after{transform:translateX(130%)}
 .btn-line{border-color:var(--line-2)}
 .btn-line:hover{border-color:var(--amber); color:var(--amber-hi); background:rgba(255,176,0,.05); transform:translateY(-1px)}
+.btn-apk b{color:var(--amber); opacity:1}
 .btn-small{min-height:44px; padding:0 14px; font-size:10.5px; gap:12px}
 .reveal{opacity:0; transform:translateY(22px); transition:opacity .7s var(--ease),transform .7s var(--ease)}
 .reveal.in{opacity:1; transform:none}
