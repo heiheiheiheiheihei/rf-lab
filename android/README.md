@@ -140,7 +140,7 @@ BLE 参数(与固件一致):
 | Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 2/0.7.0,minSdk 26,targetSdk 35,INTERNET + REQUEST_INSTALL_PACKAGES |
 | 自更新逻辑(主机) | ✅ `./tools/app_update_test.sh` 36 checks;真实 Release 的 `./name` SUMS 查表与实际哈希一致 |
 | 自更新真机链路 | ⏳ **未验证**:弹窗/下载/设置跳转/系统安装器/覆盖安装都需要 Android 手机 |
-| GitHub Release 发布 | ✅ 见 [releases](https://github.com/heiheiheiheiheihei/rf-lab/releases);官网按钮指向 `latest/download` |
+| GitHub Release 发布 | ✅ [v0.7.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.0)(CI run 44914572503,1,027,080B,`SHA256SUMS.txt` 与实际哈希一致);官网按钮指向 `latest/download` |
 | 真机安装/启动 | ⏳ 需要 Android 手机 |
 | 真机 BLE 扫描/连接/鉴权/发射 | ⏳ **未验证**;本机无蓝牙适配器,不能把构建成功写成链路验证 |
 | Android 15 edge-to-edge 视觉 | ⏳ 需要真机 |

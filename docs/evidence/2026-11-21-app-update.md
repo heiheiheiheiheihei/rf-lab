@@ -140,9 +140,40 @@ e68db13b849e5b314c3964ab15f0f1936c0adfbf35b6330b76887ae635c40ffa
 - 不在本次把官网 `0.6.0` 文案改成 `0.7.0`:Release 还不存在,页面会指向一个不存在的版本。
 - 不把「构建通过 + 主机测试通过」写成「真机自更新已验证」。
 
+## CI 发布结果(v0.7.0)
+
+工作流 run [44914572503](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44914572503)
+在 `v0.7.0` 上全绿:tag/`versionName` 校验 → `build_web.py --check` → 还原密钥 →
+`assembleRelease` → `apksigner verify` → 上传资产 → 建 Release。
+
+Release:<https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.0>
+
+| 资产 | 大小 | SHA-256 |
+|---|---:|---|
+| `rf-lab-android.apk` | 1,027,080 B | `68d9f594…40960d` |
+| `rf-lab-0.7.0.apk` | 1,027,080 B | 同上 |
+| `SHA256SUMS.txt` | 172 B | — |
+
+CI 产物下载后复核:
+
+```
+apksigner verify --verbose : Verifies,v2 true
+aapt2 dump badging         : dev.rflab.terminal versionCode='2' versionName='0.7.0'
+                             INTERNET / REQUEST_INSTALL_PACKAGES
+sha256sum rf-lab-android.apk : 68d9f5945148a36bd0f31967f317637154e923b58d5c0cb041ef821e4840960d
+仓库 Sums 解析 SHA256SUMS.txt : 68d9f594…(与实算一致 ⇒ APP 内校验会通过)
+```
+
+本地构建与 CI 产物同为 1,027,080 B、同一证书,但字节哈希不同(本地 `faad3832…`):
+和 0.6.0 一样来自打包/签名时间戳元数据,**不要**把它当成可复现构建的证明。
+
+发版后已同步官网/状态板的 APK 版本号与体积(`0.7.0 · release 签名 · 1.03 MB`),
+固件侧 `0.6.0` 文案与体积未动。`releases/latest/download/rf-lab-android.apk` 现指向 v0.7.0。
+
 ## 未验证 / 后续
 
 - 真机回归需要一台 Android 手机:首次弹窗、下载进度、跳「安装未知应用」、系统确认框、
   覆盖安装后 `versionName` 变成新版。
-- 端到端提示要等 **0.7.0 装机 + 更高版本 tag**;建议发布 v0.7.0 后先装真机,再发 v0.8.0 回归。
-- 发 v0.7.0 时同步官网/状态板的 `0.6.0` 文案与体积(本次刻意未改)。
+- 已装 0.6.0 的用户没有自更新,必须手动升级一次 0.7.0;之后才进入自更新链路。
+- 端到端「弹出提示」还要等 **0.7.0 装机 + 更高版本 tag**:发 v0.8.0(或任意 0.7.1+)后,
+  在装了 0.7.0 的真机上回归。

@@ -1,6 +1,6 @@
 # site/ — RF-LAB 官网 / 配装台
 
-**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.6.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **部署:** GitHub Pages / Actions(见文末)
+**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **部署:** GitHub Pages / Actions(见文末)
 **2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机连接与线上交互回归仍未验证。
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
@@ -37,8 +37,8 @@ python3 -m http.server 8088 -d site
 | 位置 | 链接 |
 |---|---|
 | 导航栏 CTA(吸顶) | `releases/latest/download/rf-lab-android.apk` |
-| 首屏 CTA 第三颗按钮 | 同上,标 `0.6.0 · ↓` |
-| 状态板 Android APK 行 | 文字标 `0.6.0 · release 签名 · 0.97 MB`;下载走导航/页脚 |
+| 首屏 CTA 第三颗按钮 | 同上,标 `0.7.0 · ↓` |
+| 状态板 Android APK 行 | 文字标 `0.7.0 · release 签名 · 1.03 MB`;下载走导航/页脚 |
 | 页脚 SOURCE | 同上 + [Releases](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest) |
 
 用 `releases/latest/download/<固定文件名>` 而不是写死 tag:每次发版覆盖同名资产,官网按钮

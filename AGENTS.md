@@ -15,7 +15,8 @@
 | 看/改官网、配装器、价格与文案 | `site/README.md`、`site/index.html`、`site/app.js` |
 | 接线、引脚、上电检查 | `hardware/wiring.json`、`hardware/README.md` |
 | 固件构建、烧录、排障 | `firmware/README.md` |
-| Android APK 构建/权限/BLE 桥 | `android/README.md` |
+| Android APK 构建/权限/BLE 桥/自更新 | `android/README.md` |
+| 发版 / Release / 官网下载入口 | `android/README.md`、`.github/workflows/android-release.yml`、`site/README.md` |
 | uConsole 安装/键位/`Ctrl+Alt+R` | `uconsole/README.md` |
 
 ## 硬约束
@@ -52,6 +53,13 @@
 12. **接线单一源**:`hardware/wiring.json` 同时生成 `firmware/src/wiring_config.h`、
     两张文档接线表和 `web/art/hw-*.svg`;改引脚只改 JSON,再跑 `python3 tools/gen_wiring.py`。
     `--check` 已进主机测试与固件构建前;不要手改生成物,也不要让图/表/代码各写一套。
+13. **推送即发版**:每次推到 `master` 之后都要确认"当前 `versionName` 有没有对应的 GitHub
+    Release",没有就走完整发版——bump `versionCode`/`versionName`(APK 有改动时)→ 推送 →
+    `git tag v<versionName>` + `git push origin v<versionName>` → 跟 CI →
+    `gh release view` 核验资产(`rf-lab-android.apk` / `rf-lab-<version>.apk` /
+    `SHA256SUMS.txt`)→ 把 CI 结果写进 `docs/evidence/`。只改文档的推送不重复打 tag
+    (同一 `versionName` 不能发两次,工作流会拒绝 tag 与 `versionName` 不一致)。
+    发版后同步官网/状态板里 APK 的版本号与体积(固件版本号不动)。
 
 ## 验证命令
 
