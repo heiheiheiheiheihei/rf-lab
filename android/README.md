@@ -59,10 +59,12 @@ cd android
 > ⚠️ **密钥是更新链的根**:丢失后已安装的 0.6.0 永远无法覆盖升级,只能换包名/让用户卸载。
 > 务必离线备份这两个文件。证书 SHA-256 见 `RELEASE_NOTES.md`。
 
-发布由 tag 触发(`.github/workflows/android-release.yml`):推 `v*` 标签 → 构建、验签、
+发布由 tag 触发(`.github/workflows/android-release.yml`):推 `v*` 标签 → 校验标签与
+`versionName` 一致 → 构建、验签、
 上传 `rf-lab-android.apk`(稳定名)+ `rf-lab-<version>.apk` + `SHA256SUMS.txt`。
 仓库 Secrets 需配置:`ANDROID_KEYSTORE_BASE64`(keystore 的 base64)、
 `ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。
+发版前先 bump `versionCode`(必须递增)和 `versionName`(必须等于 tag 去掉 `v`),否则工作流会拒绝发布。
 
 安装:
 

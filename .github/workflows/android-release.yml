@@ -29,6 +29,17 @@ jobs:
         with:
           packages: "platforms;android-35 build-tools;35.0.0"
 
+      # 标签与 versionName 必须一致,避免 v0.7.0 的 Release 里装出 0.6.0。
+      - name: Check tag matches versionName
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          GRADLE_VERSION=$(sed -n 's/^[[:space:]]*versionName = "\(.*\)"/\1/p' android/app/build.gradle.kts | head -n1)
+          if [ "$GRADLE_VERSION" != "$VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match versionName '$GRADLE_VERSION'"
+            exit 1
+          fi
+
       # 固件/APK/官网三处资源必须来自同一份 web/,标签上的生成物不能过期。
       - name: Check generated Web assets
         run: python3 tools/build_web.py --check
