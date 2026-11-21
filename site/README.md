@@ -3,7 +3,8 @@
 **线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **部署:** GitHub Pages / Actions(见文末)
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
-无构建、无外部字体、无 CDN、无网络请求;直接打开 `site/index.html` 就能看。
+无站点构建、无外部字体、无 CDN、无外部/API 请求;直接打开 `site/index.html` 就能看。
+终端区是预生成的交互 demo(`assets/terminal.html`),由 `tools/build_web.py` 产出并提交。
 
 ![官网首屏](assets/preview.webp)
 
@@ -25,7 +26,7 @@ python3 -m http.server 8088 -d site
 | Hero | RF-LAB / 百元射频实验室、¥100–999 预算包线、5 个舱位示意 | Canvas 频谱、雷达扫描、滚动揭示 |
 | 01 配装台 | 4 档预设、9 个可选模块、实时物料小计/余量/能力矩阵 | 勾选、预算滑杆、随机配装、削到预算内、复制配装单 |
 | 02 模块阵列 | 对数频段覆盖图、模块规格表、三条设计判断 | 表格/频段条 |
-| 03 战术终端 | Web / APP / uConsole 布局验收图(mock API,2026-11-16) | 标签切换、灯箱放大、模拟事件流(标 SIM) |
+| 03 战术终端 | **内嵌真实单页 UI**(iframe,`assets/terminal.html`);WEB/APP/UCONSOLE 三视口 | 直接 ARM/SEND/LONG/STOP/ERASE;模拟遥控器/重置;事件流(标 SIM) |
 | 04 无线上行 | 本地 MQTT + Home Assistant Discovery 拓扑与 topic 草案 | 强制 `ROADMAP / 未实现` 标识 |
 | 05 作战状态 | 构建 / 主机 / 上机分开列;版本线 | 无 |
 | Footer | 安全边界、文档入口、来源 | 键盘 `B/T/U/R/?` |
@@ -44,11 +45,15 @@ python3 -m http.server 8088 -d site
 改价格只改 `index.html` 里每个 `.mod-card` 的 `data-price`;总价/余量/预设由 `app.js` 计算。
 `tools/site_check.py` 会校验 9 个模块、基础价 ¥79、4 档预算不超支、全频段落在 ¥999 内。
 
-## 截图口径
+## 终端口径 / 截图
 
-`terminal-*.webp` 与 `../docs/evidence/ui-2026-11-16-*.png` 是 **mock API 布局验收图**,
-不是新皮肤上机截图。真实 LAN 图 `../docs/evidence/ui-lan-live.png` 仍是 0.6.0 旧皮肤;
-新皮肤尚未重新烧录验证。不要把 mock 图写成设备截图。
+终端区**不再放截图**:`site/assets/terminal.html` 是由 `tools/build_web.py` 从同一份
+`web/dist/index.html` 生成的交互 demo,`assets/terminal-demo.js` 在应用脚本前接管
+`fetch`/`EventSource`,本地回放 `/api/*` 与 SSE,不发网络请求。页面标 `SIM // 本地`,
+不是真机在线。
+
+`../docs/evidence/ui-2026-11-21-*.png` 仍是 **mock API 布局验收图**,不是新皮肤上机截图;
+真实 LAN 图 `../docs/evidence/ui-lan-live.png` 仍是 0.6.0 旧皮肤。2026-11-21 视觉尚未重新烧录验证。
 
 ## 现役 / 路线图边界(硬规则)
 
@@ -63,9 +68,13 @@ python3 -m http.server 8088 -d site
 
 ## 设计取舍
 
-**Key Judgment**:官网单独做 `site/`,不复用设备端 `web/`。
-设备端 UI 是 20KB gzip 的固件资源,受 2MB 分区与 SSE/内存约束;官网是宣传页,
-可以更大、更动效化,但不能反过来把 Three.js/GSAP/CDN 塞进固件。
+**Key Judgment**:官网与设备端 UI 共用**视觉基线**(`style.css :root` 的 token + 组件语法),
+但**代码分离**:设备端 UI 是 16KB 级 gzip 的固件资源,受 2MB 分区与 SSE/内存约束;
+官网是宣传页,可以更大、更动效化,但不能反过来把 Three.js/GSAP/CDN 塞进固件,
+也不能把官网的滚动/Canvas 逻辑当成终端的一部分。
+
+官网终端区用 **iframe + 本地传输 shim** 直接跑真实单页:既不是截图,也不复制第二份 UI;
+shim 只替换 `fetch`/`EventSource`,命令与事件格式仍由 `web/` 决定。
 
 **Avoided Misfix**:
 - ❌ 用 CDN 字体/图表库:离线不可用,且与“本地优先”叙事冲突。→ 全部系统字体 + 原生 Canvas。
@@ -78,6 +87,8 @@ python3 -m http.server 8088 -d site
 
 ```bash
 node --check site/app.js
+node --check site/assets/terminal-demo.js
+python3 tools/build_web.py            # 同时生成 site/assets/terminal.html
 python3 tools/site_check.py
 ```
 
@@ -90,9 +101,10 @@ CHROME="$HOME/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome"
 ```
 
 `?static=1` 会跳过 reveal/扫描动效,方便 CLI 截图复现;正常访问不带参数。
-人工检查项:1440×900 首屏、390×844 单列、配装器 4 档/超预算/削减、终端三标签、
-灯箱、`prefers-reduced-motion`、键盘 `B/T/U/R/?`、无 console error。
-截图工具与页面都不发起外部网络请求。
+人工检查项:1440×900 首屏、390×844 单列、配装器 4 档/超预算/削减、终端三视口、
+在终端内 ARM/SEND/LONG/STOP/ERASE、模拟遥控器/重置、`prefers-reduced-motion`、
+键盘 `B/T/U/R/?`、无 console error、无外部请求(iframe 的 `/api/*` 只走本地 shim)。
+页面与 iframe 都不发起外部网络请求。
 
 ## 发布说明
 
@@ -100,8 +112,10 @@ CHROME="$HOME/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome"
   避免部署到 Pages 根目录后 `../README.md` 404;完整规格仍在仓库里。
 - `og:image` / `canonical` / `sitemap` 已固定为 GitHub Pages 绝对 URL;换域名或换仓库名时同步改 `site/index.html`、`robots.txt`、`sitemap.xml`。
 - 页面无 Cookie、无追踪、无分析脚本。
-- 改了设备端 UI 截图后,先跑 `python3 tools/build_web.py`,再按 `../docs/01-ui.md` 的视口重拍,
-  替换 `assets/terminal-*.webp`。
+- 改了设备端 UI 后,先跑 `python3 tools/build_web.py`:它会重写 `assets/terminal.html`
+  (官网交互 demo);`--check` 会校验生成物。终端区不再有 `terminal-*.webp` 截图。
+- 部署前同样跑 `node --check site/app.js`、`node --check site/assets/terminal-demo.js`、
+  `python3 tools/site_check.py`。
 
 ## GitHub Pages 部署
 
@@ -113,6 +127,8 @@ Pages 使用 **GitHub Actions** 发布,工作流:[`../.github/workflows/pages.ym
 - 产物:工作流把 `site/` 作为 Pages artifact 上传;不需要构建,不需要 token。
 - 文档位已改为页内锚点,不依赖 `../README.md`;完整规格在公开仓库里。
 - 部署后检查 `/rf-lab/`、`/rf-lab/style.css`、`/rf-lab/app.js`、
-  `/rf-lab/assets/terminal-web.webp`、`/rf-lab/robots.txt`、`/rf-lab/sitemap.xml` 均 200。
-- 重新部署前先跑 `python3 tools/site_check.py` + `node --check site/app.js`。
+  `/rf-lab/assets/terminal.html`、`/rf-lab/assets/terminal-demo.js`、
+  `/rf-lab/robots.txt`、`/rf-lab/sitemap.xml` 均 200。
+- 重新部署前先跑 `python3 tools/build_web.py` + `node --check site/app.js` +
+  `node --check site/assets/terminal-demo.js` + `python3 tools/site_check.py`。
 - 旧 Cloudflare Pages 项目 `rf-lab` 保留为历史镜像,不再作为官方入口。

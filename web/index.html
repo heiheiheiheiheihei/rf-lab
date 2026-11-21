@@ -5,22 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#070906">
 <meta name="color-scheme" content="dark">
-<title>RF-LAB // FIELD TERMINAL</title>
+<title>RF-LAB // 百元射频实验室 · FIELD TERMINAL</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070906'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23FFB000' stroke-width='2'/%3E%3Cpath d='M32 4v14M32 46v14M4 32h14M46 32h14' stroke='%23FFB000' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23FFB000'/%3E%3C/svg%3E">
 <style>/*__CSS__*/</style>
 </head>
 <body>
 <div class="scanlines" aria-hidden="true"></div>
-<div class="scanbeam" aria-hidden="true"></div>
 <div class="frame">
   <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
   <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
 
   <header class="top">
     <div class="brand-block">
-      <div class="eyebrow"><span class="eyebrow-tag">RF-LAB</span>FIELD TERMINAL // 315·433 // LAB 100—999</div>
+      <div class="eyebrow"><span class="blink" aria-hidden="true">●</span><span class="eyebrow-tag">LAB 100—999</span>FIELD TERMINAL // 315·433 // LOCAL FIRST</div>
       <h1 class="brand">RF<span>-</span>LAB</h1>
-      <div class="sub">百元射频实验室 <em>//</em> LEARN · REPLAY · TRANSMIT</div>
+      <div class="sub"><span class="cn-rule" aria-hidden="true"></span>百元射频实验室 <em>//</em> LEARN · REPLAY · TRANSMIT</div>
     </div>
     <div class="clock-block">
       <div class="clock" id="clock">--:--:--</div>
@@ -45,11 +44,13 @@
 
   <main>
     <section class="panel hero" aria-labelledby="heroTitle">
-      <div class="panel-head"><h2 id="heroTitle">ACQUISITION <em>// 捕获</em></h2><span class="tag" id="listenTag">LISTENING</span></div>
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">01</span><h2 id="heroTitle">ACQUISITION <em>// 捕获</em></h2><span class="tag" id="listenTag">LISTENING</span></div>
       <div class="hero-body">
+        <span class="scope-label" aria-hidden="true">SCOPE // 315·433</span>
         <div class="reticle" aria-hidden="true">
-          <div class="ring"></div><div class="ring r2"></div>
+          <div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div>
           <div class="cross"></div><div class="sweep"></div>
+          <span class="blip b1"></span><span class="blip b2"></span>
         </div>
         <div class="hero-info">
           <div class="kicker">LAST SIGNAL <em>// 最近信号</em></div>
@@ -65,7 +66,8 @@
     </section>
 
     <section class="panel codebook" aria-labelledby="codeTitle">
-      <div class="panel-head"><h2 id="codeTitle">CODEBOOK <em>// 码库</em></h2><span class="tag" id="storeTag">0/32</span></div>
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">02</span><h2 id="codeTitle">CODEBOOK <em>// 码库</em></h2><span class="tag" id="storeTag">0/32</span></div>
+      <div class="code-head" aria-hidden="true"><span>ID</span><span>BAND</span><span>CODE</span><span>ACT</span></div>
       <div class="code-list" id="codeList" role="listbox" aria-label="码库" tabindex="0">
         <div class="empty" id="emptyState">NO CODES<br><span>按一下原遥控器开始学习</span></div>
       </div>
@@ -76,12 +78,12 @@
     </section>
 
     <section class="panel console-panel" aria-labelledby="logTitle">
-      <div class="panel-head"><h2 id="logTitle">EVENT LOG <em>// 事件台</em></h2><button class="mini" id="clearLog" type="button">CLEAR</button></div>
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">03</span><h2 id="logTitle">EVENT LOG <em>// 事件台</em></h2><button class="mini" id="clearLog" type="button">CLEAR</button></div>
       <div class="log" id="log" role="log" aria-live="polite" aria-relevant="additions"></div>
     </section>
 
     <aside class="panel telemetry" aria-labelledby="teleTitle">
-      <div class="panel-head"><h2 id="teleTitle">TELEMETRY <em>// 遥测</em></h2><span class="tag">LIVE</span></div>
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">04</span><h2 id="teleTitle">TELEMETRY <em>// 遥测</em></h2><span class="tag live">LIVE</span></div>
       <div class="cards">
         <div class="card"><div class="card-k">T1 STORE</div><div class="card-v" id="tStore">--</div><div class="card-s">codes / 32</div></div>
         <div class="card"><div class="card-k">T2 FRAMES</div><div class="card-v" id="tFrames">--</div><div class="card-s">decoded</div></div>
@@ -90,7 +92,7 @@
         <div class="card"><div class="card-k">T5 UPLINK</div><div class="card-v small" id="tUplink">--</div><div class="card-s" id="tRssi">RSSI --</div></div>
         <div class="card"><div class="card-k">T6 UPTIME</div><div class="card-v small" id="tUptime">--</div><div class="card-s">since boot</div></div>
       </div>
-      <div class="panel-head sub-head"><h2>SETTINGS <em>// 设置</em></h2></div>
+      <div class="panel-head sub-head"><span class="panel-no" aria-hidden="true">05</span><h2>SETTINGS <em>// 设置</em></h2></div>
       <div class="settings">
         <button class="btn btn-ghost" type="button" data-cmd="MODE continuous">MODE CONT</button>
         <button class="btn btn-ghost" type="button" data-cmd="MODE single">MODE SINGLE</button>
@@ -113,15 +115,15 @@
   </main>
 
   <div class="spectrum-rail" aria-hidden="true">
-    <span class="rail-label">RF SPECTRUM</span>
+    <span class="rail-label">RF SPECTRUM // 315 / 433</span>
     <div class="rail-bars" id="railBars"></div>
-    <span class="rail-scale">315 / 433 MHz</span>
+    <span class="rail-scale">SCAN 96</span>
   </div>
 
   <footer class="foot">
     <span><kbd>?</kbd> 帮助</span><span><kbd>R</kbd> 刷新</span><span><kbd>T</kbd> OLED TEST</span><span><kbd>A</kbd> ARM</span>
     <span class="spacer"></span>
-    <span class="foot-tail" id="footTail">RF-LAB 0.6.0 // LOCAL</span>
+    <span class="foot-tail" id="footTail">RF-LAB 0.6.0 // FIELD TERMINAL // LOCAL</span>
   </footer>
 </div>
 

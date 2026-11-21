@@ -633,120 +633,92 @@
     });
   }
 
-  /* --------------------------------------------------------------- tabs */
-  const views = {
-    web: {
-      src: "assets/terminal-web.webp", badge: "MOCK / 2026-11-16",
-      caption: "布局验收图（mock API）· 0.6.0 UI refresh",
-      meta: "1440×900 / WebP", w: 1440, h: 900, app: false,
-      alt: "RF-LAB 0.6.0 UI refresh 布局验收图，深色战术风格，显示最近信号、码库、事件台与遥测",
-    },
-    app: {
-      src: "assets/terminal-mobile.webp", badge: "MOCK / WEBVIEW",
-      caption: "Android WebView，同一份 UI；真机 BLE 连接未测",
-      meta: "390×844 / WebP", w: 390, h: 844, app: true,
-      alt: "RF-LAB 0.6.0 UI refresh 手机端布局验收图，单列码库与粘性发射按钮",
-    },
-    tui: {
-      src: "assets/terminal-uconsole.webp", badge: "MOCK",
-      caption: "uConsole 1280×720 布局验收图（mock API）；真机未测",
-      meta: "1280×720 / WebP", w: 1280, h: 720, app: false,
-      alt: "RF-LAB uConsole 1280×720 三栏键盘 TUI 布局验收图",
-    },
+  /* ------------------------------------------------------- terminal demo */
+  const DEMO_VIEWS = {
+    web: { w: 1440, h: 900, mode: "WEB // 1440×900", caption: "桌面布局 · 真实单页 UI · 本地模拟传输" },
+    app: { w: 390, h: 844, mode: "APP // 390×844", caption: "WebView 布局 · 同一份 UI · 窄屏单列" },
+    tui: { w: 1280, h: 720, mode: "UCONSOLE // 1280×720", caption: "uConsole 逻辑分辨率 · 三栏完整" },
   };
-  const tabs = $$(".tab");
-  const shot = $("#shot");
-  const shotWrap = $("#shotPanel");
-  const shotBadge = $("#shotBadge");
-  const shotCaption = $("#shotCaption");
-  const shotMeta = $("#shotMeta");
-  let currentView = "web";
+  const demoTabs = $$(".tab");
+  const demoPanel = $("#demoPanel");
+  const demoFrame = $("#demoFrame");
+  const demoViewport = $("#demoViewport");
+  const demoStage = $("#demoStage");
+  const demoLoading = $("#demoLoading");
+  const demoModeLabel = $("#demoModeLabel");
+  const demoHint = $("#demoHint");
+  const demoCaption = $("#demoCaption");
+  const demoLive = $("#demoLive");
+  const demoLearn = $("#demoLearn");
+  const demoReset = $("#demoReset");
+  const feedBody = $("#feedBody");
+  let demoView = "web";
+  let demoReady = false;
+
+  function layoutDemo() {
+    if (!demoFrame || !demoStage || !demoViewport) return;
+    const view = DEMO_VIEWS[demoView];
+    const availW = Math.max(240, demoViewport.clientWidth - 24);
+    const availH = Math.min(window.innerHeight * 0.78, 700);
+    const scale = Math.min(1, availW / view.w, availH / view.h);
+    demoStage.style.width = `${Math.round(view.w * scale)}px`;
+    demoStage.style.height = `${Math.round(view.h * scale)}px`;
+    demoFrame.style.width = `${view.w}px`;
+    demoFrame.style.height = `${view.h}px`;
+    demoFrame.style.transform = `scale(${scale})`;
+    if (demoPanel) demoPanel.dataset.view = demoView;
+    if (demoModeLabel) demoModeLabel.textContent = view.mode;
+    if (demoCaption) demoCaption.textContent = view.caption;
+    if (demoHint) {
+      demoHint.textContent = demoView === "app"
+        ? "点码库选中 → ARM → SEND；底部「模拟遥控器」可学习"
+        : "点 ARM → SEND；码库行尾按钮可 LONG / STOP / ERASE";
+    }
+  }
 
   function selectView(key, focus = false) {
-    if (!views[key] || !shot) return;
-    currentView = key;
-    const view = views[key];
-    tabs.forEach((tab) => {
+    if (!DEMO_VIEWS[key]) return;
+    demoView = key;
+    demoTabs.forEach((tab) => {
       const active = tab.dataset.view === key;
       tab.classList.toggle("active", active);
       tab.setAttribute("aria-selected", String(active));
       tab.tabIndex = active ? 0 : -1;
-      if (active && shotWrap) shotWrap.setAttribute("aria-labelledby", tab.id);
       if (active && focus) tab.focus();
     });
-    shot.src = view.src;
-    shot.alt = view.alt;
-    shot.width = view.w;
-    shot.height = view.h;
-    if (shotWrap) shotWrap.classList.toggle("is-app", view.app);
-    if (shotBadge) shotBadge.textContent = view.badge;
-    if (shotCaption) shotCaption.textContent = view.caption;
-    if (shotMeta) shotMeta.textContent = view.meta;
+    if (demoPanel) demoPanel.setAttribute("aria-labelledby", `tab-${key}`);
+    layoutDemo();
   }
 
-  tabs.forEach((tab, index) => {
+  demoTabs.forEach((tab, index) => {
     tab.addEventListener("click", () => selectView(tab.dataset.view));
     tab.addEventListener("keydown", (event) => {
       let next = -1;
-      if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
-      if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+      if (event.key === "ArrowRight") next = (index + 1) % demoTabs.length;
+      if (event.key === "ArrowLeft") next = (index - 1 + demoTabs.length) % demoTabs.length;
       if (event.key === "Home") next = 0;
-      if (event.key === "End") next = tabs.length - 1;
+      if (event.key === "End") next = demoTabs.length - 1;
       if (next >= 0) {
         event.preventDefault();
-        selectView(tabs[next].dataset.view, true);
+        selectView(demoTabs[next].dataset.view, true);
       }
     });
   });
 
-  // On a phone, lead with the phone layout instead of a 1280px desktop shot.
-  if (window.matchMedia("(max-width: 760px)").matches) selectView("app");
-
-  // warm the other screenshots after first paint
-  window.addEventListener("load", () => {
-    ["app", "tui"].forEach((key) => {
-      const image = new Image();
-      image.src = views[key].src;
-    });
-  });
-
-  /* ------------------------------------------------------------ lightbox */
-  const lightbox = $("#lightbox");
-  const lightboxImg = $("#lightboxImg");
-  const lightboxCaption = $("#lightboxCaption");
-  function openLightbox() {
-    if (!lightbox || !lightboxImg) return;
-    const view = views[currentView];
-    lightboxImg.src = view.src;
-    lightboxImg.alt = view.alt;
-    if (lightboxCaption) lightboxCaption.textContent = view.caption;
-    if (typeof lightbox.showModal === "function") lightbox.showModal();
-  }
-  if (shot) shot.addEventListener("click", openLightbox);
-  if ($("#shotExpand")) $("#shotExpand").addEventListener("click", (event) => {
-    event.stopPropagation();
-    openLightbox();
-  });
-  if ($("#lightboxClose")) $("#lightboxClose").addEventListener("click", () => lightbox?.close());
-  if (lightbox) {
-    lightbox.addEventListener("click", (event) => {
-      if (event.target === lightbox) lightbox.close();
+  const mobileQuery = window.matchMedia("(max-width: 760px)");
+  if (mobileQuery.matches) selectView("app");
+  else layoutDemo();
+  if (typeof mobileQuery.addEventListener === "function") {
+    mobileQuery.addEventListener("change", (event) => {
+      if (event.matches && demoView === "web") selectView("app");
+      else layoutDemo();
     });
   }
-
-  /* ---------------------------------------------------------------- feed */
-  const feedBody = $("#feedBody");
-  const feed = [
-    ["SYS", "RF-LAB FIELD TERMINAL // HTTP"],
-    ["LEARN", "id=6 band=315M code=5555034C"],
-    ["CMD", "> SEND 2"],
-    ["OK", "tx id=2 ms=852"],
-    ["NET", "mode=sta ap_on=0 rssi=-57"],
-    ["CMD", "> LONG 1"],
-    ["OK", "tx long id=1"],
-    ["STOP", "tx stop id=1"],
-  ];
-  let feedIndex = 0, feedTimer = 0, feedVisible = true;
+  window.addEventListener("resize", layoutDemo, { passive: true });
+  if ("ResizeObserver" in window && demoViewport) {
+    new ResizeObserver(layoutDemo).observe(demoViewport);
+  }
+  window.setTimeout(layoutDemo, 900);
 
   function feedLine(tag, text, cls = "") {
     const time = new Date().toLocaleTimeString("zh-CN", { hour12: false });
@@ -762,50 +734,120 @@
     return line;
   }
 
-  function addFeedLine() {
-    if (!feedBody) return;
-    const [tag, text] = feed[feedIndex % feed.length];
-    feedIndex += 1;
-    const cls = tag === "CMD" ? "cmd" : tag === "OK" ? "ok" : "";
+  function pushFeed(tag, text, cls = "") {
+    if (!feedBody || !text) return;
     feedBody.appendChild(feedLine(tag, text, cls));
-    while (feedBody.children.length > 4) feedBody.firstElementChild?.remove();
-  }
-
-  function startFeed() {
-    if (!feedBody || reduceMotion || feedTimer || !feedVisible || document.hidden) return;
-    feedTimer = window.setInterval(addFeedLine, 2200);
-  }
-  function stopFeed() {
-    if (feedTimer) window.clearInterval(feedTimer);
-    feedTimer = 0;
+    while (feedBody.children.length > 5) feedBody.firstElementChild?.remove();
   }
 
   if (feedBody) {
-    if (reduceMotion) {
-      feed.slice(0, 4).forEach(([tag, text]) => {
-        const cls = tag === "CMD" ? "cmd" : tag === "OK" ? "ok" : "";
-        feedBody.appendChild(feedLine(tag, text, cls));
-      });
-    } else {
-      addFeedLine();
-      addFeedLine();
-      addFeedLine();
-      addFeedLine();
-      startFeed();
+    pushFeed("SYS", "terminal link // 本地模拟 · 无网络");
+    pushFeed("SIM", "点 ARM 解锁 → SEND；或按「模拟遥控器」");
+  }
+
+  function demoPost(op) {
+    try {
+      demoFrame?.contentWindow?.postMessage({ source: "rflab-site", op }, "*");
+    } catch {
+      /* iframe not ready yet */
     }
-    if ("IntersectionObserver" in window && !reduceMotion) {
-      new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          feedVisible = entry.isIntersecting;
-          if (feedVisible) startFeed();
-          else stopFeed();
-        });
-      }, { threshold: 0.2 }).observe(feedBody);
+  }
+
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (!data || data.source !== "rflab-demo") return;
+    if (data.type === "ready") {
+      demoLoading?.classList.add("gone");
+      demoPanel?.classList.add("is-live");
+      if (demoLearn) demoLearn.disabled = false;
+      if (demoLive) demoLive.innerHTML = `<i class="dot ok"></i> SIM // ${data.store ?? "?"}/32`;
+      if (!demoReady) {
+        demoReady = true;
+        pushFeed("SYS", `link up // ${data.store ?? "?"} codes · 本地模拟`);
+      }
+    } else if (data.type === "state") {
+      if (demoLive && Number.isFinite(data.store)) {
+        demoLive.innerHTML = `<i class="dot ok"></i> SIM // ${data.store}/32`;
+      }
+    } else if (data.type === "event") {
+      const kind = String(data.kind || "log").toUpperCase();
+      const cls = data.ok ? "ok" : kind === "TX" ? "cmd" : "";
+      pushFeed(kind, data.line || "", cls);
     }
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) stopFeed();
-      else startFeed();
+  });
+
+  if (demoFrame) {
+    demoFrame.addEventListener("load", () => {
+      demoPost("hello");
+      window.setTimeout(() => demoLoading?.classList.add("gone"), 900);
     });
+  }
+  window.setTimeout(() => {
+    demoLoading?.classList.add("gone");
+    if (demoPanel && !demoPanel.classList.contains("is-live") && demoHint) {
+      demoHint.textContent = "内嵌 demo 未就绪；点 OPEN 全屏打开";
+    }
+  }, 7000);
+
+  if (demoLearn) {
+    demoLearn.addEventListener("click", () => {
+      demoPost("learn");
+      demoLearn.disabled = true;
+      window.setTimeout(() => { demoLearn.disabled = false; }, 900);
+      toast("SIM // 模拟遥控器按下");
+    });
+  }
+  if (demoReset) {
+    demoReset.addEventListener("click", () => {
+      demoPost("reset");
+      if (feedBody) {
+        feedBody.textContent = "";
+        pushFeed("SYS", "terminal link // 已重置");
+      }
+      toast("SIM // 演示已重置");
+    });
+  }
+
+  /* ------------------------------------------------------------- counters */
+  const counters = $$("[data-count]");
+  function paintCount(el, value) {
+    const decimals = Number(el.dataset.decimals || 0);
+    const sep = el.dataset.sep === "1";
+    let text = Number(value).toFixed(decimals);
+    if (sep) text = text.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    el.textContent = text;
+  }
+  function animateCount(el) {
+    const target = Number(el.dataset.count);
+    if (!Number.isFinite(target)) return;
+    if (reduceMotion || target === 0) {
+      paintCount(el, target);
+      return;
+    }
+    const started = performance.now();
+    const duration = 900;
+    function tick(now) {
+      const progress = Math.min(1, (now - started) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      paintCount(el, target * eased);
+      if (progress < 1) requestAnimationFrame(tick);
+      else paintCount(el, target);
+    }
+    requestAnimationFrame(tick);
+  }
+  if (counters.length) {
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      counters.forEach(animateCount);
+    } else {
+      const counterObserver = new IntersectionObserver((entries, obs) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          animateCount(entry.target);
+          obs.unobserve(entry.target);
+        });
+      }, { threshold: 0.4 });
+      counters.forEach((el) => counterObserver.observe(el));
+    }
   }
 
   /* ---------------------------------------------------------------- manual */

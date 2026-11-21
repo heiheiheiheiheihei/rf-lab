@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070906">
+<meta name="color-scheme" content="dark">
+<title>RF-LAB // 百元射频实验室 · FIELD TERMINAL</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070906'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23FFB000' stroke-width='2'/%3E%3Cpath d='M32 4v14M32 46v14M4 32h14M46 32h14' stroke='%23FFB000' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='3' fill='%23FFB000'/%3E%3C/svg%3E">
+<style>/* RF-LAB FIELD TERMINAL — single-page tactical terminal.
+ * Visual baseline: site/style.css :root (docs/01-ui.md §5.1).
+ * Copied tokens + component grammar, not code: no @import, no external
+ * fonts/images, no network requests. tools/build_web.py inlines this file.
+ */
+:root{
+  --void:#050604; --ink:#070906; --base:#0b0e08;
+  --panel:#10140c; --panel-2:#151a10; --panel-3:#1b2114;
+  --line:#303823; --line-2:#46522f; --line-hi:rgba(255,176,0,.52);
+  --olive:#8f9958; --amber:#ffb000; --amber-hi:#ffd24a; --amber-deep:#b87400;
+  --bone:#ece6d4; --khaki:#b4ae96; --muted:#817d6b;
+  --green:#9bf05c; --green-dim:#6ea83e; --red:#ff5d50; --hazard:#d8c34a;
+  --f-display:"Saira Condensed","Roboto Condensed","Arial Narrow","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --f-mono:"JetBrains Mono","Cascadia Mono","SFMono-Regular","Roboto Mono",Consolas,monospace;
+  --f-cjk:"Noto Sans SC","Source Han Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --gap:10px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--bone); background:var(--ink);
+  font-family:var(--f-cjk); overflow:hidden;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+body::before{
+  content:""; position:fixed; inset:0; z-index:-3; pointer-events:none;
+  background:
+    radial-gradient(1100px 720px at 82% -12%, rgba(255,176,0,.12), transparent 62%),
+    radial-gradient(900px 640px at 4% 14%, rgba(143,153,88,.13), transparent 64%),
+    radial-gradient(700px 500px at 50% 110%, rgba(120,160,70,.06), transparent 60%),
+    linear-gradient(180deg,#0a0d08 0%,#070906 48%,#050604 100%);
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:-2; pointer-events:none; opacity:.55;
+  background-image:
+    linear-gradient(rgba(255,176,0,.033) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,176,0,.033) 1px, transparent 1px);
+  background-size:52px 52px;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 60%,transparent 100%);
+  mask-image:linear-gradient(180deg,#000 0%,#000 60%,transparent 100%);
+}
+::selection{background:var(--amber); color:#0a0c07}
+::-webkit-scrollbar{width:9px; height:9px}
+::-webkit-scrollbar-track{background:#080a06}
+::-webkit-scrollbar-thumb{background:#384027; border:2px solid #080a06}
+::-webkit-scrollbar-thumb:hover{background:var(--amber-deep)}
+.scanlines{
+  position:fixed; inset:0; pointer-events:none; z-index:1; opacity:.16;
+  background:repeating-linear-gradient(180deg, rgba(0,0,0,.28) 0 1px, transparent 1px 4px);
+}
+.frame{
+  position:relative; z-index:2; height:100%;
+  display:flex; flex-direction:column; gap:var(--gap);
+  padding:14px 20px 12px; border:1px solid rgba(255,176,0,.14);
+}
+.corner{position:absolute; width:46px; height:46px; pointer-events:none; z-index:3; opacity:.7}
+.corner::before,.corner::after{content:""; position:absolute; background:var(--amber)}
+.corner::before{width:46px; height:1px}
+.corner::after{width:1px; height:46px}
+.tl{left:8px; top:8px}.tr{right:8px; top:8px; transform:scaleX(-1)}
+.bl{left:8px; bottom:8px; transform:scaleY(-1)}.br{right:8px; bottom:8px; transform:scale(-1,-1)}
+
+/* ---------- header ---------- */
+.top{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex:0 0 auto; min-width:0}
+.brand-block{min-width:0; flex:1 1 auto}
+.eyebrow{
+  display:flex; align-items:center; flex-wrap:wrap; gap:6px;
+  font-family:var(--f-mono); font-size:8.5px; letter-spacing:1.9px;
+  color:var(--khaki); text-transform:uppercase; margin-bottom:3px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.blink{color:var(--green); animation:blink 2.4s steps(1) infinite}
+@keyframes blink{0%,82%{opacity:1}86%,92%{opacity:.2}96%,100%{opacity:1}}
+.eyebrow-tag{
+  display:inline-block; padding:1px 5px; border:1px solid rgba(255,176,0,.45);
+  background:rgba(255,176,0,.05); color:var(--amber); font-weight:700; letter-spacing:1.2px;
+}
+.brand{
+  margin:0; font-family:var(--f-display); font-size:34px; line-height:.9; letter-spacing:2px;
+  color:var(--bone); font-weight:700; text-transform:uppercase;
+  text-shadow:0 0 26px rgba(255,176,0,.12);
+}
+.brand span{color:var(--amber); display:inline-block; transform:translateY(-.04em); text-shadow:0 0 18px rgba(255,176,0,.25)}
+.sub{
+  display:flex; align-items:center; gap:8px; margin-top:7px; min-width:0;
+  font-family:var(--f-cjk); font-size:10.5px; letter-spacing:.05em; color:var(--khaki);
+}
+.cn-rule{display:inline-block; width:24px; height:2px; background:var(--amber); flex:0 0 auto}
+.sub em{font-family:var(--f-mono); font-style:normal; color:var(--muted); letter-spacing:1px; white-space:nowrap}
+.clock-block{text-align:right; padding-top:1px; flex:0 0 auto}
+.clock{font-family:var(--f-mono); font-weight:700; font-size:27px; line-height:1; color:var(--amber); letter-spacing:1px}
+.date{font-family:var(--f-mono); font-size:9px; color:var(--khaki); margin-top:5px; letter-spacing:1px}
+.zulu{font-family:var(--f-mono); font-size:7.5px; color:var(--muted); margin-top:3px; letter-spacing:1.2px}
+
+/* ---------- status bar ---------- */
+.statusbar{
+  flex:0 0 auto; display:flex; align-items:center; gap:5px; flex-wrap:wrap;
+  padding:5px 8px; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  background:rgba(8,11,6,.55);
+  font-family:var(--f-mono); font-size:8px; color:var(--muted); letter-spacing:.7px;
+}
+.chip{
+  display:inline-flex; align-items:center; gap:5px; padding:2px 6px;
+  border:1px solid var(--line); background:rgba(11,14,8,.6); color:var(--khaki);
+  font:inherit; letter-spacing:.7px; white-space:nowrap;
+}
+.chip b{color:var(--bone); font-weight:600}
+.chip.bay{border-color:rgba(255,176,0,.3); background:rgba(255,176,0,.05)}
+.chip.bay b{color:var(--amber-hi)}
+.chip.arm{cursor:pointer; background:transparent; border-color:var(--line-hi)}
+.chip.arm:hover{border-color:var(--amber)}
+.chip.arm.armed{border-color:var(--amber); background:var(--amber)}
+.chip.arm.armed b{color:#080a05}
+.chip.arm.armed .dot{background:#080a05; box-shadow:none}
+.dot{width:6px; height:6px; border-radius:50%; background:var(--muted); display:inline-block; flex:0 0 auto}
+.dot.ok{background:var(--green); box-shadow:0 0 7px rgba(155,240,92,.75)}
+.dot.warn{background:var(--amber); box-shadow:0 0 7px rgba(255,176,0,.7)}
+.dot.bad{background:var(--red); box-shadow:0 0 7px rgba(255,93,80,.7)}
+.spacer{flex:1}
+
+/* ---------- layout ---------- */
+main{
+  flex:1 1 auto; min-height:0; display:grid; gap:var(--gap);
+  grid-template-columns:minmax(300px,.92fr) minmax(360px,1.28fr) minmax(280px,.86fr);
+  grid-template-rows:minmax(0,.88fr) minmax(0,1.12fr);
+  grid-template-areas:"hero codebook telemetry" "console codebook telemetry";
+}
+.panel{
+  position:relative; min-height:0; display:flex; flex-direction:column;
+  background:linear-gradient(160deg,rgba(21,26,16,.72),rgba(9,12,8,.9));
+  border:1px solid var(--line); padding:9px 11px; overflow:hidden;
+}
+.panel::before,.panel::after{content:""; position:absolute; width:16px; height:16px; pointer-events:none; opacity:.5}
+.panel::before{left:-1px; top:-1px; border-left:1px solid var(--amber); border-top:1px solid var(--amber)}
+.panel::after{right:-1px; bottom:-1px; border-right:1px solid var(--amber); border-bottom:1px solid var(--amber)}
+.hero{grid-area:hero}.codebook{grid-area:codebook}.console-panel{grid-area:console}.telemetry{grid-area:telemetry}
+.panel-head{display:flex; align-items:center; gap:7px; justify-content:flex-start; flex:0 0 auto}
+.panel-head h2{
+  margin:0; font-family:var(--f-display); font-size:12px; font-weight:700;
+  letter-spacing:1.4px; color:var(--amber); text-transform:uppercase; white-space:nowrap;
+}
+.panel-head h2 em{font-style:normal; color:var(--khaki); font-weight:400; letter-spacing:.6px; font-family:var(--f-cjk)}
+.panel-no{
+  font-family:var(--f-mono); font-size:7.5px; letter-spacing:.8px; color:var(--amber);
+  border-right:1px solid var(--line); padding-right:6px; flex:0 0 auto;
+}
+.tag{
+  font-family:var(--f-mono); font-size:7px; letter-spacing:.8px; color:var(--muted);
+  border:1px solid var(--line); padding:1px 5px; white-space:nowrap; margin-left:auto;
+}
+.tag.live{color:var(--green); border-color:rgba(155,240,92,.35); background:rgba(155,240,92,.05)}
+.tag.hot{color:var(--red); border-color:rgba(255,93,80,.4); background:rgba(255,93,80,.05)}
+.sub-head{margin-top:8px; padding-top:7px; border-top:1px solid var(--line)}
+
+/* ---------- hero ---------- */
+.hero-body{position:relative; flex:1; min-height:0; display:flex; align-items:center; overflow:hidden}
+.scope-label{
+  position:absolute; right:0; top:2px; font-family:var(--f-mono); font-size:6.5px;
+  letter-spacing:1px; color:var(--muted); pointer-events:none;
+}
+.reticle{
+  position:absolute; right:-44px; bottom:-56px; width:230px; height:230px;
+  border-radius:50%; pointer-events:none; opacity:.9;
+}
+.reticle .ring{position:absolute; inset:0; border:1px solid rgba(255,176,0,.22); border-radius:50%}
+.reticle .ring.r2{inset:15%; border-color:rgba(255,176,0,.14)}
+.reticle .ring.r3{inset:31%; border-color:rgba(143,153,88,.20)}
+.reticle .cross::before,.reticle .cross::after{content:""; position:absolute; background:rgba(255,176,0,.18)}
+.reticle .cross::before{left:50%; top:0; bottom:0; width:1px}
+.reticle .cross::after{top:50%; left:0; right:0; height:1px}
+.reticle .sweep{
+  position:absolute; inset:0; border-radius:50%;
+  background:conic-gradient(from 0deg, rgba(255,176,0,.19), rgba(255,176,0,.015) 22%, transparent 44%);
+  animation:sweep 5.8s linear infinite;
+}
+@keyframes sweep{to{transform:rotate(360deg)}}
+.reticle .blip{
+  position:absolute; width:6px; height:6px; border-radius:50%;
+  background:var(--amber); box-shadow:0 0 0 3px rgba(255,176,0,.12),0 0 12px rgba(255,176,0,.55);
+  animation:blip 3.4s ease-out infinite;
+}
+.reticle .blip.b1{left:28%; top:32%}
+.reticle .blip.b2{left:62%; top:68%; animation-delay:1.5s; background:var(--green); box-shadow:0 0 0 3px rgba(155,240,92,.12),0 0 12px rgba(155,240,92,.5)}
+@keyframes blip{0%,100%{opacity:.35; transform:scale(.7)}18%{opacity:1; transform:scale(1.25)}34%{opacity:.75; transform:scale(1)}}
+.hero-info{position:relative; z-index:2; width:100%; padding:4px 0}
+.kicker{font-family:var(--f-mono); font-size:7.5px; letter-spacing:1.6px; color:var(--muted); text-transform:uppercase}
+.kicker em{font-style:normal; font-family:var(--f-cjk); letter-spacing:.6px; color:var(--khaki)}
+.last-code{
+  font-family:var(--f-mono); font-size:clamp(25px,3vw,36px); font-weight:700;
+  letter-spacing:3.5px; color:var(--amber-hi); line-height:1.2; margin-top:5px;
+  text-shadow:0 0 18px rgba(255,176,0,.16);
+}
+.last-meta{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px}
+.last-meta span{
+  font-family:var(--f-mono); font-size:7px; letter-spacing:.8px; color:var(--khaki);
+  border:1px solid var(--line); padding:1px 5px; white-space:nowrap;
+}
+.hero-actions{display:flex; gap:7px; margin-top:12px; flex-wrap:wrap}
+.hint{margin:9px 0 0; font-family:var(--f-cjk); font-size:10px; line-height:1.6; color:var(--muted)}
+body.armed .hero{border-color:rgba(255,176,0,.55)}
+body.armed .hero::before,body.armed .hero::after{opacity:.9}
+body.txing .hero{border-color:rgba(255,93,80,.6)}
+body.txing .hero::before,body.txing .hero::after{border-color:var(--red); opacity:1}
+body.txing .last-code{color:var(--red); text-shadow:0 0 18px rgba(255,93,80,.25)}
+body.txing .reticle .sweep{animation-duration:1.2s}
+
+/* ---------- buttons ---------- */
+.btn{
+  appearance:none; border:1px solid var(--line-2); background:transparent; color:var(--bone);
+  font-family:var(--f-display); font-size:11px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; padding:0 13px; min-height:36px; cursor:pointer;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  transition:background .16s,border-color .16s,color .16s,transform .16s;
+}
+.btn:hover:not(:disabled){border-color:var(--amber); color:var(--amber-hi); background:rgba(255,176,0,.05)}
+.btn:focus-visible,.chip:focus-visible,.mini:focus-visible,input:focus-visible,a:focus-visible{
+  outline:2px solid var(--amber); outline-offset:2px;
+}
+.btn:focus-visible{outline:none; box-shadow:inset 0 0 0 2px var(--amber-hi)}
+.btn:disabled{opacity:.35; cursor:not-allowed}
+.btn-arm{background:var(--amber); border-color:var(--amber); color:#080a05}
+.btn-arm:hover:not(:disabled){background:var(--amber-hi); border-color:var(--amber-hi); color:#080a05; transform:translateY(-1px)}
+.btn-stop{border-color:rgba(255,93,80,.55); color:var(--red)}
+.btn-stop:hover:not(:disabled){background:rgba(255,93,80,.12); border-color:var(--red); color:#ffb3ae}
+.btn-ghost{min-height:30px; font-size:9px; letter-spacing:.9px; padding:0 8px; border-color:var(--line)}
+.mini{
+  appearance:none; background:transparent; border:1px solid var(--line); color:var(--muted);
+  font-family:var(--f-mono); font-size:7.5px; letter-spacing:1px; padding:3px 7px; cursor:pointer;
+}
+.mini:hover{border-color:var(--amber); color:var(--amber)}
+
+/* ---------- codebook ---------- */
+.code-head{
+  display:grid; grid-template-columns:32px 48px minmax(0,1fr) auto; gap:8px;
+  padding:5px 8px 4px; border-bottom:1px dotted rgba(48,56,35,.7);
+  font-family:var(--f-mono); font-size:6px; letter-spacing:1.2px; color:var(--muted);
+}
+.code-head span:last-child{text-align:right}
+.code-list{flex:1; min-height:0; overflow:auto; margin:6px 0 0; padding-right:2px; outline:none; scrollbar-width:thin}
+.code-row{
+  position:relative; display:grid; grid-template-columns:32px 48px minmax(0,1fr) auto; gap:8px; align-items:center;
+  padding:6px 8px; border:1px solid var(--line); background:rgba(11,14,8,.55);
+  margin-bottom:4px; cursor:pointer; transition:border-color .16s,background .16s,box-shadow .16s;
+}
+.code-row::before{content:""; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--amber); transform:scaleY(0); transform-origin:top; transition:transform .2s var(--ease)}
+.code-row:hover{border-color:var(--line-2); background:rgba(21,26,16,.8)}
+.code-row.selected{
+  border-color:rgba(255,176,0,.62);
+  background:linear-gradient(155deg,rgba(44,37,13,.72),rgba(12,16,9,.94));
+  box-shadow:inset 0 0 0 1px rgba(255,176,0,.17);
+}
+.code-row.selected::before{transform:scaleY(1)}
+.code-id{font-family:var(--f-mono); font-size:9px; color:var(--muted); text-align:center}
+.code-row.selected .code-id{color:var(--amber)}
+.band{
+  font-family:var(--f-mono); font-size:7px; font-weight:700; letter-spacing:.6px;
+  border:1px solid var(--line); color:var(--khaki); text-align:center; padding:2px 0;
+}
+.band.b315{color:var(--amber-hi); border-color:rgba(255,176,0,.42); background:rgba(255,176,0,.05)}
+.band.b433{color:var(--green); border-color:rgba(155,240,92,.34); background:rgba(155,240,92,.05)}
+.code-hex{font-family:var(--f-mono); font-size:13.5px; letter-spacing:1.2px; color:var(--bone); overflow:hidden; text-overflow:ellipsis}
+.code-row.selected .code-hex{color:var(--amber-hi)}
+.code-actions{display:flex; gap:4px}
+.act{
+  appearance:none; width:24px; height:24px; padding:0; border:1px solid var(--line);
+  background:transparent; color:var(--khaki); cursor:pointer; font-family:var(--f-mono);
+  font-size:9px; line-height:1; display:inline-flex; align-items:center; justify-content:center;
+}
+.act:hover{border-color:var(--amber); color:var(--amber-hi); background:rgba(255,176,0,.06)}
+.act.stop:hover,.act.del:hover{border-color:var(--red); color:var(--red); background:rgba(255,93,80,.08)}
+.act[data-confirm="1"]{border-color:var(--red); color:var(--red); width:auto; padding:0 5px; font-size:7px}
+.empty{
+  border:1px dashed var(--line); color:var(--muted); text-align:center; padding:22px 8px;
+  font-family:var(--f-mono); font-size:8px; letter-spacing:1px; line-height:1.9;
+}
+.empty span{font-family:var(--f-cjk); font-size:10px; letter-spacing:0}
+.codebook-foot{
+  flex:0 0 auto; display:flex; gap:9px; flex-wrap:wrap; padding-top:6px; margin-top:4px;
+  border-top:1px dotted rgba(48,56,35,.8); font-family:var(--f-mono); font-size:6.5px; color:var(--muted);
+}
+kbd{
+  display:inline-block; min-width:15px; text-align:center; padding:1px 3px; margin-right:2px;
+  border:1px solid var(--line-2); background:rgba(255,176,0,.05); color:var(--amber);
+  font-family:var(--f-mono); font-size:7.5px; line-height:1.2;
+}
+
+/* ---------- log ---------- */
+.console-panel .log{flex:1; min-height:0; overflow:auto; margin-top:6px; font-family:var(--f-mono); font-size:8px; line-height:1.55; scrollbar-width:thin}
+.log-line{display:grid; grid-template-columns:52px 1fr; gap:6px; padding:1.5px 0; border-bottom:1px dotted rgba(48,56,35,.35)}
+.log-line time{color:var(--muted); font-size:7px; padding-top:1px}
+.log-line span{color:var(--khaki); white-space:pre-wrap; word-break:break-word}
+.log-line.cmd span{color:var(--amber-hi)}
+.log-line.ok span{color:var(--green)}
+.log-line.warn span{color:var(--red)}
+.log-line.evt span{color:var(--bone)}
+.log-line.sys span{color:var(--muted)}
+
+/* ---------- telemetry ---------- */
+.cards{display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-top:7px; flex:0 0 auto; background:var(--line); border:1px solid var(--line)}
+.card{background:rgba(8,11,6,.94); padding:6px 7px; min-width:0}
+.card-k{font-family:var(--f-mono); font-size:6.5px; letter-spacing:.8px; color:var(--muted)}
+.card-v{font-family:var(--f-mono); font-size:18px; font-weight:700; line-height:1.25; color:var(--amber-hi); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.card-v.small{font-size:10.5px; color:var(--bone); letter-spacing:.3px}
+.card-s{font-family:var(--f-mono); font-size:6.5px; color:var(--muted); letter-spacing:.4px}
+.settings{display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:7px; flex:0 0 auto}
+.wifi-form{margin-top:9px; padding-top:7px; border-top:1px solid var(--line); flex:0 0 auto}
+.wifi-row{display:grid; grid-template-columns:1fr 1fr auto; gap:5px; margin-top:5px}
+.wifi-row.second{grid-template-columns:auto 1fr; align-items:center; margin-top:6px}
+.wifi-row.second .btn{min-height:28px; padding:0 7px; font-size:8px}
+.wifi-note{font-family:var(--f-mono); font-size:7px; line-height:1.45; color:var(--muted); letter-spacing:.3px}
+.wifi-note.hot{color:var(--amber)}
+input{
+  width:100%; min-width:0; height:28px; padding:0 7px; border:1px solid var(--line);
+  background:#080b06; color:var(--bone); font-family:var(--f-mono); font-size:8.5px; outline:none;
+}
+input::placeholder{color:var(--muted); letter-spacing:.5px}
+input:focus{border-color:var(--amber); box-shadow:inset 0 -2px 0 var(--amber)}
+.wifi-row .btn{min-height:28px; padding:0 7px; font-size:8.5px}
+
+/* ---------- spectrum rail ---------- */
+.spectrum-rail{
+  flex:0 0 auto; display:flex; align-items:center; gap:9px;
+  height:20px; margin:0 2px; padding:0 2px; overflow:hidden;
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  background:rgba(8,11,6,.72);
+}
+.rail-label,.rail-scale{
+  font-family:var(--f-mono); font-size:6px; letter-spacing:.8px;
+  color:var(--muted); white-space:nowrap;
+}
+.rail-scale{color:var(--khaki)}
+.rail-bars{
+  flex:1; min-width:0; height:11px; display:flex; align-items:flex-end; justify-content:space-between; gap:2px;
+  overflow:hidden;
+  background:repeating-linear-gradient(90deg,rgba(255,176,0,.08) 0 1px,transparent 1px 10%);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+}
+.rail-bars i{
+  flex:1 1 0; min-width:1px; height:var(--h,50%);
+  background:linear-gradient(180deg,var(--amber-hi),rgba(255,176,0,.08));
+  opacity:.6; transform-origin:bottom;
+  animation:rail 2.6s ease-in-out infinite alternate;
+  animation-delay:var(--d,0s);
+}
+@keyframes rail{from{transform:scaleY(.35); opacity:.28}to{transform:scaleY(1); opacity:.85}}
+
+/* ---------- footer ---------- */
+.foot{
+  flex:0 0 auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  border-top:1px solid var(--line); padding-top:6px;
+  font-family:var(--f-mono); font-size:6.5px; color:var(--muted); letter-spacing:.6px;
+}
+.foot-tail{color:var(--khaki); letter-spacing:.8px}
+
+/* ---------- modals / toast ---------- */
+.modal{position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:18px; background:rgba(3,5,2,.9)}
+.modal[hidden]{display:none}
+.modal-panel{
+  width:min(760px,94vw); max-height:86vh; overflow:auto; background:var(--base);
+  border:1px solid var(--amber); box-shadow:0 0 0 1px var(--line),0 0 44px rgba(255,176,0,.12);
+  padding:14px 18px 16px;
+}
+.modal-panel.narrow{width:min(440px,94vw)}
+.modal-head{display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding-bottom:8px}
+.modal-head h2{margin:0; font-family:var(--f-mono); font-size:10px; letter-spacing:1.2px; color:var(--amber); text-transform:uppercase; font-weight:500}
+.modal-head h2 em{font-style:normal; font-family:var(--f-cjk); font-size:10px; color:var(--khaki); letter-spacing:.4px}
+.key-grid{display:grid; grid-template-columns:1fr 1fr; gap:7px 18px; margin:12px 0}
+.key-grid div{display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px dotted rgba(48,56,35,.6); font-family:var(--f-cjk); font-size:10.5px; color:var(--khaki)}
+.key-grid span{color:var(--bone)}
+.modal-note{font-family:var(--f-cjk); font-size:10.5px; line-height:1.7; color:var(--muted); margin:12px 0 0}
+.modal-note code{font-family:var(--f-mono); color:var(--amber); font-size:10px}
+.modal-foot{font-family:var(--f-mono); font-size:9px; color:var(--red); min-height:14px; margin-top:7px}
+.pin-form{display:flex; gap:8px; margin-top:12px}
+.pin-form input{height:44px; font-size:20px; text-align:center; letter-spacing:8px}
+.pin-form .btn{min-height:44px}
+.scan-list{max-height:46vh; overflow:auto; margin-top:10px}
+.scan-item{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  border:1px solid var(--line); padding:8px 10px; margin-bottom:5px; cursor:pointer;
+  background:rgba(11,14,8,.7);
+}
+.scan-item:hover{border-color:var(--amber); background:rgba(255,176,0,.05)}
+.scan-item b{font-family:var(--f-mono); font-size:10px; color:var(--bone); font-weight:500}
+.scan-item span{font-family:var(--f-mono); font-size:8px; color:var(--muted)}
+.toast{
+  position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:30;
+  background:rgba(8,11,6,.96); border:1px solid var(--amber); color:var(--bone);
+  font-family:var(--f-mono); font-size:9px; letter-spacing:.4px; padding:8px 14px;
+  max-width:90vw; box-shadow:0 0 22px rgba(255,176,0,.14);
+}
+.toast[hidden]{display:none}
+.toast.warn{border-color:var(--red); color:#ffb3ae}
+
+/* ---------- responsive ---------- */
+@media (max-width:1120px){
+  main{
+    grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);
+    grid-template-rows:minmax(0,.9fr) minmax(0,1.1fr);
+    grid-template-areas:"hero codebook" "console telemetry";
+  }
+}
+@media (max-width:760px){
+  body{overflow:auto}
+  .frame{height:auto; min-height:100%; padding:11px 12px 14px; gap:8px}
+  .top{gap:8px}
+  .brand{font-size:28px; letter-spacing:1.6px}
+  .sub{font-size:9px; gap:6px}
+  .cn-rule{width:16px}
+  .sub em{display:none}
+  .clock{font-size:22px}
+  .date,.zulu{font-size:7.5px}
+  .eyebrow{font-size:6.5px; letter-spacing:1.1px; gap:4px; margin-bottom:4px}
+  .eyebrow-tag{padding:0 3px}
+  .statusbar{gap:4px; padding:4px 6px; font-size:7px}
+  .chip{padding:2px 5px; gap:4px}
+  main{display:flex; flex-direction:column; gap:8px}
+  .panel{padding:8px 9px}
+  .hero{min-height:214px}
+  .codebook{min-height:260px}
+  .codebook .code-list{max-height:44vh; min-height:170px}
+  .console-panel{min-height:180px; max-height:34vh}
+  .last-code{font-size:25px; letter-spacing:2.5px}
+  .hero-actions .btn{flex:1; min-height:44px}
+  .code-row{grid-template-columns:24px 42px minmax(0,1fr) auto; padding:7px 6px; gap:6px}
+  .code-head{grid-template-columns:24px 42px minmax(0,1fr) auto; gap:6px; padding-inline:6px}
+  .act{width:28px; height:28px}
+  .cards{grid-template-columns:1fr 1fr}
+  .settings{grid-template-columns:1fr 1fr}
+  .wifi-row{grid-template-columns:1fr 1fr}
+  .wifi-row .btn{grid-column:1 / -1}
+  .wifi-row.second{grid-template-columns:auto 1fr}
+  .wifi-row.second .btn{grid-column:auto}
+  .spectrum-rail{height:16px}
+  .rail-bars{height:9px}
+  .foot{gap:9px; font-size:6px}
+  .key-grid{grid-template-columns:1fr}
+  .toast{font-size:9px; bottom:12px}
+}
+@media (max-height:760px){
+  .spectrum-rail{display:none}
+  .frame{padding-block:10px; gap:8px}
+  .brand{font-size:29px}
+  .eyebrow{margin-bottom:1px}
+  .sub{margin-top:5px}
+  .clock{font-size:23px}
+  main{gap:8px}
+  .panel{padding:7px 9px}
+  .cards{gap:1px}
+  .card{padding:4px 6px}
+  .card-v{font-size:16px}
+  .settings{gap:4px}
+  .wifi-form{margin-top:6px}
+}
+@media (prefers-reduced-motion:reduce){
+  .reticle .sweep,.reticle .blip,.rail-bars i,.blink{animation:none}
+  *{transition:none !important}
+}
+
+/* ---------- 2026-11-21 motion layer ----------
+ * CSS-only and low duty cycle: no JS timers, no new data paths. The demo
+ * terminal runs the same file; prefers-reduced-motion disables all of it.
+ */
+.log-line{animation:logIn .18s var(--ease) both}
+@keyframes logIn{from{opacity:0;transform:translateY(3px)}}
+body.armed .btn-arm{animation:armPulse 2.4s ease-in-out infinite}
+@keyframes armPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,176,0,0)}50%{box-shadow:0 0 0 4px rgba(255,176,0,.16)}}
+body.txing .hero{animation:txPulse 1.2s ease-in-out infinite}
+@keyframes txPulse{0%,100%{box-shadow:inset 0 0 0 1px rgba(255,93,80,0)}50%{box-shadow:inset 0 0 0 1px rgba(255,93,80,.5),0 0 24px rgba(255,93,80,.14)}}
+body.txing .rail-bars i{animation-duration:.7s}
+body.txing .last-code{animation:none}
+.statusbar .chip .dot.ok{animation:statusPulse 2.6s ease-in-out infinite}
+@keyframes statusPulse{0%,100%{box-shadow:0 0 7px rgba(155,240,92,.6)}50%{box-shadow:0 0 0 3px rgba(155,240,92,.1),0 0 13px rgba(155,240,92,.9)}}
+.last-code{animation:codeGlow 4.5s ease-in-out infinite}
+@keyframes codeGlow{0%,100%{text-shadow:0 0 18px rgba(255,176,0,.12)}50%{text-shadow:0 0 26px rgba(255,176,0,.28)}}
+@media (prefers-reduced-motion:reduce){
+  .log-line,body.armed .btn-arm,body.txing .hero,.statusbar .chip .dot.ok,.last-code{animation:none}
+}
+</style>
+</head>
+<body>
+<div class="scanlines" aria-hidden="true"></div>
+<div class="frame">
+  <span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span>
+  <span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>
+
+  <header class="top">
+    <div class="brand-block">
+      <div class="eyebrow"><span class="blink" aria-hidden="true">●</span><span class="eyebrow-tag">LAB 100—999</span>FIELD TERMINAL // 315·433 // LOCAL FIRST</div>
+      <h1 class="brand">RF<span>-</span>LAB</h1>
+      <div class="sub"><span class="cn-rule" aria-hidden="true"></span>百元射频实验室 <em>//</em> LEARN · REPLAY · TRANSMIT</div>
+    </div>
+    <div class="clock-block">
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="date" id="date">----</div>
+      <div class="zulu" id="uptime">UPTIME --</div>
+    </div>
+  </header>
+
+  <div class="statusbar" role="status" aria-live="polite">
+    <span class="chip"><i class="dot" id="linkDot"></i><b id="linkLabel">CONNECTING</b></span>
+    <span class="chip">FW <b id="fw">--</b></span>
+    <span class="chip">NET <b id="net">--</b></span>
+    <span class="chip">BLE <b id="ble">--</b></span>
+    <span class="chip">MOD <b id="modBaud">--</b></span>
+    <span class="chip bay">BAY <b>YS-RF34DL</b></span>
+    <span class="chip">OLED <b id="oled">--</b></span>
+    <span class="spacer"></span>
+    <button class="chip arm" id="armChip" type="button" aria-pressed="false">
+      <i class="dot" id="armDot"></i><b id="armLabel">DISARMED</b>
+    </button>
+  </div>
+
+  <main>
+    <section class="panel hero" aria-labelledby="heroTitle">
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">01</span><h2 id="heroTitle">ACQUISITION <em>// 捕获</em></h2><span class="tag" id="listenTag">LISTENING</span></div>
+      <div class="hero-body">
+        <span class="scope-label" aria-hidden="true">SCOPE // 315·433</span>
+        <div class="reticle" aria-hidden="true">
+          <div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div>
+          <div class="cross"></div><div class="sweep"></div>
+          <span class="blip b1"></span><span class="blip b2"></span>
+        </div>
+        <div class="hero-info">
+          <div class="kicker">LAST SIGNAL <em>// 最近信号</em></div>
+          <div class="last-code" id="lastCode">--------</div>
+          <div class="last-meta"><span id="lastBand">NO SIGNAL</span><span id="lastId">ID --</span></div>
+          <div class="hero-actions">
+            <button id="armBtn" class="btn btn-arm" type="button">ARM TRANSMIT</button>
+            <button id="stopBtn" class="btn btn-stop" type="button" disabled>STOP</button>
+          </div>
+          <p class="hint" id="heroHint">按一下原遥控器 → 自动入库。发射前需 ARM。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel codebook" aria-labelledby="codeTitle">
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">02</span><h2 id="codeTitle">CODEBOOK <em>// 码库</em></h2><span class="tag" id="storeTag">0/32</span></div>
+      <div class="code-head" aria-hidden="true"><span>ID</span><span>BAND</span><span>CODE</span><span>ACT</span></div>
+      <div class="code-list" id="codeList" role="listbox" aria-label="码库" tabindex="0">
+        <div class="empty" id="emptyState">NO CODES<br><span>按一下原遥控器开始学习</span></div>
+      </div>
+      <div class="codebook-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span><span><kbd>⏎</kbd> 发射</span>
+        <span><kbd>L</kbd> 长发</span><span><kbd>D</kbd> 删除</span>
+      </div>
+    </section>
+
+    <section class="panel console-panel" aria-labelledby="logTitle">
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">03</span><h2 id="logTitle">EVENT LOG <em>// 事件台</em></h2><button class="mini" id="clearLog" type="button">CLEAR</button></div>
+      <div class="log" id="log" role="log" aria-live="polite" aria-relevant="additions"></div>
+    </section>
+
+    <aside class="panel telemetry" aria-labelledby="teleTitle">
+      <div class="panel-head"><span class="panel-no" aria-hidden="true">04</span><h2 id="teleTitle">TELEMETRY <em>// 遥测</em></h2><span class="tag live">LIVE</span></div>
+      <div class="cards">
+        <div class="card"><div class="card-k">T1 STORE</div><div class="card-v" id="tStore">--</div><div class="card-s">codes / 32</div></div>
+        <div class="card"><div class="card-k">T2 FRAMES</div><div class="card-v" id="tFrames">--</div><div class="card-s">decoded</div></div>
+        <div class="card"><div class="card-k">T3 ACKS</div><div class="card-v" id="tAcks">--</div><div class="card-s">F0/F1/FE</div></div>
+        <div class="card"><div class="card-k">T4 STRAY</div><div class="card-v" id="tStray">--</div><div class="card-s">bad bytes</div></div>
+        <div class="card"><div class="card-k">T5 UPLINK</div><div class="card-v small" id="tUplink">--</div><div class="card-s" id="tRssi">RSSI --</div></div>
+        <div class="card"><div class="card-k">T6 UPTIME</div><div class="card-v small" id="tUptime">--</div><div class="card-s">since boot</div></div>
+      </div>
+      <div class="panel-head sub-head"><span class="panel-no" aria-hidden="true">05</span><h2>SETTINGS <em>// 设置</em></h2></div>
+      <div class="settings">
+        <button class="btn btn-ghost" type="button" data-cmd="MODE continuous">MODE CONT</button>
+        <button class="btn btn-ghost" type="button" data-cmd="MODE single">MODE SINGLE</button>
+        <button class="btn btn-ghost" type="button" data-cmd="DISP TEST 30">OLED TEST</button>
+        <button class="btn btn-ghost" type="button" data-cmd="BAUD 9600">BAUD 9600</button>
+      </div>
+      <form id="wifiForm" class="wifi-form">
+        <div class="kicker">STA UPLINK <em>// 配网</em></div>
+        <div class="wifi-row">
+          <input id="wifiSsid" placeholder="SSID" autocomplete="off" spellcheck="false">
+          <input id="wifiPass" type="password" placeholder="PASSWORD" autocomplete="off">
+          <button class="btn btn-ghost" type="submit">JOIN</button>
+        </div>
+        <div class="wifi-row second">
+          <button id="wifiClear" class="btn btn-ghost" type="button">FORGET / AP</button>
+          <div class="wifi-note" id="wifiNote">AP MODE // 输入 SSID 后接入局域网</div>
+        </div>
+      </form>
+    </aside>
+  </main>
+
+  <div class="spectrum-rail" aria-hidden="true">
+    <span class="rail-label">RF SPECTRUM // 315 / 433</span>
+    <div class="rail-bars" id="railBars"></div>
+    <span class="rail-scale">SCAN 96</span>
+  </div>
+
+  <footer class="foot">
+    <span><kbd>?</kbd> 帮助</span><span><kbd>R</kbd> 刷新</span><span><kbd>T</kbd> OLED TEST</span><span><kbd>A</kbd> ARM</span>
+    <span class="spacer"></span>
+    <span class="foot-tail" id="footTail">RF-LAB 0.6.0 // FIELD TERMINAL // LOCAL</span>
+  </footer>
+</div>
+
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-head"><h2 id="helpTitle">FIELD MANUAL <em>// 键位</em></h2><button class="mini" data-close type="button">CLOSE</button></div>
+    <div class="key-grid">
+      <div><kbd>↑</kbd><kbd>↓</kbd><span>选择码 / 列表</span></div>
+      <div><kbd>Enter</kbd><span>单次发射 SEND</span></div>
+      <div><kbd>L</kbd><span>长发 LONG</span></div>
+      <div><kbd>S</kbd><span>停止 STOP</span></div>
+      <div><kbd>D</kbd><span>删除(按两次)</span></div>
+      <div><kbd>R</kbd><span>重新拉取状态</span></div>
+      <div><kbd>T</kbd><span>OLED 测试图案 30s</span></div>
+      <div><kbd>A</kbd><span>ARM / DISARM</span></div>
+      <div><kbd>?</kbd><span>本帮助</span></div>
+      <div><kbd>Esc</kbd><span>关闭弹层</span></div>
+    </div>
+    <p class="modal-note">BLE 模式需在设备 OLED 或串口 <code>PIN</code> 查看 4 位 PIN。ARM 只防误触,不是发射硬门控。</p>
+  </div>
+</div>
+
+<div class="modal" id="pinModal" hidden>
+  <div class="modal-panel narrow" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+    <div class="modal-head"><h2 id="pinTitle">BLE AUTH <em>// 配对</em></h2></div>
+    <p class="modal-note">输入设备 OLED 开机页或串口 <code>PIN</code> 显示的 4 位码。</p>
+    <form id="pinForm" class="pin-form">
+      <input id="pinInput" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="0000" autocomplete="off">
+      <button class="btn btn-arm" type="submit">AUTH</button>
+    </form>
+    <div class="modal-foot" id="pinMsg"></div>
+  </div>
+</div>
+
+<div class="modal" id="scanModal" hidden>
+  <div class="modal-panel narrow" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+    <div class="modal-head"><h2 id="scanTitle">BLE SCAN <em>// 选择设备</em></h2><button class="mini" id="rescan" type="button">RESCAN</button></div>
+    <div class="scan-list" id="scanList"><div class="empty">SCANNING…</div></div>
+    <p class="modal-note">只显示广播 RF-LAB Service UUID 的设备。</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden role="status"></div>
+<script src="terminal-demo.js"></script>
+<script>/* RF-LAB FIELD TERMINAL — transport-agnostic UI.
+ * HTTP + SSE (ESP32 web server) or BLE (Android WebView bridge).
+ * No external requests, no build-time framework.
+ */
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const hasBridge = typeof window.RFBridge !== 'undefined';
+  const S = {
+    transport: hasBridge ? 'ble' : 'http',
+    connected: false,
+    authed: false,
+    codes: [],
+    selected: 0,
+    state: null,
+    stateAt: 0,
+    armed: false,
+    txId: 0,
+    es: null,
+    logCount: 0,
+    lastScan: []
+  };
+
+  const el = {
+    clock: $('clock'), date: $('date'), uptime: $('uptime'),
+    linkDot: $('linkDot'), linkLabel: $('linkLabel'),
+    fw: $('fw'), net: $('net'), ble: $('ble'), modBaud: $('modBaud'), oled: $('oled'),
+    armChip: $('armChip'), armDot: $('armDot'), armLabel: $('armLabel'), armBtn: $('armBtn'),
+    stopBtn: $('stopBtn'), lastCode: $('lastCode'), lastBand: $('lastBand'), lastId: $('lastId'),
+    listenTag: $('listenTag'), storeTag: $('storeTag'), codeList: $('codeList'), emptyState: $('emptyState'),
+    log: $('log'), tStore: $('tStore'), tFrames: $('tFrames'), tAcks: $('tAcks'), tStray: $('tStray'),
+    tUplink: $('tUplink'), tRssi: $('tRssi'), tUptime: $('tUptime'),
+    helpModal: $('helpModal'), pinModal: $('pinModal'), scanModal: $('scanModal'),
+    pinInput: $('pinInput'), pinMsg: $('pinMsg'), scanList: $('scanList'),
+    toast: $('toast'), footTail: $('footTail'), wifiForm: $('wifiForm'),
+    wifiNote: $('wifiNote'), wifiClear: $('wifiClear')
+  };
+
+  const text = (node, value) => { if (node) node.textContent = value == null ? '--' : String(value); };
+
+  function toast(message, warn) {
+    if (!el.toast) return;
+    el.toast.textContent = message;
+    el.toast.classList.toggle('warn', !!warn);
+    el.toast.hidden = false;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { el.toast.hidden = true; }, 2600);
+  }
+
+  function log(kind, message) {
+    if (!el.log || message == null) return;
+    const lines = String(message).replace(/\r/g, '').split('\n');
+    for (const line of lines) {
+      if (!line && lines.length > 1) continue;
+      const row = document.createElement('div');
+      row.className = 'log-line ' + (kind || 'sys');
+      const t = document.createElement('time');
+      const d = new Date();
+      t.textContent = [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, '0')).join(':');
+      const s = document.createElement('span');
+      s.textContent = line || ' ';
+      row.append(t, s);
+      el.log.append(row);
+      S.logCount++;
+    }
+    while (S.logCount > 160 && el.log.firstChild) {
+      el.log.removeChild(el.log.firstChild);
+      S.logCount--;
+    }
+    const near = el.log.scrollHeight - el.log.scrollTop - el.log.clientHeight < 80;
+    if (near) el.log.scrollTop = el.log.scrollHeight;
+  }
+
+  function setLink(label, dot) {
+    text(el.linkLabel, label);
+    if (el.linkDot) el.linkDot.className = 'dot ' + (dot || '');
+  }
+
+  function fmtUptime(ms) {
+    let sec = Math.floor((ms || 0) / 1000);
+    const d = Math.floor(sec / 86400); sec -= d * 86400;
+    const h = Math.floor(sec / 3600); sec -= h * 3600;
+    const m = Math.floor(sec / 60); sec -= m * 60;
+    const hh = String(h).padStart(2, '0'), mm = String(m).padStart(2, '0'), ss = String(sec).padStart(2, '0');
+    return (d ? d + 'D ' : '') + hh + ':' + mm + ':' + ss;
+  }
+
+  function tickClock() {
+    const d = new Date();
+    text(el.clock, d.toLocaleTimeString('zh-CN', { hour12: false }));
+    text(el.date, d.toISOString().slice(0, 10) + ' // ' + ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()]);
+    if (S.state) {
+      const extra = S.stateAt ? (performance.now() - S.stateAt) : 0;
+      text(el.uptime, 'UPTIME ' + fmtUptime((S.state.uptime_ms || 0) + extra));
+    }
+  }
+  setInterval(tickClock, 1000);
+  tickClock();
+
+  /* ---------------- transport: HTTP + SSE ---------------- */
+
+  async function httpJSON(path, opts) {
+    const r = await fetch(path, Object.assign({ cache: 'no-store' }, opts || {}));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  async function httpRefresh() {
+    try {
+      const [st, codes] = await Promise.all([httpJSON('/api/state'), httpJSON('/api/codes')]);
+      applyState(st);
+      setCodes(codes);
+      return true;
+    } catch (e) {
+      setLink('OFFLINE', 'bad');
+      S.connected = false;
+      log('warn', 'HTTP ' + e.message);
+      return false;
+    }
+  }
+
+  async function httpConnect() {
+    try {
+      const hello = await httpJSON('/api/hello');
+      onHello(hello);
+      await httpRefresh();
+      setLink('ONLINE', 'ok');
+      S.connected = true;
+      openSSE();
+    } catch (e) {
+      setLink('OFFLINE', 'bad');
+      log('warn', '无法连接 ' + location.host + ' — ' + e.message);
+      setTimeout(httpConnect, 3000);
+    }
+  }
+
+  function openSSE() {
+    if (S.es) S.es.close();
+    const es = new EventSource('/api/events');
+    S.es = es;
+    es.onopen = () => { setLink('ONLINE', 'ok'); S.connected = true; };
+    es.onerror = () => { setLink('RECONNECT', 'warn'); S.connected = false; };
+    es.addEventListener('hello', (e) => safeParse(e.data, onHello));
+    es.addEventListener('state', (e) => safeParse(e.data, (m) => applyState(m.data)));
+    es.addEventListener('codes', (e) => safeParse(e.data, (m) => setCodes(m.items)));
+    es.addEventListener('event', (e) => safeParse(e.data, onEvent));
+  }
+
+  /* ---------------- transport: BLE bridge ---------------- */
+
+  const ble = {
+    post(obj) {
+      if (!hasBridge) return;
+      try { window.RFBridge.postMessage(JSON.stringify(obj)); }
+      catch (e) { log('warn', 'BLE bridge: ' + e.message); }
+    },
+    scan() {
+      if (!hasBridge) return;
+      S.connected = false;
+      setLink('BLE SCAN', 'warn');
+      el.scanList.innerHTML = '<div class="empty">SCANNING…</div>';
+      show(el.scanModal);
+      ble.post({ op: 'scan' });
+    },
+    connect(address) {
+      setLink('CONNECTING', 'warn');
+      ble.post({ op: 'connect', address });
+      hide(el.scanModal);
+    },
+    send(line) {
+      if (!S.connected) { toast('BLE 未连接', true); return; }
+      ble.post({ op: 'send', line });
+    }
+  };
+
+  window.__rflabNative = (raw) => {
+    let msg = raw;
+    if (typeof raw === 'string') {
+      try { msg = JSON.parse(raw); } catch (e) { log('warn', 'native parse: ' + e.message); return; }
+    }
+    if (!msg || typeof msg !== 'object') return;
+    switch (msg.op) {
+      case 'line':
+        if (msg.line) handleLine(msg.line);
+        break;
+      case 'scan':
+        S.lastScan = Array.isArray(msg.devices) ? msg.devices : [];
+        renderScan();
+        break;
+      case 'ble':
+        if (msg.state === 'connected') {
+          S.connected = true;
+          setLink('BLE LINK', 'ok');
+          log('sys', 'BLE 已连接 ' + (msg.name || msg.address || ''));
+          showPin();
+        } else if (msg.state === 'disconnected') {
+          S.connected = false;
+          S.authed = false;
+          setLink('DISCONNECTED', 'bad');
+          log('warn', 'BLE 已断开');
+          ble.scan();
+        }
+        break;
+      case 'error':
+        toast(msg.message || 'BLE error', true);
+        log('warn', msg.message || 'BLE error');
+        break;
+      default:
+        break;
+    }
+  };
+
+  function renderScan() {
+    if (!el.scanList) return;
+    el.scanList.textContent = '';
+    if (!S.lastScan.length) {
+      const d = document.createElement('div');
+      d.className = 'empty';
+      d.textContent = 'NO DEVICE // 确认设备已上电并靠近';
+      el.scanList.append(d);
+      return;
+    }
+    S.lastScan.forEach((d) => {
+      const row = document.createElement('div');
+      row.className = 'scan-item';
+      const name = document.createElement('b');
+      name.textContent = d.name || '(no name)';
+      const meta = document.createElement('span');
+      meta.textContent = (d.address || '') + (typeof d.rssi === 'number' ? '  ' + d.rssi + ' dBm' : '');
+      row.append(name, meta);
+      row.addEventListener('click', () => ble.connect(d.address));
+      el.scanList.append(row);
+    });
+  }
+
+  /* ---------------- protocol dispatch ---------------- */
+
+  function safeParse(raw, fn) {
+    try { fn(JSON.parse(raw)); }
+    catch (e) { log('warn', 'JSON: ' + e.message); }
+  }
+
+  function handleLine(line) {
+    const trimmed = String(line).trim();
+    if (!trimmed) return;
+    safeParse(trimmed, (m) => {
+      switch (m.t) {
+        case 'hello': onHello(m); break;
+        case 'auth':
+          S.authed = !!m.ok;
+          if (m.ok) { hide(el.pinModal); text(el.pinMsg, ''); log('ok', 'BLE AUTH OK'); toast('BLE 已鉴权'); }
+          else { text(el.pinMsg, 'PIN 错误，剩余 ' + (m.left == null ? '?' : m.left) + ' 次'); el.pinInput.select(); }
+          break;
+        case 'state': applyState(m.data); break;
+        case 'codes': setCodes(m.items); break;
+        case 'event': onEvent(m); break;
+        case 'log': log(m.line && /ERR|WARN/.test(m.line) ? 'warn' : 'sys', m.line); break;
+        case 'error': toast(m.line || m.error || 'error', true); log('warn', m.line || m.error || 'error'); break;
+        default: break;
+      }
+    });
+  }
+
+  function onHello(m) {
+    text(el.fw, m.fw || '--');
+    if (m.ap_ssid) text(el.net, m.ap_ssid);
+    if (m.auth === 0) {
+      S.authed = false;
+      showPin();
+    } else {
+      S.authed = true;
+      hide(el.pinModal);
+    }
+    text(el.footTail, 'RF-LAB ' + (m.fw || '') + ' // ' + S.transport.toUpperCase() + ' // ' + (m.proto || 1));
+  }
+
+  function onEvent(ev) {
+    if (!ev) return;
+    if (ev.t === 'log') {
+      log(/ERR|WARN/.test(ev.line || '') ? 'warn' : 'sys', ev.line);
+      return;
+    }
+    switch (ev.kind) {
+      case 'learn':
+        updateLast(Object.assign({}, ev, { kind: 'learn' }));
+        log('evt', 'LEARN #' + ev.id + '  ' + ev.band + '  ' + ev.code);
+        toast('学到 #' + ev.id + '  ' + ev.code);
+        break;
+      case 'rx':
+        updateLast(Object.assign({}, ev, { kind: 'rx' }));
+        log('evt', 'RX #' + ev.id + '  ' + ev.band + '  ' + ev.code);
+        break;
+      case 'full':
+        log('warn', 'STORE FULL  ' + ev.band + '  ' + ev.code + ' (未保存)');
+        toast('码库已满，未保存', true);
+        break;
+      case 'tx': {
+        const active = ev.tx === 'long' && ev.ok === 1;
+        setTxActive(active, ev.tx, ev.id);
+        const label = String(ev.tx || 'tx').toUpperCase();
+        log(ev.ok ? 'ok' : 'warn', label + ' #' + ev.id + '  ' + (ev.ok ? 'OK' : 'WARN') + '  ' + ev.ms + 'ms');
+        toast(label + ' #' + ev.id + ' ' + (ev.ok ? 'OK' : 'WARN'));
+        break;
+      }
+      case 'net':
+        log('sys', ev.line || 'net');
+        break;
+      default:
+        if (ev.line) log('sys', ev.line);
+        break;
+    }
+  }
+
+  /* ---------------- state ---------------- */
+
+  function applyState(st) {
+    if (!st || typeof st !== 'object') return;
+    S.state = st;
+    S.stateAt = performance.now();
+
+    text(el.fw, st.fw);
+    text(el.modBaud, st.module ? st.module.baud : '--');
+    text(el.ble, st.ble ? (st.ble.on ? (st.ble.conn ? 'LINK' : 'ON') : 'OFF') : '--');
+    text(el.oled, st.oled ? (st.oled.present ? (st.oled.on ? 'OK' : 'OFF') : 'N/A') : '--');
+
+    if (st.net) {
+      const mode = st.net.mode || 'ap';
+      if (st.net.sta_connected) {
+        text(el.net, 'LAN ' + st.net.sta_ip);
+      } else if (mode === 'connecting') {
+        text(el.net, 'WIFI…');
+      } else {
+        text(el.net, 'AP ' + st.net.ap_ip);
+      }
+      text(el.tUplink, st.net.sta_connected ? st.net.sta_ip : st.net.ap_ip);
+      text(el.tRssi, st.net.sta_connected
+        ? ('RSSI ' + st.net.rssi + ' dBm')
+        : ('AP ' + (st.net.ap_clients || 0) + ' client'));
+
+      let note = 'AP MODE // 输入 SSID 后接入局域网';
+      let hot = false;
+      if (mode === 'connecting') {
+        note = 'WIFI CONNECTING // 最长 15s,失败自动回 AP';
+        hot = true;
+      } else if (mode === 'sta') {
+        note = 'LAN MODE // AP 已关闭;用局域网 IP 访问';
+      } else if (mode === 'apsta' && st.net.sta_connected) {
+        note = 'LAN + AP // 局域网与 AP 都可访问';
+      } else if (mode === 'apsta') {
+        note = 'AP FALLBACK // WiFi 连接失败;AP 可直接用,也可重新配网';
+        hot = true;
+      }
+      if (el.wifiNote) { el.wifiNote.textContent = note; el.wifiNote.classList.toggle('hot', hot); }
+    }
+
+    const store = st.store || {};
+    text(el.tStore, (store.count == null ? '--' : store.count) + '/' + (store.max == null ? '--' : store.max));
+    text(el.storeTag, (store.count == null ? 0 : store.count) + '/' + (store.max == null ? 32 : store.max));
+
+    const mod = st.module || {};
+    text(el.tFrames, mod.frames == null ? '--' : mod.frames);
+    text(el.tAcks, mod.acks == null ? '--' : mod.acks);
+    text(el.tStray, mod.stray == null ? '--' : mod.stray);
+    text(el.tUptime, fmtUptime(st.uptime_ms));
+
+    if (st.last && st.last.code) updateLast(st.last);
+    if (st.tx) setTxActive(!!st.tx.active, st.tx.kind, st.tx.id);
+    text(el.footTail, 'RF-LAB ' + (st.fw || '') + ' // ' + S.transport.toUpperCase() + ' // ' + (st.net ? (st.net.sta_connected ? 'STA' : 'AP') : 'LOCAL'));
+  }
+
+  function updateLast(l) {
+    if (!l) return;
+    text(el.lastCode, l.code || '--------');
+    text(el.lastBand, l.band ? (l.band + ' // ' + String(l.kind || '').toUpperCase()) : 'NO SIGNAL');
+    text(el.lastId, l.id ? ('ID ' + l.id) : 'ID --');
+  }
+
+  function setTxActive(active, kind, id) {
+    document.body.classList.toggle('txing', !!active);
+    if (active && id) S.txId = id;
+    if (el.stopBtn) el.stopBtn.disabled = !active;
+    if (el.listenTag) {
+      el.listenTag.textContent = active ? (kind === 'long' ? 'LONG TX' : 'TX ACTIVE') : 'LISTENING';
+      el.listenTag.classList.toggle('hot', !!active);
+    }
+  }
+
+  /* ---------------- codebook ---------------- */
+
+  function setCodes(items) {
+    if (!Array.isArray(items)) return;
+    S.codes = items;
+    if (S.selected >= items.length) S.selected = Math.max(0, items.length - 1);
+    renderCodes();
+  }
+
+  function renderCodes() {
+    const list = el.codeList;
+    if (!list) return;
+    list.textContent = '';
+    if (!S.codes.length) {
+      const d = document.createElement('div');
+      d.className = 'empty';
+      d.innerHTML = 'NO CODES<br><span>按一下原遥控器开始学习</span>';
+      list.append(d);
+      return;
+    }
+
+    S.codes.forEach((c, idx) => {
+      const row = document.createElement('div');
+      row.className = 'code-row' + (idx === S.selected ? ' selected' : '');
+      row.setAttribute('role', 'option');
+      row.setAttribute('aria-selected', idx === S.selected ? 'true' : 'false');
+      row.tabIndex = -1;
+
+      const id = document.createElement('div');
+      id.className = 'code-id';
+      id.textContent = String(c.id).padStart(2, '0');
+
+      const band = document.createElement('div');
+      band.className = 'band ' + (c.band === '433M' ? 'b433' : 'b315');
+      band.textContent = c.band || '???';
+
+      const hex = document.createElement('div');
+      hex.className = 'code-hex';
+      hex.textContent = c.code || '--------';
+
+      const acts = document.createElement('div');
+      acts.className = 'code-actions';
+
+      const mk = (cls, label, title, fn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'act ' + cls;
+        b.textContent = label;
+        b.title = title;
+        b.setAttribute('aria-label', title + ' #' + c.id);
+        b.addEventListener('click', (e) => { e.stopPropagation(); fn(b); });
+        acts.append(b);
+      };
+      mk('go', '▶', 'SEND', () => tx('send', idx));
+      mk('long', '∞', 'LONG', () => tx('long', idx));
+      mk('stop', '■', 'STOP', () => stopTx(idx));
+      mk('del', '×', 'ERASE', (b) => erase(idx, b));
+
+      row.append(id, band, hex, acts);
+      row.addEventListener('click', () => select(idx));
+      row.addEventListener('dblclick', () => tx('send', idx));
+      list.append(row);
+    });
+
+    const sel = list.querySelector('.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function select(idx) {
+    if (idx < 0 || idx >= S.codes.length) return;
+    S.selected = idx;
+    renderCodes();
+  }
+
+  function move(delta) {
+    if (!S.codes.length) return;
+    select((S.selected + delta + S.codes.length) % S.codes.length);
+  }
+
+  function tx(kind, idx) {
+    const c = S.codes[idx == null ? S.selected : idx];
+    if (!c) { toast('码库为空', true); return; }
+    if (!S.armed) { toast('先 ARM TRANSMIT', true); flashArm(); return; }
+    sendCmd(kind.toUpperCase() + ' ' + c.id);
+  }
+
+  function stopTx(idx) {
+    const c = S.codes[idx == null ? S.selected : idx];
+    const id = S.txId || (c && c.id);
+    if (!id) { toast('没有正在发射的码', true); return; }
+    sendCmd('STOP ' + id);
+  }
+
+  function erase(idx, btn) {
+    const c = S.codes[idx];
+    if (!c) return;
+    if (btn.dataset.confirm !== '1') {
+      btn.dataset.confirm = '1';
+      btn.textContent = 'SURE';
+      btn.title = '再按一次删除';
+      setTimeout(() => {
+        btn.dataset.confirm = '';
+        btn.textContent = '×';
+        btn.title = 'ERASE';
+      }, 2600);
+      return;
+    }
+    sendCmd('ERASE ' + c.id);
+  }
+
+  /* ---------------- commands ---------------- */
+
+  function sendCmd(line) {
+    if (S.transport === 'ble') {
+      if (!S.connected) { toast('BLE 未连接', true); return; }
+      log('cmd', '> ' + line);
+      ble.send(line);
+      return;
+    }
+    log('cmd', '> ' + line);
+    httpJSON('/api/cmd', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cmd: line })
+    }).catch((e) => {
+      toast('命令失败: ' + e.message, true);
+      log('warn', 'ERR ' + e.message);
+    });
+  }
+
+  function setArmed(on) {
+    S.armed = !!on;
+    document.body.classList.toggle('armed', S.armed);
+    text(el.armLabel, S.armed ? 'ARMED' : 'DISARMED');
+    if (el.armChip) el.armChip.setAttribute('aria-pressed', S.armed ? 'true' : 'false');
+    if (el.armChip) el.armChip.classList.toggle('armed', S.armed);
+    if (el.armDot) el.armDot.className = 'dot ' + (S.armed ? 'warn' : '');
+    text(el.armBtn, S.armed ? 'DISARM' : 'ARM TRANSMIT');
+    text(el.heroHint, S.armed ? '已 ARM：Enter 发射 / L 长发 / S 停止。仅防误触。' : '按一下原遥控器 → 自动入库。发射前需 ARM。');
+  }
+
+  function toggleArm() {
+    if (S.armed && S.state && S.state.tx && S.state.tx.active) stopTx();
+    setArmed(!S.armed);
+    if (S.armed) toast('ARMED — 发射已解锁');
+  }
+
+  function flashArm() {
+    if (!el.armBtn) return;
+    el.armBtn.animate(
+      [{ transform: 'translateX(0)' }, { transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }],
+      { duration: 220 }
+    );
+  }
+
+  function refresh() {
+    if (S.transport === 'http') {
+      httpRefresh().then((ok) => { if (ok) toast('状态已刷新'); });
+    } else {
+      toast('BLE 为推送模式，无需刷新');
+    }
+  }
+
+  /* ---------------- modals ---------------- */
+
+  function show(m) { if (m) m.hidden = false; }
+  function hide(m) { if (m) m.hidden = true; }
+  function closeAll() {
+    hide(el.helpModal); hide(el.scanModal);
+    if (S.authed) hide(el.pinModal);
+  }
+  function showPin() {
+    if (!hasBridge) return;
+    show(el.pinModal);
+    setTimeout(() => { try { el.pinInput.focus(); } catch (e) {} }, 40);
+  }
+
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t && t.matches('[data-close]')) closeAll();
+    if (t && t.classList && t.classList.contains('modal')) {
+      if (t.id === 'pinModal' && !S.authed) return;
+      closeAll();
+    }
+  });
+
+  const helpClose = el.helpModal.querySelector('[data-close]');
+  if (helpClose) helpClose.addEventListener('click', closeAll);
+  const rescan = el.scanModal.querySelector('#rescan');
+  if (rescan) rescan.addEventListener('click', () => ble.scan());
+
+  $('pinForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const pin = (el.pinInput.value || '').trim();
+    if (!/^\d{4}$/.test(pin)) { text(el.pinMsg, 'PIN 必须是 4 位数字'); return; }
+    text(el.pinMsg, 'AUTH…');
+    ble.post({ op: 'send', line: 'AUTH ' + pin });
+  });
+
+  /* ---------------- UI events ---------------- */
+
+  el.armBtn.addEventListener('click', toggleArm);
+  el.armChip.addEventListener('click', toggleArm);
+  el.stopBtn.addEventListener('click', () => stopTx());
+  $('clearLog').addEventListener('click', () => { el.log.textContent = ''; S.logCount = 0; });
+
+  document.querySelectorAll('[data-cmd]').forEach((b) => {
+    b.addEventListener('click', () => sendCmd(b.dataset.cmd));
+  });
+
+  el.codeList.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'j') { e.preventDefault(); move(1); }
+    else if (e.key === 'ArrowUp' || e.key === 'k') { e.preventDefault(); move(-1); }
+    else if (e.key === 'Enter') { e.preventDefault(); tx('send'); }
+  });
+
+  el.wifiClear.addEventListener('click', () => {
+    if (S.transport === 'ble') {
+      sendCmd('WIFI CLEAR');
+    } else {
+      httpJSON('/api/wifi/clear', { method: 'POST' })
+        .then(() => { toast('已清除 STA,回到 AP 模式'); log('sys', 'WIFI CLEAR'); })
+        .catch((err) => toast('清除失败: ' + err.message, true));
+    }
+  });
+
+  el.wifiForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const ssid = $('wifiSsid').value.trim();
+    const pass = $('wifiPass').value;
+    if (!ssid) { toast('SSID 不能为空', true); return; }
+    if (S.transport === 'ble') {
+      if (/\s/.test(ssid)) { toast('BLE 配网暂不支持含空格的 SSID', true); return; }
+      sendCmd('WIFI ' + ssid + ' ' + pass);
+    } else {
+      httpJSON('/api/wifi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid, pass })
+      }).then(() => { toast('正在连接 ' + ssid + '（AP 保持）'); log('sys', 'WIFI ' + ssid + ' connecting'); })
+        .catch((err) => toast('配网失败: ' + err.message, true));
+    }
+    $('wifiPass').value = '';
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (!el.helpModal.hidden || !el.pinModal.hidden || !el.scanModal.hidden) {
+      if (e.key === 'Escape') closeAll();
+      return;
+    }
+    switch (e.key) {
+      case 'ArrowDown': case 'j': e.preventDefault(); move(1); break;
+      case 'ArrowUp': case 'k': e.preventDefault(); move(-1); break;
+      case 'Enter': e.preventDefault(); tx('send'); break;
+      case 'l': case 'L': tx('long'); break;
+      case 's': case 'S': stopTx(); break;
+      case 'd': case 'D': {
+        const row = el.codeList.querySelector('.selected');
+        const btn = row && row.querySelector('.act.del');
+        if (btn) erase(S.selected, btn);
+        break;
+      }
+      case 'r': case 'R': refresh(); break;
+      case 't': case 'T': sendCmd('DISP TEST 30'); break;
+      case 'a': case 'A': toggleArm(); break;
+      case '?': show(el.helpModal); break;
+      case 'Escape': closeAll(); break;
+      default:
+        if (/^[1-9]$/.test(e.key)) select(Math.min(Number(e.key) - 1, S.codes.length - 1));
+        break;
+    }
+  });
+
+  window.addEventListener('beforeunload', () => { if (S.es) S.es.close(); });
+
+  /* ---------------- boot ---------------- */
+
+  // Decorative RF spectrum rail: generated locally, no data path.
+  (() => {
+    const rail = $('railBars');
+    if (!rail) return;
+    for (let i = 0; i < 96; i++) {
+      const bar = document.createElement('i');
+      bar.style.setProperty('--h', (18 + ((i * 37 + 11) % 74)) + '%');
+      bar.style.setProperty('--d', ((i % 11) * -0.19).toFixed(2) + 's');
+      rail.append(bar);
+    }
+  })();
+
+  setArmed(false);
+  log('sys', 'RF-LAB FIELD TERMINAL // ' + S.transport.toUpperCase());
+  if (S.transport === 'ble') {
+    setLink('BLE SCAN', 'warn');
+    ble.scan();
+  } else {
+    setLink('CONNECTING', 'warn');
+    httpConnect();
+  }
+})();
+</script>
+</body>
+</html>

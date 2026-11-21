@@ -1,7 +1,8 @@
 # RF-LAB · 百元射频实验室
 
 **丰俭由人:¥100 的固定码侦察包 → ¥999 的全频段工作台。**
-一块 ESP32-C3,五个可换射频舱位;同一套战术终端跑在 **Web / Android / uConsole** 上。
+一块 ESP32-C3,五个可换射频舱位;同一套战术终端跑在 **Web / Android / uConsole** 上,
+与官网共用一套视觉基线([`docs/01-ui.md` §5.1](docs/01-ui.md))。
 现役链路是 **YS-RF34DL 315/433 固定码**;CC1101 / NRF24L01 / SI4463 / LR1121、
 MQTT 与 Home Assistant 是路线图,不是现货能力。
 
@@ -63,14 +64,20 @@ AP 下可以直接用,也可以重新配网或 `WIFI CLEAR`。AP 里配网成功
 线上:<https://heiheiheiheiheihei.github.io/rf-lab/>(GitHub Pages / GitHub Actions 发布 `site/`)。
 
 [`site/index.html`](site/index.html) 是静态单页:4 档预算、9 个模块勾选、实时配装单、
-战术终端展示、MQTT/HA 路线图。无构建、无外部字体、无 CDN、无网络请求。
+**内嵌真实单页 UI 的交互终端 demo**、MQTT/HA 路线图。无站点构建、无外部字体、无 CDN、无外部/API 请求。
+
+§03 终端区直接跑 `web/` 的真实 UI(iframe):可以 ARM、SEND、LONG、STOP、ERASE,也可以用
+「模拟遥控器」学习一条新码;`site/assets/terminal-demo.js` 在 iframe 内接管
+`fetch`/`EventSource`,本地回放 `/api/*` 与 SSE,只标 `SIM`,不发网络请求、不代表真机在线。
 
 ![配装台:四档预算 + 实时物料小计](site/assets/preview-builder.webp)
 
 ```bash
-python3 -m http.server 8088 -d site   # http://127.0.0.1:8088/
-python3 tools/site_check.py            # 静态验收
+python3 tools/build_web.py             # 同步生成 site/assets/terminal.html
+python3 -m http.server 8088 -d site    # http://127.0.0.1:8088/
+python3 tools/site_check.py            # 静态验收(含 demo 资源)
 node --check site/app.js
+node --check site/assets/terminal-demo.js
 ```
 
 ## 快速开始
@@ -109,7 +116,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 | 项 | 状态 |
 |---|---|
-| 构建(ESP32-C3,0.6.0) | ✅ 主机;Flash 1,067,804B / RAM 55,732B |
+| 构建(ESP32-C3,0.6.0) | ✅ 主机;Flash 1,069,052B / RAM 55,732B(2026-11-21) |
 | 主机单测(协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
 | 上机:学码 / 存码 / 发射 / 改波特率 | ✅ 2026-11-15(0.5.0 证据仍有效) |
 | 上机:Web HTTP/SSE/命令 | ✅ 2026-11-15,设备内 `WEBTEST` hello/state/events 200 + POST 202 |
@@ -119,11 +126,13 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 上机:重启 AP 关闭 | ✅ `mode=sta ap_on=0`,LAN 仍可访问 |
 | 上机:AP 内配网 / CLEAR | ✅ 设备内;WebTest 经 AP 200,`WIFI CLEAR` 回 AP |
 | 上机:BLE 广播 | ✅ `INFO` `adv=yes`;⏳ **真实手机连接未测**(本机无 BT 适配器) |
-| Android APK | ✅ `assembleDebug` 1,275,234B;⏳ 真机安装/BLE 未测 |
+| Android APK | ✅ `assembleDebug` 1,280,617B;⏳ 真机安装/BLE 未测 |
 | uConsole TUI | ✅ 主机解析/键位/PTY 布局;⏳ 真机未测 |
-| Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,503B;⏳ **新皮肤未上机** |
-| 官网 / 配装台(静态) | ✅ 2026-11-16 主机 Chromium 1440×900 / 390×844,无 console error;`tools/site_check.py` 通过;无外部请求 |
-| 官网线上(GitHub Pages) | ✅ 2026-11-21 仓库公开 + Actions 部署;<https://heiheiheiheiheihei.github.io/rf-lab/>;`/`、CSS、JS、WebP、robots、sitemap 均 200 |
+| Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,503B;⏳ 新皮肤未上机 |
+| Web/固件 UI 视觉统一(2026-11-21) | ✅ 构建 + 主机 + mock 布局(1440/1280/390);gzip 16,745B;固件 1,069,052B;⏳ **新皮肤未上机** |
+| 官网 / 配装台(静态 + 交互 demo) | ✅ 2026-11-21 主机 Chromium 1440×1250 / 390×844,无 console error;`site_check.py` 通过;iframe 零 `/api`、零外部请求 |
+| 官网交互式终端(2026-11-21) | ✅ 本地 Chromium:ARM/SEND/LONG/STOP/LEARN/RESET + 三视口;21/21 + 移动 12/12;iframe 零 `/api`、零外部请求;⏳ **Pages 未重新部署** |
+| 官网线上(GitHub Pages) | ✅ 2026-11-21 已部署;<https://heiheiheiheiheihei.github.io/rf-lab/>;**本次交互 demo 尚未重新部署**,线上仍为旧版 |
 | 路线图:MQTT / HA / 多模块 | ○ **未实现**,接口草案见官网 §04 |
 | 上机:距离 / 长发时接收器是否真持续 | ⏳ 未测,见规格 §7 |
 | 上机证据 | [`2026-11-15-bringup.md`](docs/evidence/2026-11-15-bringup.md) · [`2026-11-15-oled.md`](docs/evidence/2026-11-15-oled.md) · [`2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md) |
@@ -159,17 +168,24 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 ## UI 截图
 
-2026-11-16 UI refresh 的 mock API 布局验收图(不是上机截图,新皮肤未烧录):
+官网 §03 的交互终端(真实单页 UI,传输为本地模拟;点开即可操作):
 
-![桌面 1440×900](docs/evidence/ui-2026-11-16b-desktop.png)
-![uConsole 1280×720](docs/evidence/ui-2026-11-16b-uconsole.png)
-![手机 390×844](docs/evidence/ui-2026-11-16b-mobile.png)
+![官网交互终端](docs/evidence/site-demo-2026-11-21-desktop.png)
+
+## 设备端布局(mock 证据)
+
+官网不再使用下面的截图;保留作设备端布局对照(不是上机截图,新皮肤未烧录):
+
+![桌面 1440×900](docs/evidence/ui-2026-11-21-desktop.png)
+![uConsole 1280×720](docs/evidence/ui-2026-11-21-uconsole.png)
+![手机 390×844](docs/evidence/ui-2026-11-21-mobile.png)
 
 真实设备 LAN 页面(0.6.0 旧皮肤,`192.168.5.117`,非 mock)仍保留作为上机证据:
 
 ![真实 LAN](docs/evidence/ui-lan-live.png)
 
 真实 LAN 页面:[`ui-lan-live.png`](docs/evidence/ui-lan-live.png)(设备 `192.168.5.117`,非 mock)。
-新皮肤构建/布局/未验证项:[`2026-11-16-ui-refresh.md`](docs/evidence/2026-11-16-ui-refresh.md)。
+新皮肤构建/布局/未验证项:[`2026-11-21-ui-unify.md`](docs/evidence/2026-11-21-ui-unify.md)(上一版:[`2026-11-16-ui-refresh.md`](docs/evidence/2026-11-16-ui-refresh.md))。
+官网交互 demo:[`2026-11-21-site-live-demo.md`](docs/evidence/2026-11-21-site-live-demo.md)。
 
 上机细节与取舍:[`docs/01-ui.md`](docs/01-ui.md) · [`docs/evidence/2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`docs/evidence/2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`docs/evidence/2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md)。

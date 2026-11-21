@@ -10,6 +10,11 @@ Outputs:
   web/dist/index.html                  human-readable build (debug / screenshot)
   firmware/src/web/index.html.gz       embedded into the firmware (gzip, mtime=0)
   android/app/src/main/assets/index.html  bundled into the APK (same bytes)
+  site/assets/terminal.html            live iframe demo for the official site
+
+The site demo is the same built page plus one preceding script:
+site/assets/terminal-demo.js replaces fetch/EventSource with an in-page mock.
+It never ships in the firmware.
 
 Run automatically by firmware/scripts/embed_web.py before a PlatformIO build.
 `--check` verifies the generated artifacts match the sources without writing.
@@ -31,6 +36,8 @@ JS = ROOT / "web" / "app.js"
 DIST = ROOT / "web" / "dist" / "index.html"
 FW_GZ = ROOT / "firmware" / "src" / "web" / "index.html.gz"
 ANDROID = ROOT / "android" / "app" / "src" / "main" / "assets" / "index.html"
+SITE_DEMO = ROOT / "site" / "assets" / "terminal.html"
+SITE_DEMO_SCRIPT = '<script src="terminal-demo.js"></script>\n'
 
 # Only these absolute URLs are allowed in the generated page. They are XML
 # namespaces (data: favicon), not network requests.
@@ -63,6 +70,19 @@ def build_html() -> bytes:
     return html.encode("utf-8")
 
 
+def build_demo(html: bytes) -> bytes:
+    """Official-site iframe: real page + local transport shim, no new UI code."""
+    page = html.decode("utf-8")
+    if "terminal-demo.js" in page:
+        return page.encode("utf-8")
+    page = page.replace("<head>", '<head>\n<meta name="robots" content="noindex">', 1)
+    at = page.rfind("<script>")
+    if at < 0:
+        raise SystemExit("web/dist page has no inline app script")
+    page = page[:at] + SITE_DEMO_SCRIPT + page[at:]
+    return page.encode("utf-8")
+
+
 def gz(data: bytes) -> bytes:
     # mtime=0 keeps the embedded asset reproducible.
     return gzip.compress(data, compresslevel=9, mtime=0)
@@ -90,10 +110,12 @@ def main() -> int:
 
     html = build_html()
     packed = gz(html)
+    demo = build_demo(html)
 
     ok = True
     ok &= write_or_check(DIST, html, args.check)
     ok &= write_or_check(FW_GZ, packed, args.check)
+    ok &= write_or_check(SITE_DEMO, demo, args.check)
     # Android may not be checked out; only verify if the file already exists.
     if ANDROID.exists() or not args.check:
         ok &= write_or_check(ANDROID, html, args.check)
@@ -102,6 +124,7 @@ def main() -> int:
         print(f"html   {len(html):7d} B  sha256 {hashlib.sha256(html).hexdigest()[:16]}")
         print(f"gzip   {len(packed):7d} B  sha256 {hashlib.sha256(packed).hexdigest()[:16]}")
         print(f"ratio  {100.0 * len(packed) / len(html):5.1f}%")
+        print(f"demo   {len(demo):7d} B  {SITE_DEMO.relative_to(ROOT)}")
     if args.check and not ok:
         return 1
     return 0

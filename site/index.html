@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#070906">
 <meta name="color-scheme" content="dark">
 <title>RF-LAB // 百元射频实验室 · 丰俭由人</title>
-<meta name="description" content="RF-LAB 百元射频实验室：¥100–999 自由配装的模块化射频工作台。ESP32-C3 + YS-RF34DL 现役固定码链路，CC1101 / NRF24L01 / SI4463 / LR1121 路线图，战术风 Web/APP/uConsole，MQTT/Home Assistant 规划中。">
+<meta name="description" content="RF-LAB 百元射频实验室：¥100–999 自由配装的模块化射频工作台。ESP32-C3 + YS-RF34DL 现役固定码链路，CC1101 / NRF24L01 / SI4463 / LR1121 路线图，战术风 Web/APP/uConsole 可在页面内直接体验，MQTT/Home Assistant 规划中。">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://heiheiheiheiheihei.github.io/rf-lab/">
 <link rel="canonical" href="https://heiheiheiheiheihei.github.io/rf-lab/">
 <meta property="og:title" content="RF-LAB // 百元射频实验室">
-<meta property="og:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套战术终端。">
+<meta property="og:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套可在页面内直接操作的战术终端。">
 <meta property="og:image" content="https://heiheiheiheiheihei.github.io/rf-lab/assets/preview.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="RF-LAB 百元射频实验室官网首屏">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="RF-LAB // 百元射频实验室">
-<meta name="twitter:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套战术终端。">
+<meta name="twitter:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套可在页面内直接操作的战术终端。">
 <meta name="twitter:image" content="https://heiheiheiheiheihei.github.io/rf-lab/assets/preview.jpg">
 <meta name="robots" content="index,follow">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070906'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23FFB000' stroke-width='2'/%3E%3Cpath d='M32 5v13M32 46v13M5 32h13M46 32h13' stroke='%23FFB000' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='3.5' fill='%23FFB000'/%3E%3C/svg%3E">
@@ -422,50 +422,72 @@
       <span class="sec-no">03</span>
       <div class="sec-title">
         <p class="kicker">FIELD TERMINAL // 战术终端</p>
-        <h2 id="terminalTitle">一套 UI，<br>三种打法。</h2>
+        <h2 id="terminalTitle">不是截图，<br>是能点的终端。</h2>
       </div>
-      <p class="sec-note">同一份 HTML/CSS/JS，进浏览器、Android WebView 和 uConsole；同一套命令契约。</p>
+      <p class="sec-note">同一份 HTML/CSS/JS 直接在页面里运行；本地模拟层接管网络，零外部请求。</p>
     </div>
 
     <div class="terminal-grid">
       <div class="terminal-copy reveal">
-        <p class="kicker">ONE UI / THREE SURFACES</p>
-        <h3>桌面用键盘，<br>手机用触控，<br>uConsole 用 TUI。</h3>
-        <p>Web 是设备内嵌的单页，HTTP + SSE 推状态；Android 是单 Activity + WebView + 原生 BLE 桥；uConsole 是同一套 HTTP 契约上的键盘 TUI，断网回退 USB 串口。</p>
+        <p class="kicker">ONE UI / THREE SURFACES / LIVE</p>
+        <h3>点开就用，<br>先 ARM，再发射。</h3>
+        <p>Web 是设备内嵌的单页，HTTP + SSE 推状态；Android 是单 Activity + WebView + 原生 BLE 桥；uConsole 是同一套 HTTP 契约上的键盘 TUI，断网回退 USB 串口。下面跑的是这份真实 UI，网络层由本地模拟接管。</p>
         <ul class="tick-list">
-          <li><b>WEB</b> HTTP + SSE，无外部请求，gzip 15.5 KB</li>
-          <li><b>APP</b> 单 Activity + WebView + BLE 桥，APK 1.28 MB</li>
-          <li><b>TUI</b> HTTP 优先、串口回退，12 项键位测试</li>
-          <li><b>ARM</b> 默认关：防误触，不是安全门控</li>
+          <li><b>WEB</b> 真实单页内嵌；ARM / SEND / LONG / STOP 可点</li>
+          <li><b>APP</b> 同一份 UI 切到 390×844；WebView 布局</li>
+          <li><b>TUI</b> 1280×720 三栏；同一套命令契约</li>
+          <li><b>SIM</b> 本地模拟传输，零外部请求</li>
         </ul>
         <div class="terminal-stats">
-          <div><b>3</b><span>界面</span></div>
-          <div><b>15.5<small>KB</small></b><span>gzip</span></div>
-          <div><b>0</b><span>外部请求</span></div>
-          <div><b>1,362</b><span>主机测试</span></div>
+          <div><b><span data-count="3">3</span></b><span>界面</span></div>
+          <div><b><span data-count="16.7" data-decimals="1">16.7</span><small>KB</small></b><span>gzip</span></div>
+          <div><b><span data-count="0">0</span></b><span>外部请求</span></div>
+          <div><b><span data-count="1362" data-sep="1">1,362</span></b><span>主机测试</span></div>
         </div>
       </div>
 
       <div class="terminal-stage reveal">
         <div class="tabs" role="tablist" aria-label="终端视图">
-          <button class="tab active" id="tab-web" role="tab" aria-selected="true" aria-controls="shotPanel" tabindex="0" data-view="web">WEB <em>// LAN</em></button>
-          <button class="tab" id="tab-app" role="tab" aria-selected="false" aria-controls="shotPanel" tabindex="-1" data-view="app">APP <em>// WEBVIEW</em></button>
-          <button class="tab" id="tab-tui" role="tab" aria-selected="false" aria-controls="shotPanel" tabindex="-1" data-view="tui">UCONSOLE <em>// 1280×720</em></button>
+          <button class="tab active" id="tab-web" role="tab" aria-selected="true" aria-controls="demoPanel" tabindex="0" data-view="web">WEB <em>// LIVE</em></button>
+          <button class="tab" id="tab-app" role="tab" aria-selected="false" aria-controls="demoPanel" tabindex="-1" data-view="app">APP <em>// 390×844</em></button>
+          <button class="tab" id="tab-tui" role="tab" aria-selected="false" aria-controls="demoPanel" tabindex="-1" data-view="tui">UCONSOLE <em>// 1280×720</em></button>
         </div>
-        <div class="shot-wrap" id="shotPanel" role="tabpanel" aria-labelledby="tab-web">
-          <div class="shot-corner tl" aria-hidden="true"></div><div class="shot-corner tr" aria-hidden="true"></div>
-          <div class="shot-corner bl" aria-hidden="true"></div><div class="shot-corner br" aria-hidden="true"></div>
-          <img id="shot" src="assets/terminal-web.webp" width="1440" height="900" decoding="async" alt="RF-LAB 0.6.0 UI refresh 布局验收图，深色战术风格，显示最近信号、码库、事件台与遥测">
-          <button class="shot-expand" id="shotExpand" type="button" aria-label="放大查看截图">EXPAND</button>
-          <span class="shot-badge" id="shotBadge">MOCK / 2026-11-16</span>
+
+        <div class="demo-shell" id="demoPanel" data-view="web" role="tabpanel" aria-labelledby="tab-web">
+          <div class="demo-chrome">
+            <span class="demo-lights" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="demo-path">rf-lab://field-terminal/demo</span>
+            <span class="demo-live" id="demoLive"><i class="dot ok"></i> SIM // 本地</span>
+          </div>
+          <div class="demo-viewport" id="demoViewport">
+            <div class="demo-stage" id="demoStage">
+              <iframe id="demoFrame" src="assets/terminal.html" title="RF-LAB 终端交互演示（本地模拟传输）" loading="lazy">你的浏览器不支持内嵌框架，可<a href="assets/terminal.html">直接打开终端演示</a>。</iframe>
+              <span class="demo-scan" aria-hidden="true"></span>
+            </div>
+            <div class="demo-loading" id="demoLoading" aria-hidden="true">
+              <span class="demo-loading-bar"></span>
+              <span>LINKING TERMINAL // 本地模拟</span>
+            </div>
+          </div>
+          <div class="demo-hud">
+            <span id="demoModeLabel">WEB // 1440×900</span>
+            <span id="demoHint">点 ARM → SEND；或按下方「模拟遥控器」</span>
+          </div>
         </div>
-        <div class="shot-caption">
-          <span id="shotCaption">布局验收图（mock API）· 0.6.0 UI refresh</span>
-          <span id="shotMeta">1440×900 / WebP</span>
+
+        <div class="demo-controls" role="group" aria-label="模拟设备操作">
+          <button class="btn btn-fill btn-small" id="demoLearn" type="button" disabled><span>模拟遥控器</span><b>LEARN</b></button>
+          <button class="btn btn-line btn-small" id="demoReset" type="button"><span>重置终端</span><b>RESET</b></button>
+          <a class="btn btn-line btn-small" id="demoOpen" href="assets/terminal.html" target="_blank" rel="noopener"><span>全屏体验</span><b>OPEN</b></a>
         </div>
+        <div class="demo-caption">
+          <span id="demoCaption">同一份单页 UI · 本地模拟传输 · 不发网络请求</span>
+          <span id="demoMeta">SIM / 2026-11-21</span>
+        </div>
+
         <div class="feed">
-          <div class="feed-head"><span><i class="dot ok"></i> EVENT LOG // 演示数据</span><span class="sim">SIM</span></div>
-          <div class="feed-body" id="feedBody" aria-hidden="true"></div>
+          <div class="feed-head"><span><i class="dot ok"></i> EVENT STREAM // 来自终端</span><span class="sim">SIM</span></div>
+          <div class="feed-body" id="feedBody" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -579,7 +601,7 @@ payload: "SEND 1"</code></pre>
     <div class="status-grid">
       <div class="status-board reveal">
         <div class="status-row status-head"><span>ITEM</span><span>STATE</span><span>NOTE</span></div>
-        <div class="status-row"><span>ESP32-C3 构建</span><span class="st live">● 通过</span><span>1,067,804 B / 2 MB 分区</span></div>
+        <div class="status-row"><span>ESP32-C3 构建</span><span class="st live">● 通过</span><span>1,069,052 B / 2 MB 分区</span></div>
         <div class="status-row"><span>主机测试</span><span class="st live">● 1,362 项</span><span>协议 76 · 事件环 53 · OLED/UI 1,286 · TUI 12</span></div>
         <div class="status-row"><span>学码 / 存码 / 发射</span><span class="st live">● 上机</span><span>2026-11-15</span></div>
         <div class="status-row"><span>Web HTTP / SSE / 命令</span><span class="st live">● 上机</span><span>设备内 + 真实 LAN</span></div>
@@ -637,12 +659,6 @@ payload: "SEND 1"</code></pre>
     <span>仅限自有设备 / 遵守当地法规</span>
   </div>
 </footer>
-
-<dialog class="lightbox" id="lightbox" aria-labelledby="lightboxTitle">
-  <div class="lightbox-head"><h2 id="lightboxTitle">TERMINAL VIEW // 截图</h2><button id="lightboxClose" type="button" aria-label="关闭">CLOSE ×</button></div>
-  <img id="lightboxImg" src="assets/terminal-web.webp" alt="RF-LAB 终端截图">
-  <p id="lightboxCaption"></p>
-</dialog>
 
 <dialog class="manual" id="helpDialog" aria-labelledby="helpTitle">
   <div class="manual-head"><h2 id="helpTitle">FIELD MANUAL // 键位</h2><button id="helpClose" type="button" aria-label="关闭">CLOSE ×</button></div>

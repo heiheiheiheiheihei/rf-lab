@@ -32,11 +32,14 @@
    AP 里配网成功保持 AP,`WIFI CLEAR` 回 AP-only。不要改回"AP 常开";也不要声称
    真实 LAN 连接已验证——本机没有 AP,只验证了失败回退路径。
 8. **单一 Web 资源源**:`web/index.html` + `web/app.css` + `web/app.js` 由
-   `tools/build_web.py` 生成 `web/dist/index.html`、固件 gzip、Android assets;
-   改 UI 后先跑 `python3 tools/build_web.py`,再构建固件/APK。
+   `tools/build_web.py` 生成 `web/dist/index.html`、固件 gzip、Android assets,
+   以及 `site/assets/terminal.html`(官网交互 demo);改 UI 后先跑
+   `python3 tools/build_web.py`,再构建固件/APK。
 9. **app 分区余量**:镜像已 ~1.06MB/2MB;新增依赖先看 Flash/RAM 报告,不要把 2MB 用满。
-10. **官网不越权**:`site/` 是静态宣传/规划页;CC1101/NRF24L01/SI4463/LR1121、MQTT/HA
-    必须保持“路线图/未实现”标识,不得写成现役能力。改官网不动 `web/` 与固件。
+10. **官网不越权 / 视觉同源**:`site/` 是静态宣传/规划页;CC1101/NRF24L01/SI4463/LR1121、MQTT/HA
+    必须保持“路线图/未实现”标识,不得写成现役能力。官网同时是 UI 视觉基线(`site/style.css`
+    的 token 与组件语法):`web/`/固件页只复制视觉、不复制脚本/依赖,细则见 `docs/01-ui.md` §5.1。
+    改官网版式不动 `web/` 与固件;设备 UI 变了才重生成 `site/assets/terminal.html`(官网交互 demo)。
 
 ## 验证命令
 
@@ -45,7 +48,8 @@
 node --check web/app.js
 python3 tools/build_web.py --check
 node --check site/app.js
-python3 tools/site_check.py           # 官网静态验收
+node --check site/assets/terminal-demo.js
+python3 tools/site_check.py           # 官网静态验收(含 demo 资源)
 cd firmware && pio run -e esp32c3    # 构建(含 Web gzip + 分区校验)
 ./tools/flash.sh /dev/ttyACM0        # 上机(需硬件)
 python3 tools/device_selftest.py --port /dev/ttyACM0 --tx

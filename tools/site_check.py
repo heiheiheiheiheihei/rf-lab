@@ -36,8 +36,11 @@ PRESETS = {
 REQUIRED_IDS = {
     "hero", "budget", "modules", "terminal", "uplink", "status",
     "budgetRange", "total", "buildCode", "presetName", "sheetList",
-    "shot", "shotPanel", "lightbox", "helpDialog", "helpBtn", "copyBom",
+    "demoPanel", "demoViewport", "demoFrame", "demoLearn", "demoReset",
+    "demoOpen", "feedBody", "helpDialog", "helpBtn", "copyBom",
 }
+DEMO = SITE / "assets" / "terminal.html"
+DEMO_JS = SITE / "assets" / "terminal-demo.js"
 # Canonical/OG URLs point at the deployed site; they are metadata, not fetched resources.
 ALLOWED_EXTERNAL_HOSTS = {"github.com", "heiheiheiheiheihei.github.io"}
 
@@ -142,6 +145,22 @@ def main() -> int:
     if re.search(r"\b(?:fetch|XMLHttpRequest|WebSocket)\s*\(", js):
         errors.append("JS contains a network primitive (fetch/XHR/WebSocket)")
 
+    # live terminal demo: real built page + local transport shim, no screenshots
+    if not DEMO.exists():
+        errors.append("missing site/assets/terminal.html (run tools/build_web.py)")
+    else:
+        demo_html = read(DEMO)
+        if "terminal-demo.js" not in demo_html:
+            errors.append("terminal.html is missing the terminal-demo.js shim")
+        if len(demo_html) > 120_000:
+            warnings.append(f"terminal.html is {len(demo_html):,} B")
+    if not DEMO_JS.exists():
+        errors.append("missing site/assets/terminal-demo.js")
+    if "assets/terminal.html" not in html:
+        errors.append("terminal section does not embed assets/terminal.html")
+    if "terminal-web.webp" in html:
+        errors.append("terminal section still references a screenshot")
+
     # image alt text
     for image in parser.images:
         if not image.get("alt", "").strip():
@@ -223,6 +242,8 @@ def main() -> int:
     print(f"presets     " + "  ".join(f"{k}=¥{v[0]}" for k, v in PRESETS.items()))
     print(f"html        {len(html):,} B  gzip {gz:,} B")
     print(f"css / js    {len(css):,} B / {len(js):,} B")
+    if DEMO.exists():
+        print(f"demo        {len(read(DEMO)):,} B html + {DEMO_JS.stat().st_size:,} B shim")
 
     if warnings:
         for warning in warnings:
