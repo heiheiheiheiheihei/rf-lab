@@ -108,3 +108,6 @@ learn/send 事件;和 2026-11-15 的 mock 口径一致。不是上机图。
 [`ui-2026-11-16b-uconsole.png`](ui-2026-11-16b-uconsole.png)、
 [`ui-2026-11-16b-mobile.png`](ui-2026-11-16b-mobile.png)。仍是 mock 布局图;
 命令/API/元素 ID 未变,新皮肤仍未重新烧录上机。
+
+> 2026-11-21:官方入口迁移到 GitHub Pages;旧 Cloudflare 地址保留为历史镜像,
+> 见 [`2026-11-21-pages.md`](2026-11-21-pages.md)。

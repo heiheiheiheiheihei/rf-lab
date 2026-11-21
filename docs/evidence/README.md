@@ -10,6 +10,7 @@
 | [`2026-11-15-oled.md`](2026-11-15-oled.md) | 0.5.0 上机:`DISP SHOW` 40 行 ASCII + 反解文本、`MON` 时间戳抓包、目视验收 | OLED 几何正确;学码/发射/长发/停止页随事件更新;**长发 `0xFE` ~25Hz / 停止 `0xFF`**,修正 0.4.0 的"无应答"结论;两条 433M 记录未解释 |
 | [`2026-11-15-ui.md`](2026-11-15-ui.md) | 0.6.0 构建/主机/上机自检(18/18)、HTTP/SSE/POST、BLE 广播、APK/TUI、截图索引 | Web/BLE/Android/TUI 的交付边界与未验证项 |
 | [`2026-11-16-ui-refresh.md`](2026-11-16-ui-refresh.md) | Web 资源 refresh;`build_web` + `pio run` + `assembleDebug` + mock API 布局 | 新皮肤构建事实;截图是 mock,新皮肤**未上机** |
+| [`2026-11-21-pages.md`](2026-11-21-pages.md) | 仓库转 public + GitHub Actions Pages + URL/资源 200 | 官方入口切到 GitHub Pages;设备/固件无变更 |
 | [`2026-11-15-ui-serial.log`](2026-11-15-ui-serial.log) | `tools/device_selftest.py --tx` 串口全文 | 18 项上机检查的原始输出 |
 | [`ui-desktop-1440.png`](ui-desktop-1440.png) 等 | Playwright + mock API | 0.6.0 旧皮肤桌面/uConsole/手机布局;不是设备截图 |
 | [`ui-2026-11-16-desktop.png`](ui-2026-11-16-desktop.png) 等 | [`tools/ui_mock_server.py`](../tools/ui_mock_server.py) + Chromium | 2026-11-16 品牌/频谱带布局;不是设备截图;新皮肤未上机 |
