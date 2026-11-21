@@ -5,7 +5,7 @@
 现役链路是 **YS-RF34DL 315/433 固定码**;CC1101 / NRF24L01 / SI4463 / LR1121、
 MQTT 与 Home Assistant 是路线图,不是现货能力。
 
-[**官网 / 配装台(线上)**](https://rf-lab-388.pages.dev/) · [本地源](site/index.html) · [射频规格](docs/00-mvp.md) · [UI 规格](docs/01-ui.md) · [接线](hardware/README.md) · [官网维护说明](site/README.md)
+[**官网 / 配装台(线上)**](https://heiheiheiheiheihei.github.io/rf-lab/) · [本地源](site/index.html) · [射频规格](docs/00-mvp.md) · [UI 规格](docs/01-ui.md) · [接线](hardware/README.md) · [官网维护说明](site/README.md)
 
 ![RF-LAB 官网首屏](site/assets/preview.webp)
 
@@ -60,7 +60,7 @@ AP 下可以直接用,也可以重新配网或 `WIFI CLEAR`。AP 里配网成功
 
 ## 官网 / 配装台
 
-线上:<https://rf-lab-388.pages.dev/>(Cloudflare Pages 直传 `site/`)。
+线上:<https://heiheiheiheiheihei.github.io/rf-lab/>(GitHub Pages / GitHub Actions 发布 `site/`)。
 
 [`site/index.html`](site/index.html) 是静态单页:4 档预算、9 个模块勾选、实时配装单、
 战术终端展示、MQTT/HA 路线图。无构建、无外部字体、无 CDN、无网络请求。
@@ -123,7 +123,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | uConsole TUI | ✅ 主机解析/键位/PTY 布局;⏳ 真机未测 |
 | Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,503B;⏳ **新皮肤未上机** |
 | 官网 / 配装台(静态) | ✅ 2026-11-16 主机 Chromium 1440×900 / 390×844,无 console error;`tools/site_check.py` 通过;无外部请求 |
-| 官网线上(Cloudflare Pages) | ✅ <https://rf-lab-388.pages.dev/>;`/`、CSS、JS、WebP、robots、sitemap 均 200 |
+| 官网线上(GitHub Pages) | ⏳ Actions 部署中;目标 <https://heiheiheiheiheihei.github.io/rf-lab/> |
 | 路线图:MQTT / HA / 多模块 | ○ **未实现**,接口草案见官网 §04 |
 | 上机:距离 / 长发时接收器是否真持续 | ⏳ 未测,见规格 §7 |
 | 上机证据 | [`2026-11-15-bringup.md`](docs/evidence/2026-11-15-bringup.md) · [`2026-11-15-oled.md`](docs/evidence/2026-11-15-oled.md) · [`2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md) |

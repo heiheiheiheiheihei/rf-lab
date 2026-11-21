@@ -39,7 +39,7 @@ REQUIRED_IDS = {
     "shot", "shotPanel", "lightbox", "helpDialog", "helpBtn", "copyBom",
 }
 # Canonical/OG URLs point at the deployed site; they are metadata, not fetched resources.
-ALLOWED_EXTERNAL_HOSTS = {"github.com", "rf-lab-388.pages.dev"}
+ALLOWED_EXTERNAL_HOSTS = {"github.com", "heiheiheiheiheihei.github.io"}
 
 
 class SiteParser(HTMLParser):
