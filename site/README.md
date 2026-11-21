@@ -1,6 +1,6 @@
 # site/ — RF-LAB 官网 / 配装台
 
-**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **部署:** GitHub Pages / Actions(见文末)
+**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **部署:** GitHub Pages / Actions(见文末)
 **2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机连接与线上交互回归仍未验证。
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
@@ -37,8 +37,8 @@ python3 -m http.server 8088 -d site
 | 位置 | 链接 |
 |---|---|
 | 导航栏 CTA(吸顶) | `releases/latest/download/rf-lab-android.apk` |
-| 首屏 CTA 第三颗按钮 | 同上,标 `0.7.0 · ↓` |
-| 状态板 Android APK 行 | 文字标 `0.7.0 · release 签名 · 1.03 MB`;下载走导航/页脚 |
+| 首屏 CTA 第三颗按钮 | 同上,标 `0.7.1 · ↓` |
+| 状态板 Android APK 行 | 文字标 `0.7.1 · release 签名 · 1.05 MB`;下载走导航/页脚 |
 | 页脚 SOURCE | 同上 + [Releases](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest) |
 
 用 `releases/latest/download/<固定文件名>` 而不是写死 tag:每次发版覆盖同名资产,官网按钮
@@ -117,7 +117,7 @@ shim 只替换 `fetch`/`EventSource`,命令与事件格式仍由 `web/` 决定�
 - ❌ 把 5 个模块都画成已支持:会误导采购。→ 每张卡带“现役/路线图”状态,顶部有采购边界。
 - ❌ 官网直接改 `web/index.html`:会破坏 `tools/build_web.py`、固件 gzip、Android assets 的单一来源。
 - ❌ 首屏堆满自动播放视频:移动端耗电、不可控。→ 一个 Canvas 频谱 + CSS 雷达,尊重 `prefers-reduced-motion`。
-- ❌ 把“可接入 Home Assistant”写成现在时。→ 整段套 `ROADMAP / 0.8.0` 边框与“未实现”文案。
+- ❌ 把“可接入 Home Assistant”写成现在时。→ 整段套 `ROADMAP / 0.9.0` 边框与“未实现”文案。
 - ❌ 用产品照片或外链图撑首屏:离线会裂图、风格不统一,还可能把路线图模块拍成现役。
   → `web/art/` 矢量重绘,只用项目 token;照片不进仓库。
 

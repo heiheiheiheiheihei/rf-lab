@@ -48,7 +48,7 @@
     <a href="#status"><b>05</b> 状态</a>
   </nav>
   <div class="nav-meta">
-    <span class="nav-live"><i class="dot ok"></i> SYS 0.6.0</span>
+    <span class="nav-live"><i class="dot ok"></i> SYS 0.7.1</span>
     <button class="nav-help" id="helpBtn" type="button" aria-haspopup="dialog">FIELD MANUAL</button>
     <a class="nav-cta" href="https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk" rel="noopener">下载 APK</a>
   </div>
@@ -71,7 +71,7 @@
         <div class="cta-row reveal">
           <a class="btn btn-fill" href="#budget"><span>开始配装</span><b>¥100 →</b></a>
           <a class="btn btn-line" href="#terminal"><span>查看战术终端</span><b>WEB / APP / TUI</b></a>
-          <a class="btn btn-line btn-apk" href="https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk" rel="noopener"><span>下载 Android APK</span><b>0.7.0 · ↓</b></a>
+          <a class="btn btn-line btn-apk" href="https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk" rel="noopener"><span>下载 Android APK</span><b>0.7.1 · ↓</b></a>
         </div>
         <dl class="hero-specs reveal">
           <div><dt>BASE</dt><dd>ESP32-C3</dd></div>
@@ -426,7 +426,7 @@
           </tr>
         </tbody>
       </table>
-      <p class="spec-note">Datasheet typical values；以模块实物与当地法规为准。路线图模块未接入 0.6.0 固件。</p>
+      <p class="spec-note">Datasheet typical values；以模块实物与当地法规为准。路线图模块未接入 0.7.1 固件。</p>
     </div>
 
 
@@ -537,21 +537,21 @@
         <p class="kicker">UPLINK // 无线上行</p>
         <h2 id="uplinkTitle">把遥控器，<br>接进你的自动化。</h2>
       </div>
-      <p class="sec-note">目标：本地 MQTT + Home Assistant Discovery。下面全是路线图，不是 0.6.0 的能力。</p>
+      <p class="sec-note">目标：本地 MQTT + Home Assistant Discovery。下面全是路线图，不是 0.7.1 的能力。</p>
     </div>
 
     <div class="roadmap-banner reveal">
-      <span class="rb-stamp">ROADMAP / 0.8.0</span>
+      <span class="rb-stamp">ROADMAP / 0.9.0</span>
       <div>
         <strong>未实现 / NOT IMPLEMENTED</strong>
-        <p>0.6.0 只有 HTTP/SSE + BLE，没有 MQTT 客户端，也不能接入 Home Assistant。这里展示的是下一步的接口草案，不是可售能力。</p>
+        <p>0.7.1 只有 HTTP/SSE + BLE，没有 MQTT 客户端，也不能接入 Home Assistant。这里展示的是下一步的接口草案，不是可售能力。</p>
       </div>
     </div>
 
     <div class="uplink-grid">
       <div class="uplink-copy reveal">
         <h3>设备 → 本地 Broker → HA。</h3>
-        <p>计划中的 0.8.0：设备通过 Wi-Fi 连接你自己拥有的 Mosquitto，把最近信号、码库与发射结果发布成 retained topic；Home Assistant 用 MQTT Discovery 自动出现实体。无云账户、无订阅、断网仍可用。</p>
+        <p>计划中的 0.9.0：设备通过 Wi-Fi 连接你自己拥有的 Mosquitto，把最近信号、码库与发射结果发布成 retained topic；Home Assistant 用 MQTT Discovery 自动出现实体。无云账户、无订阅、断网仍可用。</p>
         <ul class="tick-list">
           <li><b>LOCAL</b> Broker 只开在局域网，不端口转发</li>
           <li><b>DISCOVERY</b> HA 自动出现最近信号 / 码库 / 发射按钮</li>
@@ -584,7 +584,7 @@
 
     <div class="uplink-detail">
       <div class="code-card reveal">
-        <div class="code-head"><span>PLANNED CONFIG // 草案</span><span>YAML / 0.8.0</span></div>
+        <div class="code-head"><span>PLANNED CONFIG // 草案</span><span>YAML / 0.9.0</span></div>
         <pre><code><span class="c"># 路线图草案 · 不是现有功能</span>
 mqtt:
   broker: 192.168.1.10
@@ -644,7 +644,7 @@ payload: "SEND 1"</code></pre>
         <div class="status-row"><span>Web HTTP / SSE / 命令</span><span class="st live">● 上机</span><span>设备内 + 真实 LAN</span></div>
         <div class="status-row"><span>真实 LAN / AP 回退</span><span class="st live">● 上机</span><span>192.168.5.117 · 15/15</span></div>
         <div class="status-row"><span>BLE 广播</span><span class="st live">● 已开</span><span>真实手机连接未测</span></div>
-        <div class="status-row"><span>Android APK</span><span class="st partial">◐ 已发布</span><span>0.7.0 · release 签名 · 1.03 MB；真机未测</span></div>
+        <div class="status-row"><span>Android APK</span><span class="st partial">◐ 已发布</span><span>0.7.1 · release 签名 · 1.05 MB；真机未测</span></div>
         <div class="status-row"><span>uConsole TUI</span><span class="st partial">◐ 主机通过</span><span>12 项 + PTY；真机未测</span></div>
         <div class="status-row"><span>MQTT / Home Assistant</span><span class="st none">○ 路线图</span><span>未实现</span></div>
         <div class="status-row"><span>多模块 / SPI 背板</span><span class="st none">○ 路线图</span><span>未实现</span></div>
@@ -655,8 +655,9 @@ payload: "SEND 1"</code></pre>
         <div class="roadmap-head">RELEASE TRACK // 版本线</div>
         <div class="track done"><i></i><b>0.5.0</b><span>固定码上机 / OLED / 长发修正</span></div>
         <div class="track done"><i></i><b>0.6.0</b><span>Web / BLE / uConsole / STA-AP 回退</span></div>
-        <div class="track next"><i></i><b>0.7.0</b><span>模块抽象层 + SPI 背板</span></div>
-        <div class="track next"><i></i><b>0.8.0</b><span>MQTT bridge + HA Discovery</span></div>
+        <div class="track done"><i></i><b>0.7.1</b><span>码库 v2 / 名称·分组·原始参数</span></div>
+        <div class="track next"><i></i><b>0.8.0</b><span>模块抽象层 + SPI 背板</span></div>
+        <div class="track next"><i></i><b>0.9.0</b><span>MQTT bridge + HA Discovery</span></div>
         <div class="track next"><i></i><b>1.0</b><span>多模块外壳 / 小批量</span></div>
         <div class="legend"><span><i class="dot ok"></i> 已发生</span><span><i class="dot warn"></i> 计划中</span></div>
       </div>
@@ -682,7 +683,7 @@ payload: "SEND 1"</code></pre>
     <div class="footer-brand">
       <span class="mark">RF<span>-</span>LAB</span>
       <p>百元射频实验室。丰俭由人，先让它可用，再让它更强。</p>
-      <span class="footer-status"><i class="dot ok"></i> 0.6.0 / FIELD LAB / 2026</span>
+      <span class="footer-status"><i class="dot ok"></i> 0.7.1 / FIELD LAB / 2026</span>
     </div>
     <div class="footer-links">
       <div><b>BUILD</b><a href="#budget">配装台</a><a href="#modules">模块阵列</a><a href="#terminal">战术终端</a></div>
