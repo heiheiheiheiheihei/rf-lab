@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="rflab-ui" content="2099b603">
 <meta name="theme-color" content="#070906">
 <meta name="color-scheme" content="dark">
 <title>RF-LAB // 百元射频实验室 · FIELD TERMINAL</title>
@@ -117,6 +118,9 @@ body::after{
 .chip b{color:var(--bone); font-weight:600}
 .chip.bay{border-color:rgba(255,176,0,.3); background:rgba(255,176,0,.05)}
 .chip.bay b{color:var(--amber-hi)}
+.chip.hw{cursor:pointer;border-color:rgba(255,176,0,.3);background:rgba(255,176,0,.05)}
+.chip.hw b{color:var(--amber-hi)}
+.chip.hw:hover{border-color:var(--amber)}
 .chip.arm{cursor:pointer; background:transparent; border-color:var(--line-hi)}
 .chip.arm:hover{border-color:var(--amber)}
 .chip.arm.armed{border-color:var(--amber); background:var(--amber)}
@@ -372,6 +376,24 @@ input:focus{border-color:var(--amber); box-shadow:inset 0 -2px 0 var(--amber)}
   padding:14px 18px 16px;
 }
 .modal-panel.narrow{width:min(440px,94vw)}
+.modal-panel.hw{width:min(1180px,96vw)}
+.hw-modal-body{margin-top:10px;border:1px solid var(--line);background:#070906;overflow:auto;-webkit-overflow-scrolling:touch}
+.hw-modal-body svg{display:block;width:100%;height:auto;min-width:0}
+.hw-modal-body.is-zoom svg{min-width:1100px}
+.hw-tools{display:flex;gap:6px;align-items:center}
+.hw-modal-body::-webkit-scrollbar{height:7px}
+.help-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:8px;color:var(--muted);letter-spacing:.6px}
+.help-meta b{color:var(--amber);font-weight:500}
+.help-meta .mini{margin-left:auto}
+.ota-body{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.ota-row{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:8px;letter-spacing:1px;color:var(--muted)}
+.ota-row input{flex:1;min-width:0;font-size:11px}
+.ota-row input[type=file]{font-size:9px;padding:6px}
+.ota-bar{height:6px;border:1px solid var(--line);background:#070906;overflow:hidden}
+.ota-bar i{display:block;height:100%;width:0;background:var(--amber);transition:width .18s linear}
+.ota-status{font-family:var(--f-mono);font-size:9px;color:var(--khaki);min-height:14px;letter-spacing:.4px}
+.ota-status.warn{color:var(--red)}
+.ota-body .btn{min-height:44px}
 .modal-head{display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding-bottom:8px}
 .modal-head h2{margin:0; font-family:var(--f-mono); font-size:10px; letter-spacing:1.2px; color:var(--amber); text-transform:uppercase; font-weight:500}
 .modal-head h2 em{font-style:normal; font-family:var(--f-cjk); font-size:10px; color:var(--khaki); letter-spacing:.4px}
@@ -411,6 +433,7 @@ input:focus{border-color:var(--amber); box-shadow:inset 0 -2px 0 var(--amber)}
   }
 }
 @media (max-width:760px){
+  .ota-row{flex-direction:column;align-items:stretch;gap:4px}
   body{overflow:auto}
   .frame{height:auto; min-height:100%; padding:11px 12px 14px; gap:8px}
   .top{gap:8px}
@@ -515,6 +538,7 @@ body.txing .last-code{animation:none}
     <span class="chip">MOD <b id="modBaud">--</b></span>
     <span class="chip bay">BAY <b>YS-RF34DL</b></span>
     <span class="chip">OLED <b id="oled">--</b></span>
+    <button class="chip hw" id="hwChip" type="button" aria-haspopup="dialog" aria-controls="hwModal"><i class="dot ok"></i><b>HW</b></button>
     <span class="spacer"></span>
     <button class="chip arm" id="armChip" type="button" aria-pressed="false">
       <i class="dot" id="armDot"></i><b id="armLabel">DISARMED</b>
@@ -618,8 +642,15 @@ body.txing .last-code{animation:none}
       <div><kbd>R</kbd><span>重新拉取状态</span></div>
       <div><kbd>T</kbd><span>OLED 测试图案 30s</span></div>
       <div><kbd>A</kbd><span>ARM / DISARM</span></div>
+      <div><kbd>H</kbd><span>硬件链路</span></div>
+      <div><kbd>U</kbd><span>固件升级</span></div>
       <div><kbd>?</kbd><span>本帮助</span></div>
       <div><kbd>Esc</kbd><span>关闭弹层</span></div>
+    </div>
+    <div class="help-meta">
+      <span>BUILD <b id="buildId">--</b></span>
+      <span>UI <b id="uiId">--</b></span>
+      <button class="mini" id="otaOpen" type="button">FIRMWARE UPDATE</button>
     </div>
     <p class="modal-note">BLE 模式需在设备 OLED 或串口 <code>PIN</code> 查看 4 位 PIN。ARM 只防误触,不是发射硬门控。</p>
   </div>
@@ -645,6 +676,73 @@ body.txing .last-code{animation:none}
   </div>
 </div>
 
+<div class="modal" id="hwModal" hidden>
+  <div class="modal-panel hw" role="dialog" aria-modal="true" aria-labelledby="hwModalTitle">
+    <div class="modal-head"><h2 id="hwModalTitle">HARDWARE <em>// 硬件链路</em></h2><div class="hw-tools"><button class="mini" id="hwZoom" type="button" aria-pressed="false">ZOOM</button><button class="mini" data-close type="button">CLOSE</button></div></div>
+    <div class="hw-modal-body">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-labelledby="w-title w-desc">
+<title id="w-title">RF-LAB abstract wiring diagram: ESP32-C3 to YS-RF34DL</title>
+<desc id="w-desc">Abstract four-wire wiring diagram generated from hardware/wiring.json. ESP32-C3 3V3/GND/GPIO3/GPIO4 to YS-RF34DL VCC/GND/RXD/TXD.</desc>
+<defs>
+  <pattern id="w-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+    <path d="M28 0H0V28" fill="none" stroke="#ffb000" stroke-opacity=".05"/>
+  </pattern>
+  <marker id="w-arr-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+    <path d="M0 0L10 5L0 10Z" fill="#9bf05c"/>
+  </marker>
+  <marker id="w-arr-bone" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+    <path d="M0 0L10 5L0 10Z" fill="#ece6d4"/>
+  </marker>
+</defs>
+<style>
+  .w-mono{font-family:'JetBrains Mono','Cascadia Mono','DejaVu Sans Mono',monospace}
+  .w-disp{font-family:'Saira Condensed','Roboto Condensed','Arial Narrow',sans-serif}
+  .w-cjk{font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif}
+</style>
+<rect width="1200" height="760" fill="#070906"/>
+<rect width="1200" height="760" fill="url(#w-grid)"/>
+<rect x="1" y="1" width="1198" height="758" fill="none" stroke="#303823"/>
+<g fill="none" stroke="#ffb000" stroke-opacity=".55">
+  <path d="M16 38V16H38"/><path d="M1162 16H1184V38"/>
+  <path d="M16 722V744H38"/><path d="M1162 744H1184V722"/>
+</g>
+<text x="30" y="32" class="w-mono" font-size="7.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="1.8" opacity="1">RF-LAB // WIRING PLATE</text><text x="1170" y="32" class="w-mono" font-size="7.2" fill="#ffb000" text-anchor="end" font-weight="normal" letter-spacing="1.6" opacity="1">FIG. 02 / WIRING</text><line x1="30" y1="44" x2="1170" y2="44" stroke="#303823"/><text x="40" y="90" class="w-disp" font-size="40" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing=".4" opacity="1">FOUR WIRES. ONE CHAIN.</text><text x="41" y="110" class="w-mono" font-size="8" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing=".5" opacity="1">CORE-C3 ↔ YS-RF34DL  //  UART1 9600 8N1  //  3.3V LOGIC</text><text x="1160" y="88" class="w-mono" font-size="7" fill="#9bf05c" text-anchor="end" font-weight="normal" letter-spacing="1.2" opacity="1">● LIVE // 0.6.0</text><text x="1160" y="102" class="w-mono" font-size="6.4" fill="#817d6b" text-anchor="end" font-weight="normal" letter-spacing=".6" opacity="1">GENERATED FROM hardware/wiring.json</text><line x1="30" y1="128" x2="1170" y2="128" stroke="#303823"/><g>
+  <rect x="46" y="160" width="440" height="340" fill="#0d120b" stroke="#46522f"/>
+  <rect x="46" y="160" width="440" height="42" fill="#11160d" stroke="#303823"/>
+  <rect x="46" y="160" width="3" height="340" fill="#ffb000" opacity=".75"/>
+  <text x="60" y="184" class="w-disp" font-size="20" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing=".5" opacity="1">CORE-C3</text>
+  <text x="60" y="196" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing=".5" opacity="1">ESP32-C3  //  Wi-Fi 2.4G + BLE 5</text>
+  <text x="474" y="176" class="w-mono" font-size="6.4" fill="#817d6b" text-anchor="end" font-weight="normal" letter-spacing="1" opacity="1">MCU</text>
+</g><g>
+  <rect x="714" y="160" width="440" height="340" fill="#0d120b" stroke="#46522f"/>
+  <rect x="714" y="160" width="440" height="42" fill="#11160d" stroke="#303823"/>
+  <rect x="714" y="160" width="3" height="340" fill="#9bf05c" opacity=".75"/>
+  <text x="728" y="184" class="w-disp" font-size="20" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing=".5" opacity="1">YS-RF34DL</text>
+  <text x="728" y="196" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing=".5" opacity="1">315 / 433 MHz  //  UART 9600 8N1</text>
+  <text x="1142" y="176" class="w-mono" font-size="6.4" fill="#817d6b" text-anchor="end" font-weight="normal" letter-spacing="1" opacity="1">RF BAY 01</text>
+</g><rect x="76" y="226" width="220" height="86" fill="#173029" stroke="#46522f"/><text x="88" y="248" class="w-disp" font-size="17" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing=".5" opacity="1">ESP32-C3</text><text x="88" y="263" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">Wi-Fi 2.4G + BLE 5</text><text x="88" y="278" class="w-mono" font-size="6.4" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">USB native USB</text><rect x="76" y="330" width="155" height="58" fill="#11160d" stroke="#303823"/><text x="88" y="350" class="w-mono" font-size="9" fill="#ffb000" text-anchor="start" font-weight="700" letter-spacing=".8" opacity="1">OLED</text><text x="88" y="364" class="w-mono" font-size="7" fill="#ece6d4" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">0.42&quot; 72x40</text><text x="88" y="376" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">I2C 5/6 / 0x3C</text><rect x="246" y="330" width="110" height="58" fill="#11160d" stroke="#303823"/><text x="258" y="350" class="w-mono" font-size="9" fill="#ffb000" text-anchor="start" font-weight="700" letter-spacing=".8" opacity="1">USB-C</text><text x="258" y="364" class="w-mono" font-size="7" fill="#ece6d4" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">5V IN</text><text x="258" y="376" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">native USB</text><rect x="76" y="404" width="280" height="28" fill="#ffb000" fill-opacity=".04" stroke="#ffb000" stroke-opacity=".35"/><text x="88" y="422" class="w-mono" font-size="7.2" fill="#ffb000" text-anchor="start" font-weight="700" letter-spacing=".5" opacity="1">3.3V ONLY  //  NEVER 5V INTO GPIO3/4</text><rect x="748" y="226" width="170" height="86" fill="#173029" stroke="#46522f"/><text x="760" y="248" class="w-disp" font-size="17" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing=".5" opacity="1">STC15</text><text x="760" y="263" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">fixed-code codec</text><text x="760" y="278" class="w-mono" font-size="6.4" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">315 / 433 MHz</text><rect x="748" y="330" width="140" height="58" fill="#11160d" stroke="#303823"/><text x="760" y="350" class="w-mono" font-size="9" fill="#9bf05c" text-anchor="start" font-weight="700" letter-spacing="1" opacity="1">RF</text><text x="760" y="364" class="w-mono" font-size="7" fill="#ece6d4" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">315 / 433</text><text x="760" y="376" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">≤10 dBm</text><g stroke="#c98a4b" stroke-width="2" fill="none"><path d="M1040 300V220"/><path d="M1040 220L1028 206M1040 220L1052 206"/></g><path d="M1066 300A26 26 0 0 1 1040 274" fill="none" stroke="#ffb000" stroke-opacity=".28" stroke-dasharray="2 5"/><path d="M1082 300A42 42 0 0 1 1040 258" fill="none" stroke="#ffb000" stroke-opacity=".28" stroke-dasharray="2 5"/><path d="M1098 300A58 58 0 0 1 1040 242" fill="none" stroke="#ffb000" stroke-opacity=".28" stroke-dasharray="2 5"/><text x="1078" y="292" class="w-mono" font-size="8" fill="#ffb000" text-anchor="start" font-weight="700" letter-spacing="1" opacity="1">ANT</text><text x="1078" y="304" class="w-mono" font-size="6.4" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">17-23 cm wire</text><line x1="470" y1="264" x2="486" y2="264" stroke="#ffb000" stroke-opacity=".55"/><circle cx="486" cy="264" r="4.2" fill="#ffb000" stroke="#ffb000" stroke-width="1.2"/><text x="466" y="266.6" class="w-mono" font-size="8.2" fill="#ffb000" text-anchor="end" font-weight="700" letter-spacing=".2" opacity="1">3V3</text><text x="466" y="255" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="end" font-weight="normal" letter-spacing=".2" opacity="1">3.3V rail</text><line x1="730" y1="264" x2="714" y2="264" stroke="#ffb000" stroke-opacity=".55"/><circle cx="714" cy="264" r="4.2" fill="#ffb000" stroke="#ffb000" stroke-width="1.2"/><text x="736" y="266.6" class="w-mono" font-size="8.2" fill="#ffb000" text-anchor="start" font-weight="700" letter-spacing=".2" opacity="1">VCC</text><text x="736" y="255" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".2" opacity="1">power</text><line x1="486" y1="264" x2="714" y2="264" stroke="#070906" stroke-width="8"/><line x1="486" y1="264" x2="714" y2="264" stroke="#ffb000" stroke-width="2.6"/><line x1="486" y1="263" x2="714" y2="263" stroke="#ffffff" stroke-opacity=".16" stroke-width=".7"/><text x="600" y="256" class="w-mono" font-size="8.6" fill="#ffb000" text-anchor="middle" font-weight="700" letter-spacing=".2" opacity="1">3V3  →  VCC</text><text x="600" y="277" class="w-mono" font-size="6.2" fill="#ffb000" text-anchor="middle" font-weight="normal" letter-spacing=".3" opacity="1">3.3V ONLY</text><line x1="470" y1="314" x2="486" y2="314" stroke="#b4ae96" stroke-opacity=".55"/><circle cx="486" cy="314" r="4.2" fill="#b4ae96" stroke="#b4ae96" stroke-width="1.2"/><text x="466" y="316.6" class="w-mono" font-size="8.2" fill="#b4ae96" text-anchor="end" font-weight="700" letter-spacing=".2" opacity="1">GND</text><text x="466" y="305" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="end" font-weight="normal" letter-spacing=".2" opacity="1">ground</text><line x1="730" y1="314" x2="714" y2="314" stroke="#b4ae96" stroke-opacity=".55"/><circle cx="714" cy="314" r="4.2" fill="#b4ae96" stroke="#b4ae96" stroke-width="1.2"/><text x="736" y="316.6" class="w-mono" font-size="8.2" fill="#b4ae96" text-anchor="start" font-weight="700" letter-spacing=".2" opacity="1">GND</text><text x="736" y="305" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".2" opacity="1">ground</text><line x1="486" y1="314" x2="714" y2="314" stroke="#070906" stroke-width="8"/><line x1="486" y1="314" x2="714" y2="314" stroke="#b4ae96" stroke-width="2.6"/><line x1="486" y1="313" x2="714" y2="313" stroke="#ffffff" stroke-opacity=".16" stroke-width=".7"/><text x="600" y="306" class="w-mono" font-size="8.6" fill="#b4ae96" text-anchor="middle" font-weight="700" letter-spacing=".2" opacity="1">GND  →  GND</text><text x="600" y="327" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="middle" font-weight="normal" letter-spacing=".3" opacity="1">COMMON GROUND</text><line x1="470" y1="364" x2="486" y2="364" stroke="#9bf05c" stroke-opacity=".55"/><circle cx="486" cy="364" r="4.2" fill="#9bf05c" stroke="#9bf05c" stroke-width="1.2"/><text x="466" y="366.6" class="w-mono" font-size="8.2" fill="#9bf05c" text-anchor="end" font-weight="700" letter-spacing=".2" opacity="1">GPIO3</text><text x="466" y="355" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="end" font-weight="normal" letter-spacing=".2" opacity="1">UART1 TX</text><line x1="730" y1="364" x2="714" y2="364" stroke="#9bf05c" stroke-opacity=".55"/><circle cx="714" cy="364" r="4.2" fill="#9bf05c" stroke="#9bf05c" stroke-width="1.2"/><text x="736" y="366.6" class="w-mono" font-size="8.2" fill="#9bf05c" text-anchor="start" font-weight="700" letter-spacing=".2" opacity="1">RXD</text><text x="736" y="355" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".2" opacity="1">module RX</text><line x1="486" y1="364" x2="714" y2="364" stroke="#070906" stroke-width="8"/><line x1="486" y1="364" x2="714" y2="364" stroke="#9bf05c" stroke-width="2.6"/><line x1="486" y1="363" x2="714" y2="363" stroke="#ffffff" stroke-opacity=".16" stroke-width=".7"/><path d="M703 359L714 364L703 369Z" fill="#9bf05c"/><text x="600" y="356" class="w-mono" font-size="8.6" fill="#9bf05c" text-anchor="middle" font-weight="700" letter-spacing=".2" opacity="1">GPIO3  →  RXD</text><text x="600" y="377" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="middle" font-weight="normal" letter-spacing=".3" opacity="1">UART1 TX // module RX</text><line x1="470" y1="414" x2="486" y2="414" stroke="#9bf05c" stroke-opacity=".55"/><circle cx="486" cy="414" r="4.2" fill="#9bf05c" stroke="#9bf05c" stroke-width="1.2"/><text x="466" y="416.6" class="w-mono" font-size="8.2" fill="#9bf05c" text-anchor="end" font-weight="700" letter-spacing=".2" opacity="1">GPIO4</text><text x="466" y="405" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="end" font-weight="normal" letter-spacing=".2" opacity="1">UART1 RX</text><line x1="730" y1="414" x2="714" y2="414" stroke="#9bf05c" stroke-opacity=".55"/><circle cx="714" cy="414" r="4.2" fill="#9bf05c" stroke="#9bf05c" stroke-width="1.2"/><text x="736" y="416.6" class="w-mono" font-size="8.2" fill="#9bf05c" text-anchor="start" font-weight="700" letter-spacing=".2" opacity="1">TXD</text><text x="736" y="405" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".2" opacity="1">module TX</text><line x1="486" y1="414" x2="714" y2="414" stroke="#070906" stroke-width="8"/><line x1="486" y1="414" x2="714" y2="414" stroke="#9bf05c" stroke-width="2.6"/><line x1="486" y1="413" x2="714" y2="413" stroke="#ffffff" stroke-opacity=".16" stroke-width=".7"/><path d="M497 409L486 414L497 419Z" fill="#9bf05c"/><text x="600" y="406" class="w-mono" font-size="8.6" fill="#9bf05c" text-anchor="middle" font-weight="700" letter-spacing=".2" opacity="1">GPIO4  ←  TXD</text><text x="600" y="427" class="w-mono" font-size="6.2" fill="#817d6b" text-anchor="middle" font-weight="normal" letter-spacing=".3" opacity="1">UART1 RX // module TX</text><text x="46" y="540" class="w-mono" font-size="7" fill="#ffb000" text-anchor="start" font-weight="700" letter-spacing="1.4" opacity="1">WIRING TABLE // 4 NETS</text><text x="46" y="552" class="w-mono" font-size="6.4" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">Reference table. Pin numbers come from firmware/src/wiring_config.h.</text><rect x="46" y="566" width="1108" height="126" fill="#0b0e08" stroke="#303823"/><rect x="46" y="566" width="1108" height="22" fill="#11160d" stroke="#303823"/><text x="56" y="581" class="w-mono" font-size="6.8" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="1" opacity="1">ESP32-C3</text><text x="196" y="581" class="w-mono" font-size="6.8" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="1" opacity="1">NET</text><text x="346" y="581" class="w-mono" font-size="6.8" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="1" opacity="1">YS-RF34DL</text><text x="486" y="581" class="w-mono" font-size="6.8" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="1" opacity="1">DIR</text><text x="666" y="581" class="w-mono" font-size="6.8" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing="1" opacity="1">NOTE</text><line x1="46" y1="588" x2="1154" y2="588" stroke="#303823" stroke-opacity=".55"/><text x="56" y="605" class="w-mono" font-size="8.4" fill="#ffb000" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">3V3</text><text x="196" y="605" class="w-mono" font-size="7.4" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".3" opacity="1">3V3</text><text x="346" y="605" class="w-mono" font-size="8.4" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">VCC</text><text x="486" y="605" class="w-mono" font-size="9.5" fill="#b4ae96" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">POWER</text><text x="666" y="605" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">3.3V ONLY / never 5V</text><line x1="46" y1="614" x2="1154" y2="614" stroke="#303823" stroke-opacity=".55"/><text x="56" y="631" class="w-mono" font-size="8.4" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">GND</text><text x="196" y="631" class="w-mono" font-size="7.4" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".3" opacity="1">GND</text><text x="346" y="631" class="w-mono" font-size="8.4" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">GND</text><text x="486" y="631" class="w-mono" font-size="9.5" fill="#b4ae96" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">GND</text><text x="666" y="631" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">common ground required</text><line x1="46" y1="640" x2="1154" y2="640" stroke="#303823" stroke-opacity=".55"/><text x="56" y="657" class="w-mono" font-size="8.4" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">GPIO3</text><text x="196" y="657" class="w-mono" font-size="7.4" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".3" opacity="1">UART1_TX</text><text x="346" y="657" class="w-mono" font-size="8.4" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">RXD</text><text x="486" y="657" class="w-mono" font-size="9.5" fill="#9bf05c" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">→</text><text x="666" y="657" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">cross TX -&gt; RX</text><line x1="46" y1="666" x2="1154" y2="666" stroke="#303823" stroke-opacity=".55"/><text x="56" y="683" class="w-mono" font-size="8.4" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">GPIO4</text><text x="196" y="683" class="w-mono" font-size="7.4" fill="#817d6b" text-anchor="start" font-weight="normal" letter-spacing=".3" opacity="1">UART1_RX</text><text x="346" y="683" class="w-mono" font-size="8.4" fill="#ece6d4" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">TXD</text><text x="486" y="683" class="w-mono" font-size="9.5" fill="#9bf05c" text-anchor="start" font-weight="700" letter-spacing="0" opacity="1">←</text><text x="666" y="683" class="w-mono" font-size="7.2" fill="#b4ae96" text-anchor="start" font-weight="normal" letter-spacing="0" opacity="1">cross RX &lt;- TX</text><line x1="28" y1="722" x2="1172" y2="722" stroke="#303823"/>
+<text x="30" y="742" class="w-mono" font-size="6.4" fill="#817d6b" letter-spacing=".4">GENERATED FROM hardware/wiring.json / DO NOT EDIT</text>
+<text x="1170" y="742" text-anchor="end" class="w-mono" font-size="6.4" fill="#817d6b" letter-spacing=".4">WIRING // v1 // 2026-11-21</text>
+</svg>
+    </div>
+    <p class="modal-note">CORE-C3 + YS-RF34DL:VCC 接 <code>3V3</code>,GND 共地,TXD→<code>GPIO4</code>、RXD→<code>GPIO3</code>。<b>3.3V ONLY</b>;示意图非比例,接线以 <code>hardware/README.md</code> 为准。窄屏点 ZOOM 放大。</p>
+  </div>
+</div>
+
+<div class="modal" id="otaModal" hidden>
+  <div class="modal-panel narrow" role="dialog" aria-modal="true" aria-labelledby="otaTitle">
+    <div class="modal-head"><h2 id="otaTitle">FIRMWARE <em>// 固件升级</em></h2><button class="mini" data-close type="button">CLOSE</button></div>
+    <div class="ota-body">
+      <p class="modal-note">串口执行 <code>OTA</code> 取 8 位 token(10 分钟有效)。只更新设备固件;APP 页面仍需重装 APK。</p>
+      <label class="ota-row">IMAGE <input type="file" id="otaFile" accept=".bin,application/octet-stream"></label>
+      <label class="ota-row">TOKEN <input id="otaToken" maxlength="8" autocomplete="off" spellcheck="false" placeholder="8 HEX"></label>
+      <div class="ota-bar" aria-hidden="true"><i id="otaBar"></i></div>
+      <div class="ota-status" id="otaStatus">IDLE // 等待镜像</div>
+      <button class="btn btn-arm" id="otaStart" type="button">UPLOAD &amp; REBOOT</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden role="status"></div>
 <script>/* RF-LAB FIELD TERMINAL — transport-agnostic UI.
  * HTTP + SSE (ESP32 web server) or BLE (Android WebView bridge).
@@ -655,6 +753,7 @@ body.txing .last-code{animation:none}
 
   const $ = (id) => document.getElementById(id);
   const hasBridge = typeof window.RFBridge !== 'undefined';
+  const UI_HASH = ((document.querySelector('meta[name="rflab-ui"]') || {}).content || '--').slice(0, 8);
   const S = {
     transport: hasBridge ? 'ble' : 'http',
     connected: false,
@@ -667,7 +766,9 @@ body.txing .last-code{animation:none}
     txId: 0,
     es: null,
     logCount: 0,
-    lastScan: []
+    lastScan: [],
+    fw: '',
+    build: ''
   };
 
   const el = {
@@ -679,7 +780,9 @@ body.txing .last-code{animation:none}
     listenTag: $('listenTag'), storeTag: $('storeTag'), codeList: $('codeList'), emptyState: $('emptyState'),
     log: $('log'), tStore: $('tStore'), tFrames: $('tFrames'), tAcks: $('tAcks'), tStray: $('tStray'),
     tUplink: $('tUplink'), tRssi: $('tRssi'), tUptime: $('tUptime'),
-    helpModal: $('helpModal'), pinModal: $('pinModal'), scanModal: $('scanModal'),
+    helpModal: $('helpModal'), pinModal: $('pinModal'), scanModal: $('scanModal'), hwModal: $('hwModal'),
+    otaModal: $('otaModal'), otaFile: $('otaFile'), otaToken: $('otaToken'), otaStart: $('otaStart'),
+    otaBar: $('otaBar'), otaStatus: $('otaStatus'), buildId: $('buildId'), uiId: $('uiId'),
     pinInput: $('pinInput'), pinMsg: $('pinMsg'), scanList: $('scanList'),
     toast: $('toast'), footTail: $('footTail'), wifiForm: $('wifiForm'),
     wifiNote: $('wifiNote'), wifiClear: $('wifiClear')
@@ -911,7 +1014,11 @@ body.txing .last-code{animation:none}
   }
 
   function onHello(m) {
+    S.fw = m.fw || '';
+    S.build = m.build || '';
     text(el.fw, m.fw || '--');
+    text(el.buildId, S.build || '--');
+    text(el.uiId, UI_HASH);
     if (m.ap_ssid) text(el.net, m.ap_ssid);
     if (m.auth === 0) {
       S.authed = false;
@@ -920,7 +1027,8 @@ body.txing .last-code{animation:none}
       S.authed = true;
       hide(el.pinModal);
     }
-    text(el.footTail, 'RF-LAB ' + (m.fw || '') + ' // ' + S.transport.toUpperCase() + ' // ' + (m.proto || 1));
+    text(el.footTail, 'RF-LAB ' + (m.fw || '') + (S.build ? '+' + S.build : '') +
+      ' // ' + S.transport.toUpperCase() + ' // ' + (m.proto || 1));
   }
 
   function onEvent(ev) {
@@ -958,6 +1066,95 @@ body.txing .last-code{animation:none}
         if (ev.line) log('sys', ev.line);
         break;
     }
+  }
+
+  /* ---------------- firmware OTA (HTTP only) ---------------- */
+
+  function otaStatus(msg, warn) {
+    text(el.otaStatus, msg);
+    if (el.otaStatus) el.otaStatus.classList.toggle('warn', !!warn);
+  }
+
+  function otaPct(pct) {
+    if (el.otaBar) el.otaBar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  }
+
+  function openOta() {
+    show(el.otaModal);
+    otaPct(0);
+    const bleOnly = S.transport !== 'http';
+    if (el.otaStart) el.otaStart.disabled = bleOnly;
+    if (el.otaFile) el.otaFile.disabled = bleOnly;
+    if (el.otaToken) el.otaToken.disabled = bleOnly;
+    text(el.buildId, S.build || '--');
+    text(el.uiId, UI_HASH);
+    otaStatus(bleOnly
+      ? 'APP // BLE 不支持上传;请用浏览器打开设备 IP,或 USB 烧录'
+      : 'IDLE // 串口执行 OTA 取 token', bleOnly);
+  }
+
+  function startOta() {
+    if (S.transport !== 'http') return;
+    const file = el.otaFile && el.otaFile.files && el.otaFile.files[0];
+    if (!file) { otaStatus('ERR // 先选择 firmware.bin', true); return; }
+    const token = (el.otaToken.value || '').trim().toUpperCase();
+    if (!/^[0-9A-F]{8}$/.test(token)) {
+      otaStatus('ERR // token 是 8 位十六进制(串口 OTA)', true);
+      return;
+    }
+    const before = S.build || '';
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ota');
+    xhr.timeout = 180000;
+    xhr.setRequestHeader('X-RFLAB-OTA', token);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const pct = Math.round((e.loaded * 100) / e.total);
+      otaPct(pct);
+      otaStatus('UPLOAD ' + pct + '% // ' + Math.round(e.loaded / 1024) + ' KiB');
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        otaPct(100);
+        otaStatus('OK // 设备重启中,等待新镜像…');
+        log('ok', 'OTA 上传完成,等待重启');
+        pollReboot(before);
+      } else {
+        let why = xhr.responseText || ('HTTP ' + xhr.status);
+        try { why = JSON.parse(xhr.responseText).error || why; } catch (e) { /* text */ }
+        otaStatus('ERR ' + why, true);
+        log('warn', 'OTA ' + why);
+      }
+    };
+    xhr.onerror = () => otaStatus('ERR // 网络中断(设备仍在旧镜像)', true);
+    xhr.ontimeout = () => otaStatus('ERR // 超时(设备仍在旧镜像)', true);
+    otaPct(0);
+    otaStatus('UPLOAD 0% // ' + Math.round(file.size / 1024) + ' KiB');
+    xhr.send(file);
+  }
+
+  function pollReboot(before) {
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries++;
+      try {
+        const h = await httpJSON('/api/hello');
+        const now = h.build || '';
+        if (now && now !== before) {
+          clearInterval(timer);
+          otaStatus('OK // ' + h.fw + '+' + now + ' · 刷新页面');
+          setTimeout(() => location.reload(), 900);
+          return;
+        }
+      } catch (e) {
+        otaStatus('REBOOT… // 等待设备 ' + tries + 's');
+      }
+      if (tries >= 30) {
+        clearInterval(timer);
+        otaStatus('WARN // 未检测到新 build,检查串口后手动刷新', true);
+      }
+    }, 1000);
   }
 
   /* ---------------- state ---------------- */
@@ -1014,7 +1211,8 @@ body.txing .last-code{animation:none}
 
     if (st.last && st.last.code) updateLast(st.last);
     if (st.tx) setTxActive(!!st.tx.active, st.tx.kind, st.tx.id);
-    text(el.footTail, 'RF-LAB ' + (st.fw || '') + ' // ' + S.transport.toUpperCase() + ' // ' + (st.net ? (st.net.sta_connected ? 'STA' : 'AP') : 'LOCAL'));
+    text(el.footTail, 'RF-LAB ' + (st.fw || '') + (S.build ? '+' + S.build : '') +
+      ' // ' + S.transport.toUpperCase() + ' // ' + (st.net ? (st.net.sta_connected ? 'STA' : 'AP') : 'LOCAL'));
   }
 
   function updateLast(l) {
@@ -1202,7 +1400,11 @@ body.txing .last-code{animation:none}
   function show(m) { if (m) m.hidden = false; }
   function hide(m) { if (m) m.hidden = true; }
   function closeAll() {
-    hide(el.helpModal); hide(el.scanModal);
+    hide(el.helpModal); hide(el.scanModal); hide(el.hwModal); hide(el.otaModal);
+    const hb = el.hwModal && el.hwModal.querySelector('.hw-modal-body');
+    if (hb) hb.classList.remove('is-zoom');
+    const hz = $('hwZoom');
+    if (hz) { hz.textContent = 'ZOOM'; hz.setAttribute('aria-pressed', 'false'); }
     if (S.authed) hide(el.pinModal);
   }
   function showPin() {
@@ -1222,8 +1424,26 @@ body.txing .last-code{animation:none}
 
   const helpClose = el.helpModal.querySelector('[data-close]');
   if (helpClose) helpClose.addEventListener('click', closeAll);
+  const hwChip = $('hwChip');
+  if (hwChip) hwChip.addEventListener('click', () => show(el.hwModal));
+  const hwZoom = $('hwZoom');
+  if (hwZoom) hwZoom.addEventListener('click', () => {
+    const body = el.hwModal && el.hwModal.querySelector('.hw-modal-body');
+    if (!body) return;
+    const on = body.classList.toggle('is-zoom');
+    hwZoom.textContent = on ? 'FIT' : 'ZOOM';
+    hwZoom.setAttribute('aria-pressed', String(on));
+  });
   const rescan = el.scanModal.querySelector('#rescan');
   if (rescan) rescan.addEventListener('click', () => ble.scan());
+
+  const otaOpen = $('otaOpen');
+  if (otaOpen) otaOpen.addEventListener('click', openOta);
+  if (el.otaStart) el.otaStart.addEventListener('click', startOta);
+  if (el.otaFile) el.otaFile.addEventListener('change', () => {
+    const f = el.otaFile.files && el.otaFile.files[0];
+    if (f) otaStatus('READY // ' + f.name + ' · ' + Math.round(f.size / 1024) + ' KiB');
+  });
 
   $('pinForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1282,7 +1502,8 @@ body.txing .last-code{animation:none}
   document.addEventListener('keydown', (e) => {
     const tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    if (!el.helpModal.hidden || !el.pinModal.hidden || !el.scanModal.hidden) {
+    if (!el.helpModal.hidden || !el.pinModal.hidden || !el.scanModal.hidden ||
+        !el.hwModal.hidden || !el.otaModal.hidden) {
       if (e.key === 'Escape') closeAll();
       return;
     }
@@ -1301,6 +1522,8 @@ body.txing .last-code{animation:none}
       case 'r': case 'R': refresh(); break;
       case 't': case 'T': sendCmd('DISP TEST 30'); break;
       case 'a': case 'A': toggleArm(); break;
+      case 'h': case 'H': show(el.hwModal); break;
+      case 'u': case 'U': openOta(); break;
       case '?': show(el.helpModal); break;
       case 'Escape': closeAll(); break;
       default:
@@ -1326,7 +1549,8 @@ body.txing .last-code{animation:none}
   })();
 
   setArmed(false);
-  log('sys', 'RF-LAB FIELD TERMINAL // ' + S.transport.toUpperCase());
+  text(el.uiId, UI_HASH);
+  log('sys', 'RF-LAB FIELD TERMINAL // ' + S.transport.toUpperCase() + ' // UI ' + UI_HASH);
   if (S.transport === 'ble') {
     setLink('BLE SCAN', 'warn');
     ble.scan();

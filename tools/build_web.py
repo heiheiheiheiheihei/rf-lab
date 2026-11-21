@@ -5,12 +5,14 @@ Sources:
   web/index.html   page shell with /*__CSS__*/ and /*__JS__*/ placeholders
   web/app.css      tactical skin
   web/app.js       HTTP/SSE + BLE transport
+  web/art/*.svg    hardware plates (also copied to site/assets/)
 
 Outputs:
   web/dist/index.html                  human-readable build (debug / screenshot)
   firmware/src/web/index.html.gz       embedded into the firmware (gzip, mtime=0)
   android/app/src/main/assets/index.html  bundled into the APK (same bytes)
   site/assets/terminal.html            live iframe demo for the official site
+  site/assets/hw-*.svg                 copies of web/art hardware plates
 
 The site demo is the same built page plus one preceding script:
 site/assets/terminal-demo.js replaces fetch/EventSource with an in-page mock.
@@ -38,6 +40,11 @@ FW_GZ = ROOT / "firmware" / "src" / "web" / "index.html.gz"
 ANDROID = ROOT / "android" / "app" / "src" / "main" / "assets" / "index.html"
 SITE_DEMO = ROOT / "site" / "assets" / "terminal.html"
 SITE_DEMO_SCRIPT = '<script src="terminal-demo.js"></script>\n'
+ART = ROOT / "web" / "art"
+SITE_ASSETS = ROOT / "site" / "assets"
+HW_ART = ("hw-assembly.svg", "hw-core.svg", "hw-rf.svg")
+HW_PLACEHOLDER = "<!--__HW_ASSEMBLY__-->"
+UI_HASH_TOKEN = "__UI_HASH__"
 
 # Only these absolute URLs are allowed in the generated page. They are XML
 # namespaces (data: favicon), not network requests.
@@ -66,6 +73,22 @@ def build_html() -> bytes:
             external.append(url)
     if external:
         raise SystemExit("external resource(s) not allowed: " + ", ".join(sorted(set(external))))
+
+    if HW_PLACEHOLDER not in html:
+        raise SystemExit("web/index.html is missing <!--__HW_ASSEMBLY__-->")
+    art = (ART / "hw-assembly.svg").read_text(encoding="utf-8")
+    art = re.sub(r"^<\?xml[^>]*>\s*", "", art)
+    if "<script" in art.lower():
+        raise SystemExit("hardware plate SVG must not contain script")
+    html = html.replace(HW_PLACEHOLDER, art)
+
+    # Content fingerprint: the page tells the user which build it is, on both
+    # the device and the APK. Hash the page with the placeholder still in
+    # place, then substitute — so the digest does not depend on itself.
+    if UI_HASH_TOKEN not in html:
+        raise SystemExit("web/index.html is missing __UI_HASH__")
+    ui_hash = hashlib.sha256(html.encode("utf-8")).hexdigest()[:8]
+    html = html.replace(UI_HASH_TOKEN, ui_hash)
 
     return html.encode("utf-8")
 
@@ -116,15 +139,21 @@ def main() -> int:
     ok &= write_or_check(DIST, html, args.check)
     ok &= write_or_check(FW_GZ, packed, args.check)
     ok &= write_or_check(SITE_DEMO, demo, args.check)
+    for name in HW_ART:
+        ok &= write_or_check(SITE_ASSETS / name, (ART / name).read_bytes(), args.check)
     # Android may not be checked out; only verify if the file already exists.
     if ANDROID.exists() or not args.check:
         ok &= write_or_check(ANDROID, html, args.check)
 
     if not args.quiet:
+        page = html.decode("utf-8")
+        found = re.search(r'name="rflab-ui" content="([0-9a-f]+)"', page)
         print(f"html   {len(html):7d} B  sha256 {hashlib.sha256(html).hexdigest()[:16]}")
+        print(f"ui     {found.group(1) if found else '--'}  (page build id, shown in HELP)")
         print(f"gzip   {len(packed):7d} B  sha256 {hashlib.sha256(packed).hexdigest()[:16]}")
         print(f"ratio  {100.0 * len(packed) / len(html):5.1f}%")
         print(f"demo   {len(demo):7d} B  {SITE_DEMO.relative_to(ROOT)}")
+        print(f"art    3 SVGs -> site/assets/ (hw-assembly, hw-core, hw-rf)")
     if args.check and not ok:
         return 1
     return 0

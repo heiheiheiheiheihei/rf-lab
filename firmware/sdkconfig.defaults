@@ -10,11 +10,17 @@ CONFIG_IDF_TARGET="esp32c3"
 # --- Flash:4MB ---------------------------------------------------------
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
-# 0.5.0 的 singleapp_large 只有 1500K;Wi-Fi+HTTP+NimBLE+内嵌 UI 需要 2MB。
-# partitions.csv 保留 nvs 在 0x9000,已有码库不丢。
+# 0.5.0 的 singleapp_large 只有 1500K;Wi-Fi+HTTP+NimBLE+内嵌 UI 需要 ~1.08MB。
+# 0.6.0+ OTA:otadata + 两个 1.94MB 槽,不再保留 factory;NVS 仍在 0x9000。
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
+# --- OTA:双槽 + 回滚 ----------------------------------------------------
+# 新镜像首次启动是 PENDING_VERIFY;main.c 在启动自检通过后调用
+# esp_ota_mark_app_valid_cancel_rollback()。在那之前崩溃/复位,引导器回滚到旧槽。
+# 不做安全启动:token 是应用层门,不是签名,见 docs/01-ui.md §3.4。
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 
 # --- 控制台:自己实现,不用 IDF console ---------------------------------
 CONFIG_ESP_CONSOLE_NONE=y

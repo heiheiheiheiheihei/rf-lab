@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="rflab-ui" content="__UI_HASH__">
 <meta name="theme-color" content="#070906">
 <meta name="color-scheme" content="dark">
 <title>RF-LAB // 百元射频实验室 · FIELD TERMINAL</title>
@@ -36,6 +37,7 @@
     <span class="chip">MOD <b id="modBaud">--</b></span>
     <span class="chip bay">BAY <b>YS-RF34DL</b></span>
     <span class="chip">OLED <b id="oled">--</b></span>
+    <button class="chip hw" id="hwChip" type="button" aria-haspopup="dialog" aria-controls="hwModal"><i class="dot ok"></i><b>HW</b></button>
     <span class="spacer"></span>
     <button class="chip arm" id="armChip" type="button" aria-pressed="false">
       <i class="dot" id="armDot"></i><b id="armLabel">DISARMED</b>
@@ -139,8 +141,15 @@
       <div><kbd>R</kbd><span>重新拉取状态</span></div>
       <div><kbd>T</kbd><span>OLED 测试图案 30s</span></div>
       <div><kbd>A</kbd><span>ARM / DISARM</span></div>
+      <div><kbd>H</kbd><span>硬件链路</span></div>
+      <div><kbd>U</kbd><span>固件升级</span></div>
       <div><kbd>?</kbd><span>本帮助</span></div>
       <div><kbd>Esc</kbd><span>关闭弹层</span></div>
+    </div>
+    <div class="help-meta">
+      <span>BUILD <b id="buildId">--</b></span>
+      <span>UI <b id="uiId">--</b></span>
+      <button class="mini" id="otaOpen" type="button">FIRMWARE UPDATE</button>
     </div>
     <p class="modal-note">BLE 模式需在设备 OLED 或串口 <code>PIN</code> 查看 4 位 PIN。ARM 只防误触,不是发射硬门控。</p>
   </div>
@@ -163,6 +172,30 @@
     <div class="modal-head"><h2 id="scanTitle">BLE SCAN <em>// 选择设备</em></h2><button class="mini" id="rescan" type="button">RESCAN</button></div>
     <div class="scan-list" id="scanList"><div class="empty">SCANNING…</div></div>
     <p class="modal-note">只显示广播 RF-LAB Service UUID 的设备。</p>
+  </div>
+</div>
+
+<div class="modal" id="hwModal" hidden>
+  <div class="modal-panel hw" role="dialog" aria-modal="true" aria-labelledby="hwModalTitle">
+    <div class="modal-head"><h2 id="hwModalTitle">HARDWARE <em>// 硬件链路</em></h2><div class="hw-tools"><button class="mini" id="hwZoom" type="button" aria-pressed="false">ZOOM</button><button class="mini" data-close type="button">CLOSE</button></div></div>
+    <div class="hw-modal-body">
+      <!--__HW_ASSEMBLY__-->
+    </div>
+    <p class="modal-note">CORE-C3 + YS-RF34DL:VCC 接 <code>3V3</code>,GND 共地,TXD→<code>GPIO4</code>、RXD→<code>GPIO3</code>。<b>3.3V ONLY</b>;示意图非比例,接线以 <code>hardware/README.md</code> 为准。窄屏点 ZOOM 放大。</p>
+  </div>
+</div>
+
+<div class="modal" id="otaModal" hidden>
+  <div class="modal-panel narrow" role="dialog" aria-modal="true" aria-labelledby="otaTitle">
+    <div class="modal-head"><h2 id="otaTitle">FIRMWARE <em>// 固件升级</em></h2><button class="mini" data-close type="button">CLOSE</button></div>
+    <div class="ota-body">
+      <p class="modal-note">串口执行 <code>OTA</code> 取 8 位 token(10 分钟有效)。只更新设备固件;APP 页面仍需重装 APK。</p>
+      <label class="ota-row">IMAGE <input type="file" id="otaFile" accept=".bin,application/octet-stream"></label>
+      <label class="ota-row">TOKEN <input id="otaToken" maxlength="8" autocomplete="off" spellcheck="false" placeholder="8 HEX"></label>
+      <div class="ota-bar" aria-hidden="true"><i id="otaBar"></i></div>
+      <div class="ota-status" id="otaStatus">IDLE // 等待镜像</div>
+      <button class="btn btn-arm" id="otaStart" type="button">UPLOAD &amp; REBOOT</button>
+    </div>
   </div>
 </div>
 

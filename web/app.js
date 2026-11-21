@@ -7,6 +7,7 @@
 
   const $ = (id) => document.getElementById(id);
   const hasBridge = typeof window.RFBridge !== 'undefined';
+  const UI_HASH = ((document.querySelector('meta[name="rflab-ui"]') || {}).content || '--').slice(0, 8);
   const S = {
     transport: hasBridge ? 'ble' : 'http',
     connected: false,
@@ -19,7 +20,9 @@
     txId: 0,
     es: null,
     logCount: 0,
-    lastScan: []
+    lastScan: [],
+    fw: '',
+    build: ''
   };
 
   const el = {
@@ -31,7 +34,9 @@
     listenTag: $('listenTag'), storeTag: $('storeTag'), codeList: $('codeList'), emptyState: $('emptyState'),
     log: $('log'), tStore: $('tStore'), tFrames: $('tFrames'), tAcks: $('tAcks'), tStray: $('tStray'),
     tUplink: $('tUplink'), tRssi: $('tRssi'), tUptime: $('tUptime'),
-    helpModal: $('helpModal'), pinModal: $('pinModal'), scanModal: $('scanModal'),
+    helpModal: $('helpModal'), pinModal: $('pinModal'), scanModal: $('scanModal'), hwModal: $('hwModal'),
+    otaModal: $('otaModal'), otaFile: $('otaFile'), otaToken: $('otaToken'), otaStart: $('otaStart'),
+    otaBar: $('otaBar'), otaStatus: $('otaStatus'), buildId: $('buildId'), uiId: $('uiId'),
     pinInput: $('pinInput'), pinMsg: $('pinMsg'), scanList: $('scanList'),
     toast: $('toast'), footTail: $('footTail'), wifiForm: $('wifiForm'),
     wifiNote: $('wifiNote'), wifiClear: $('wifiClear')
@@ -263,7 +268,11 @@
   }
 
   function onHello(m) {
+    S.fw = m.fw || '';
+    S.build = m.build || '';
     text(el.fw, m.fw || '--');
+    text(el.buildId, S.build || '--');
+    text(el.uiId, UI_HASH);
     if (m.ap_ssid) text(el.net, m.ap_ssid);
     if (m.auth === 0) {
       S.authed = false;
@@ -272,7 +281,8 @@
       S.authed = true;
       hide(el.pinModal);
     }
-    text(el.footTail, 'RF-LAB ' + (m.fw || '') + ' // ' + S.transport.toUpperCase() + ' // ' + (m.proto || 1));
+    text(el.footTail, 'RF-LAB ' + (m.fw || '') + (S.build ? '+' + S.build : '') +
+      ' // ' + S.transport.toUpperCase() + ' // ' + (m.proto || 1));
   }
 
   function onEvent(ev) {
@@ -310,6 +320,95 @@
         if (ev.line) log('sys', ev.line);
         break;
     }
+  }
+
+  /* ---------------- firmware OTA (HTTP only) ---------------- */
+
+  function otaStatus(msg, warn) {
+    text(el.otaStatus, msg);
+    if (el.otaStatus) el.otaStatus.classList.toggle('warn', !!warn);
+  }
+
+  function otaPct(pct) {
+    if (el.otaBar) el.otaBar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  }
+
+  function openOta() {
+    show(el.otaModal);
+    otaPct(0);
+    const bleOnly = S.transport !== 'http';
+    if (el.otaStart) el.otaStart.disabled = bleOnly;
+    if (el.otaFile) el.otaFile.disabled = bleOnly;
+    if (el.otaToken) el.otaToken.disabled = bleOnly;
+    text(el.buildId, S.build || '--');
+    text(el.uiId, UI_HASH);
+    otaStatus(bleOnly
+      ? 'APP // BLE 不支持上传;请用浏览器打开设备 IP,或 USB 烧录'
+      : 'IDLE // 串口执行 OTA 取 token', bleOnly);
+  }
+
+  function startOta() {
+    if (S.transport !== 'http') return;
+    const file = el.otaFile && el.otaFile.files && el.otaFile.files[0];
+    if (!file) { otaStatus('ERR // 先选择 firmware.bin', true); return; }
+    const token = (el.otaToken.value || '').trim().toUpperCase();
+    if (!/^[0-9A-F]{8}$/.test(token)) {
+      otaStatus('ERR // token 是 8 位十六进制(串口 OTA)', true);
+      return;
+    }
+    const before = S.build || '';
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ota');
+    xhr.timeout = 180000;
+    xhr.setRequestHeader('X-RFLAB-OTA', token);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const pct = Math.round((e.loaded * 100) / e.total);
+      otaPct(pct);
+      otaStatus('UPLOAD ' + pct + '% // ' + Math.round(e.loaded / 1024) + ' KiB');
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        otaPct(100);
+        otaStatus('OK // 设备重启中,等待新镜像…');
+        log('ok', 'OTA 上传完成,等待重启');
+        pollReboot(before);
+      } else {
+        let why = xhr.responseText || ('HTTP ' + xhr.status);
+        try { why = JSON.parse(xhr.responseText).error || why; } catch (e) { /* text */ }
+        otaStatus('ERR ' + why, true);
+        log('warn', 'OTA ' + why);
+      }
+    };
+    xhr.onerror = () => otaStatus('ERR // 网络中断(设备仍在旧镜像)', true);
+    xhr.ontimeout = () => otaStatus('ERR // 超时(设备仍在旧镜像)', true);
+    otaPct(0);
+    otaStatus('UPLOAD 0% // ' + Math.round(file.size / 1024) + ' KiB');
+    xhr.send(file);
+  }
+
+  function pollReboot(before) {
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries++;
+      try {
+        const h = await httpJSON('/api/hello');
+        const now = h.build || '';
+        if (now && now !== before) {
+          clearInterval(timer);
+          otaStatus('OK // ' + h.fw + '+' + now + ' · 刷新页面');
+          setTimeout(() => location.reload(), 900);
+          return;
+        }
+      } catch (e) {
+        otaStatus('REBOOT… // 等待设备 ' + tries + 's');
+      }
+      if (tries >= 30) {
+        clearInterval(timer);
+        otaStatus('WARN // 未检测到新 build,检查串口后手动刷新', true);
+      }
+    }, 1000);
   }
 
   /* ---------------- state ---------------- */
@@ -366,7 +465,8 @@
 
     if (st.last && st.last.code) updateLast(st.last);
     if (st.tx) setTxActive(!!st.tx.active, st.tx.kind, st.tx.id);
-    text(el.footTail, 'RF-LAB ' + (st.fw || '') + ' // ' + S.transport.toUpperCase() + ' // ' + (st.net ? (st.net.sta_connected ? 'STA' : 'AP') : 'LOCAL'));
+    text(el.footTail, 'RF-LAB ' + (st.fw || '') + (S.build ? '+' + S.build : '') +
+      ' // ' + S.transport.toUpperCase() + ' // ' + (st.net ? (st.net.sta_connected ? 'STA' : 'AP') : 'LOCAL'));
   }
 
   function updateLast(l) {
@@ -554,7 +654,11 @@
   function show(m) { if (m) m.hidden = false; }
   function hide(m) { if (m) m.hidden = true; }
   function closeAll() {
-    hide(el.helpModal); hide(el.scanModal);
+    hide(el.helpModal); hide(el.scanModal); hide(el.hwModal); hide(el.otaModal);
+    const hb = el.hwModal && el.hwModal.querySelector('.hw-modal-body');
+    if (hb) hb.classList.remove('is-zoom');
+    const hz = $('hwZoom');
+    if (hz) { hz.textContent = 'ZOOM'; hz.setAttribute('aria-pressed', 'false'); }
     if (S.authed) hide(el.pinModal);
   }
   function showPin() {
@@ -574,8 +678,26 @@
 
   const helpClose = el.helpModal.querySelector('[data-close]');
   if (helpClose) helpClose.addEventListener('click', closeAll);
+  const hwChip = $('hwChip');
+  if (hwChip) hwChip.addEventListener('click', () => show(el.hwModal));
+  const hwZoom = $('hwZoom');
+  if (hwZoom) hwZoom.addEventListener('click', () => {
+    const body = el.hwModal && el.hwModal.querySelector('.hw-modal-body');
+    if (!body) return;
+    const on = body.classList.toggle('is-zoom');
+    hwZoom.textContent = on ? 'FIT' : 'ZOOM';
+    hwZoom.setAttribute('aria-pressed', String(on));
+  });
   const rescan = el.scanModal.querySelector('#rescan');
   if (rescan) rescan.addEventListener('click', () => ble.scan());
+
+  const otaOpen = $('otaOpen');
+  if (otaOpen) otaOpen.addEventListener('click', openOta);
+  if (el.otaStart) el.otaStart.addEventListener('click', startOta);
+  if (el.otaFile) el.otaFile.addEventListener('change', () => {
+    const f = el.otaFile.files && el.otaFile.files[0];
+    if (f) otaStatus('READY // ' + f.name + ' · ' + Math.round(f.size / 1024) + ' KiB');
+  });
 
   $('pinForm').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -634,7 +756,8 @@
   document.addEventListener('keydown', (e) => {
     const tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    if (!el.helpModal.hidden || !el.pinModal.hidden || !el.scanModal.hidden) {
+    if (!el.helpModal.hidden || !el.pinModal.hidden || !el.scanModal.hidden ||
+        !el.hwModal.hidden || !el.otaModal.hidden) {
       if (e.key === 'Escape') closeAll();
       return;
     }
@@ -653,6 +776,8 @@
       case 'r': case 'R': refresh(); break;
       case 't': case 'T': sendCmd('DISP TEST 30'); break;
       case 'a': case 'A': toggleArm(); break;
+      case 'h': case 'H': show(el.hwModal); break;
+      case 'u': case 'U': openOta(); break;
       case '?': show(el.helpModal); break;
       case 'Escape': closeAll(); break;
       default:
@@ -678,7 +803,8 @@
   })();
 
   setArmed(false);
-  log('sys', 'RF-LAB FIELD TERMINAL // ' + S.transport.toUpperCase());
+  text(el.uiId, UI_HASH);
+  log('sys', 'RF-LAB FIELD TERMINAL // ' + S.transport.toUpperCase() + ' // UI ' + UI_HASH);
   if (S.transport === 'ble') {
     setLink('BLE SCAN', 'warn');
     ble.scan();

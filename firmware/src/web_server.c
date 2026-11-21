@@ -11,9 +11,16 @@
 #include "freertos/task.h"
 #include "link.h"
 #include "net.h"
+#include "ota.h"
 
 #ifndef RFLAB_FW_VERSION
 #define RFLAB_FW_VERSION "0.6.0"
+#endif
+#ifndef RFLAB_BUILD_ID
+#define RFLAB_BUILD_ID "dev"
+#endif
+#ifndef RFLAB_UI_HASH
+#define RFLAB_UI_HASH "unknown"
 #endif
 
 /* CMake EMBED_FILES "web/index.html.gz" 生成的小端二进制符号。 */
@@ -57,11 +64,11 @@ static esp_err_t hello_get(httpd_req_t *req)
 {
     net_info_t ni;
     net_get_info(&ni);
-    char buf[320];
+    char buf[384];
     snprintf(buf, sizeof(buf),
-             "{\"fw\":\"%s\",\"proto\":1,\"name\":\"%s\",\"ap_ssid\":\"%s\","
-             "\"ip\":\"%s\",\"auth\":1}",
-             RFLAB_FW_VERSION, app_name(), ni.ap_ssid, net_ip());
+             "{\"fw\":\"%s\",\"build\":\"%s\",\"ui\":\"%s\",\"proto\":1,\"name\":\"%s\","
+             "\"ap_ssid\":\"%s\",\"ip\":\"%s\",\"auth\":1}",
+             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, app_name(), ni.ap_ssid, net_ip());
     return send_json(req, buf);
 }
 
@@ -231,6 +238,84 @@ static esp_err_t wifi_clear_post(httpd_req_t *req)
     return r;
 }
 
+/* Firmware upload. Token is armed from the serial console only (`OTA`);
+ * a successful upload writes the inactive slot and main reboots after a
+ * short grace period. No token => 401, no free slot => 409. */
+static esp_err_t ota_post(httpd_req_t *req)
+{
+    char token[16];
+    if (httpd_req_get_hdr_value_str(req, "X-RFLAB-OTA", token, sizeof(token)) != ESP_OK ||
+        !ota_check_token(token)) {
+        httpd_resp_set_status(req, "401 Unauthorized");
+        return send_json(req, "{\"ok\":false,\"error\":\"bad or missing token: serial OTA\"}");
+    }
+
+    int total = req->content_len;
+    if (total <= 0) {
+        httpd_resp_set_status(req, "400 Bad Request");
+        return send_json(req, "{\"ok\":false,\"error\":\"content-length required\"}");
+    }
+
+    esp_err_t e = ota_begin((size_t)total);
+    if (e != ESP_OK) {
+        char err[160];
+        snprintf(err, sizeof(err), "{\"ok\":false,\"error\":\"%s\"}", ota_error());
+        httpd_resp_set_status(req, "409 Conflict");
+        return send_json(req, err);
+    }
+
+    char *buf = malloc(4096);
+    if (!buf) {
+        ota_abort();
+        httpd_resp_set_status(req, "500 Internal Server Error");
+        return send_json(req, "{\"ok\":false,\"error\":\"out of memory\"}");
+    }
+
+    int got = 0;
+    int timeouts = 0;
+    while (got < total) {
+        size_t want = (size_t)(total - got);
+        if (want > 4096) {
+            want = 4096;
+        }
+        int r = httpd_req_recv(req, buf, want);
+        if (r == HTTPD_SOCK_ERR_TIMEOUT && ++timeouts < 3) {
+            continue;
+        }
+        if (r <= 0) {
+            free(buf);
+            ota_abort();
+            httpd_resp_set_status(req, "400 Bad Request");
+            return send_json(req, "{\"ok\":false,\"error\":\"upload interrupted\"}");
+        }
+        timeouts = 0;
+        e = ota_write(buf, (size_t)r);
+        if (e != ESP_OK) {
+            free(buf);
+            ota_abort();
+            char err[160];
+            snprintf(err, sizeof(err), "{\"ok\":false,\"error\":\"%s\"}", ota_error());
+            httpd_resp_set_status(req, "500 Internal Server Error");
+            return send_json(req, err);
+        }
+        got += r;
+    }
+    free(buf);
+
+    e = ota_finish();
+    if (e != ESP_OK) {
+        char err[160];
+        snprintf(err, sizeof(err), "{\"ok\":false,\"error\":\"%s\"}", ota_error());
+        httpd_resp_set_status(req, "400 Bad Request");
+        return send_json(req, err);
+    }
+
+    char ok[128];
+    snprintf(ok, sizeof(ok),
+             "{\"ok\":true,\"bytes\":%d,\"slot\":%d,\"reboot\":true}", total, ota_target_slot());
+    return send_json(req, ok);
+}
+
 static bool sse_send(httpd_req_t *req, const char *event, const char *data)
 {
     char head[48];
@@ -255,7 +340,7 @@ static void sse_task(void *arg)
 {
     httpd_req_t *req = (httpd_req_t *)arg;
     sse_ctx_t *ctx = calloc(1, sizeof(sse_ctx_t));
-    char hello[320];
+    char hello[384];
     uint32_t cursor = link_head();
     uint32_t st_seq = 0;
     uint32_t cd_seq = 0;
@@ -279,9 +364,9 @@ static void sse_task(void *arg)
     net_info_t ni;
     net_get_info(&ni);
     snprintf(hello, sizeof(hello),
-             "{\"t\":\"hello\",\"fw\":\"%s\",\"proto\":1,\"name\":\"%s\","
-             "\"ap_ssid\":\"%s\",\"ip\":\"%s\",\"auth\":1}",
-             RFLAB_FW_VERSION, app_name(), ni.ap_ssid, net_ip());
+             "{\"t\":\"hello\",\"fw\":\"%s\",\"build\":\"%s\",\"ui\":\"%s\",\"proto\":1,"
+             "\"name\":\"%s\",\"ap_ssid\":\"%s\",\"ip\":\"%s\",\"auth\":1}",
+             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, app_name(), ni.ap_ssid, net_ip());
     if (!sse_send(req, "hello", hello)) {
         goto done;
     }
@@ -373,6 +458,7 @@ static const httpd_uri_t s_uris[] = {
     {.uri = "/api/net", .method = HTTP_GET, .handler = net_get},
     {.uri = "/api/events", .method = HTTP_GET, .handler = events_get},
     {.uri = "/api/cmd", .method = HTTP_POST, .handler = cmd_post},
+    {.uri = "/api/ota", .method = HTTP_POST, .handler = ota_post},
     {.uri = "/api/wifi", .method = HTTP_POST, .handler = wifi_post},
     {.uri = "/api/wifi/clear", .method = HTTP_POST, .handler = wifi_clear_post},
 };

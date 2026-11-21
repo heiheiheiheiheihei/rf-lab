@@ -21,6 +21,12 @@ extern void ble_store_config_init(void);
 #ifndef RFLAB_FW_VERSION
 #define RFLAB_FW_VERSION "0.6.0"
 #endif
+#ifndef RFLAB_BUILD_ID
+#define RFLAB_BUILD_ID "dev"
+#endif
+#ifndef RFLAB_UI_HASH
+#define RFLAB_UI_HASH "unknown"
+#endif
 
 /* 128-bit UUID,小端字节序(BLE_UUID128_INIT 的约定)。 */
 #define SVC_BYTES  0x31, 0x42, 0x41, 0x4c, 0x46, 0x52, 0x55, 0x9a, \
@@ -146,8 +152,9 @@ static void queue_line(const char *line)
 static void send_hello(void)
 {
     snprintf(s_line, sizeof(s_line),
-             "{\"t\":\"hello\",\"fw\":\"%s\",\"proto\":1,\"name\":\"%s\",\"auth\":%d}",
-             RFLAB_FW_VERSION, app_name(), s_authed ? 1 : 0);
+             "{\"t\":\"hello\",\"fw\":\"%s\",\"build\":\"%s\",\"ui\":\"%s\","
+             "\"proto\":1,\"name\":\"%s\",\"auth\":%d}",
+             RFLAB_FW_VERSION, RFLAB_BUILD_ID, RFLAB_UI_HASH, app_name(), s_authed ? 1 : 0);
     notify_line(s_line);
 }
 

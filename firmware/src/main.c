@@ -46,12 +46,19 @@
 #include "oled.h"
 #include "oled_gfx.h"
 #include "oled_panel.h"
+#include "ota.h"
 #include "rf34dl.h"
 #include "ui.h"
 #include "web_server.h"
 
 #ifndef RFLAB_FW_VERSION
 #define RFLAB_FW_VERSION "0.6.0"
+#endif
+#ifndef RFLAB_BUILD_ID
+#define RFLAB_BUILD_ID "dev"
+#endif
+#ifndef RFLAB_UI_HASH
+#define RFLAB_UI_HASH "unknown"
 #endif
 
 /* ---------------- 引脚与参数 ---------------- */
@@ -288,6 +295,11 @@ static void build_state_json(char *out, size_t cap)
                 ost ? (unsigned long)ost->flush_err : 0UL,
                 ost ? (unsigned long)ost->last_us : 0UL,
                 ost ? (unsigned long)ost->max_us : 0UL);
+    o = jappend(out, cap, o,
+                "\"ota\":{\"armed\":%d,\"pct\":%d,\"phase\":\"%s\",\"slot\":%d,"
+                "\"next\":%d,\"pending\":%d},",
+                ota_is_armed() ? 1 : 0, ota_progress(), ota_phase(),
+                ota_running_slot(), ota_target_slot(), ota_pending_verify() ? 1 : 0);
     o = jappend(out, cap, o,
                 "\"tx\":{\"active\":%d,\"kind\":\"%s\",\"id\":%d,\"ok\":%d,\"ms\":%u},"
                 "\"last\":{\"kind\":\"%s\",\"id\":%d,\"band\":\"%s\",\"code\":\"%s\","
@@ -964,6 +976,7 @@ static void cmd_help(void)
     out("  WIFI [status]|[ssid pass]|CLEAR  join an AP / forget STA (AP fallback)\n");
     out("  BLE [on|off]          BLE advertising / status\n");
     out("  PIN                   show BLE 4-digit PIN (serial only)\n");
+    out("  OTA | OTA OFF         arm firmware upload (token on serial/OLED, 10 min)\n");
     out("  STATE                 print JSON state snapshot\n");
     out("  WEBTEST               self-check HTTP /api/hello + /api/events\n");
     out("  RESET                 restart ESP32\n");
@@ -974,6 +987,10 @@ static void cmd_help(void)
 static void cmd_info(void)
 {
     out("# RF-Lab fw=%s (ESP32-C3 + YS-RF34DL)\n", RFLAB_FW_VERSION);
+    out("# build=%s ui=%s\n", RFLAB_BUILD_ID, RFLAB_UI_HASH);
+    out("# ota slot=%d next=%d state=%s pct=%d pending=%d\n",
+        ota_running_slot(), ota_target_slot(), ota_phase(), ota_progress(),
+        ota_pending_verify() ? 1 : 0);
     out("# module UART1 %d 8N1 TX=GPIO%d RX=GPIO%d\n", s_mod_baud, PIN_MODULE_TX, PIN_MODULE_RX);
     out("# console uart0:%s usb:%s %d 8N1\n", s_uart0 ? "on" : "off", s_usb ? "on" : "off",
         CONSOLE_BAUD);
@@ -1437,6 +1454,42 @@ static void cmd_pin(app_src_t src)
     out("OK ble_pin=%s (enter in Android app; shown on OLED for 5s at boot)\n", s_ble_pin);
 }
 
+static void cmd_ota(const char *args, app_src_t src)
+{
+    if (src != APP_SRC_SERIAL) {
+        /* An HTTP/BLE caller must not be able to arm the flasher. */
+        out("ERR OTA is serial-only\n");
+        return;
+    }
+    if (arg_eq(args, "off")) {
+        ota_disarm();
+        out("OK ota=off\n");
+        ui_note_idle(&s_ui);
+        ui_mark_dirty();
+        app_mark_state_dirty();
+        return;
+    }
+    if (*args != 0 && !arg_eq(args, "on")) {
+        out("ERR usage: OTA|OTA OFF\n");
+        return;
+    }
+
+    char token[16];
+    if (!ota_arm(token, sizeof(token))) {
+        out("ERR ota arm failed\n");
+        return;
+    }
+    out("OK ota armed token=%s ttl=%us\n", token, (unsigned)ota_remaining_s());
+    out("# upload: POST /api/ota  X-RFLAB-OTA: <token>  body=firmware.bin\n");
+
+    char line[UI_COLS + 1];
+    snprintf(line, sizeof(line), "OTA %s", token);
+    ui_note_boot(&s_ui, line, "10 MIN");
+    s_boot_until_ms = now_ms() + 10000;
+    ui_mark_dirty();
+    app_mark_state_dirty();
+}
+
 static void cmd_state(void)
 {
     static char buf[APP_STATE_JSON_MAX];
@@ -1588,6 +1641,8 @@ static void handle_line(char *line, app_src_t src)
         cmd_ble(p);
     } else if (strcmp(cmd, "PIN") == 0) {
         cmd_pin(src);
+    } else if (strcmp(cmd, "OTA") == 0) {
+        cmd_ota(p, src);
     } else if (strcmp(cmd, "STATE") == 0) {
         cmd_state();
     } else if (strcmp(cmd, "WEBTEST") == 0) {
@@ -1711,6 +1766,44 @@ static void make_device_name(void)
 
 /* ---------------- main ---------------- */
 
+/* OTA progress/reboot pump. Runs on the main loop (single producer for
+ * state/event publishing); the HTTP handler only streams bytes into ota.c. */
+static void poll_ota(void)
+{
+    static char last_phase[8] = "";
+    static int last_pct = -1;
+
+    if (ota_pending_verify() && now_ms() > 6000) {
+        if (ota_confirm_boot()) {
+            out("# ota new image confirmed (rollback window closed)\n");
+        }
+    }
+
+    const char *ph = ota_phase();
+    if (strcmp(ph, last_phase) != 0) {
+        snprintf(last_phase, sizeof(last_phase), "%s", ph);
+        if (strcmp(ph, "error") == 0) {
+            out("# ota error: %s\n", ota_error());
+        } else if (strcmp(ph, "done") == 0) {
+            out("# ota image written; rebooting\n");
+        } else if (strcmp(ph, "armed") == 0) {
+            out("# ota armed (%us)\n", (unsigned)ota_remaining_s());
+        }
+        app_mark_state_dirty();
+    }
+
+    int pct = ota_progress();
+    if (pct != last_pct) {
+        last_pct = pct;
+        app_mark_state_dirty();
+    }
+
+    if (ota_reboot_due()) {
+        vTaskDelay(pdMS_TO_TICKS(150));
+        esp_restart();
+    }
+}
+
 void app_main(void)
 {
     init_console();
@@ -1739,7 +1832,10 @@ void app_main(void)
     bool nvs_ok = init_store();
     load_ble_pin();
     make_device_name();
+    ota_init();
     out("# stored %d code(s)%s\n", s_count, nvs_ok ? "" : " (NVS unavailable)");
+    out("# build=%s ui=%s ota_slot=%d pending_verify=%d\n",
+        RFLAB_BUILD_ID, RFLAB_UI_HASH, ota_running_slot(), ota_pending_verify() ? 1 : 0);
 
     esp_err_t ne = net_init();
     if (ne != ESP_OK) {
@@ -1802,6 +1898,7 @@ void app_main(void)
             feed_console(tmp, n);
         }
         poll_net_note();
+        poll_ota();
         execute_one_queued();
         pump(5);
         ui_refresh(false);

@@ -1,8 +1,9 @@
 # 固件(ESP32-C3 / ESP-IDF 5.5.5)
 
-**状态**:0.6.0 · 可构建 · 协议/OLED/事件环/TUI 有主机单测 · **2026-11-15 已上机**
-(见文末「上机结果」)。0.6.0 增加 Wi-Fi APSTA + HTTP/SSE + NimBLE;规格见
-[`../docs/01-ui.md`](../docs/01-ui.md),射频行为仍以 [`../docs/00-mvp.md`](../docs/00-mvp.md) 为准。
+**状态**:0.6.0 · 可构建 · 协议/OLED/事件环/TUI/OTA 门票有主机单测 · **2026-11-15 已上机**
+(见文末「上机结果」)。0.6.0 增加 Wi-Fi APSTA + HTTP/SSE + NimBLE;同日加入
+**双槽 OTA**(Web 上传 + 回滚 + 串口 token);规格见
+[`../docs/01-ui.md`](../docs/01-ui.md) §3.4,射频行为仍以 [`../docs/00-mvp.md`](../docs/00-mvp.md) 为准。
 
 目标板:ESP32-C3 0.42" OLED(4MB Flash,原生 USB)。板载 SSD1306 72×40 由本版驱动,
 只做状态面板;命令与行为规格在 [`docs/00-mvp.md`](../docs/00-mvp.md) §5–6(**唯一权威**,这里不重复)。
@@ -20,7 +21,9 @@
 | [`src/link.h`](src/link.h) / [`src/link.c`](src/link.c) | 小型事件环 + JSON 转义(纯 C,主机单测) |
 | [`src/app.h`](src/app.h) | main 暴露给传输层的命令入队 / 状态快照接口 |
 | [`src/net.h`](src/net.h) / [`src/net.c`](src/net.c) | Wi-Fi APSTA、STA 凭据 NVS、IP/RSSI |
-| [`src/web_server.h`](src/web_server.h) / [`src/web_server.c`](src/web_server.c) | HTTP 静态页、`/api/*`、SSE(异步 handler) |
+| [`src/ota_ticket.h`](src/ota_ticket.h) / [`src/ota_ticket.c`](src/ota_ticket.c) | **纯 C**:8-hex 一次性 token、10 分钟过期、5 次错误锁定(主机单测) |
+| [`src/ota.h`](src/ota.h) / [`src/ota.c`](src/ota.c) | 双槽写入、`esp_ota_set_boot_partition`、PENDING_VERIFY 确认、进度 |
+| [`src/web_server.h`](src/web_server.h) / [`src/web_server.c`](src/web_server.c) | HTTP 静态页、`/api/*`、SSE(异步 handler)、`POST /api/ota` |
 | [`src/ble_link.h`](src/ble_link.h) / [`src/ble_link.c`](src/ble_link.c) | NimBLE GATT(自定义 NUS 风格)、PIN、分片通知 |
 | [`src/main.c`](src/main.c) | 控制台、NVS、模块 UART1、命令队列、快照、网络初始化、OLED 调度 |
 | [`test/host/test_rf34dl.c`](test/host/test_rf34dl.c) | 协议单测:真实抓包回归、重同步、ACK(含 FE/FF)、fuzz |
@@ -34,12 +37,16 @@ cd firmware
 pio run -e esp32c3
 ```
 
-构建前会自动跑 `scripts/embed_web.py`(把 `web/` 打成 gzip 并 EMBED_FILES);构建后
-`scripts/check_partitions.py` 校验 app 分区必须是 **2MB**。
+构建前会自动跑 `scripts/embed_web.py`(把 `web/` 打成 gzip、EMBED_FILES,并注入
+`RFLAB_BUILD_ID` / `RFLAB_UI_HASH`);构建后 `scripts/check_partitions.py` 校验
+**otadata + 两个 ≥0x1E0000 的 OTA 槽**,且镜像放得下。
 
 产物 `.pio/build/esp32c3/firmware.bin`。**烧录请用仓库根的 `./tools/flash.sh /dev/ttyACM0`**:
-它一次写 bootloader + 2MB 分区表 + app。只 `pio run -t upload` 会留下旧的 1MB 分区表,
-1.06MB 的镜像会启动失败(0.6.0 实测踩过)。
+它一次写 bootloader + 双 OTA 分区表 + app 到 `ota_0`,并擦 `otadata`。只 `pio run -t upload`
+会留下旧的分区表/槽,镜像启动失败或写错槽(0.6.0 实测踩过)。
+
+**首次从旧的单 app(2MB factory)迁移必须 USB 重烧一次**;分区表不能 OTA 自己。
+之后用 `tools/ota.py` 或 Web UI 的 `U` 面板,不动 NVS(码库/Wi-Fi/BLE PIN)。
 
 改了 `sdkconfig.defaults` 先 `rm -f sdkconfig.esp32c3` 再编(它是生成物)。
 
@@ -48,7 +55,7 @@ pio run -e esp32c3
 ## 主机单测(不接硬件)
 
 ```bash
-./tools/host_test.sh        # 协议 76 + 事件环 53 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh        # 协议 76 + 事件环 53 + OTA 41 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh  # 加 ASan/UBSan
 ```
 
@@ -65,6 +72,26 @@ pio run -e esp32c3 -t upload --upload-port /dev/ttyACM0
 
 原生 USB-Serial-JTAG,不需要驱动。端口不出现时:按住 **BOOT**(GPIO9)插线进下载模式,或换一根**数据线**(充电线没有 D+/D−)。
 
+## OTA(首次 USB 迁移之后)
+
+| 项 | 值 |
+|---|---|
+| 分区 | `nvs` 0x9000/0x6000 · `phy` 0xf000/0x1000 · `otadata` 0x10000/0x2000 · `ota_0` 0x20000/0x1F0000 · `ota_1` 0x210000/0x1F0000(无 factory) |
+| 入口 | 串口 `OTA`(生成 8-hex token,10 分钟有效;OLED 显示 10s) · `OTA OFF` |
+| 上传 | `POST /api/ota`,头 `X-RFLAB-OTA: <token>`,`Content-Length` + 原始 `.bin`;成功 200 后约 1.5s 重启 |
+| 工具 | `python3 tools/ota.py --host <ip> --serial /dev/ttyACM0`(或 `--token`) |
+| Web | 帮助面板 `U` → `FIRMWARE UPDATE`;仅 HTTP 页面可用,APP/BLE 不提供 |
+| 回滚 | 新镜像首次启动为 `PENDING_VERIFY`;`main.c` 在 6s 后 `mark valid`,之前崩溃/复位由引导器回滚 |
+| 不动 | NVS 0x9000(码库/Wi-Fi/BLE PIN);写的是非运行槽 |
+
+**边界**:HTTP 无登录,所以 OTA 端点默认关闭,只有串口 `OTA` armed 后才接受;
+token 是应用层门,不是签名/加密。没有 secure boot。**APP 的页面在 APK 里,OTA 不会更新
+APK**;网页端和 APP 的 `build` / `ui` 可在帮助面板或 `/api/hello` 对比。
+
+实测(2026-11-21):镜像 1,086,800B;A(ota_0)→B(ota_1)→A(ota_0)→final(ota_1) 三次 OTA 成功;
+错 token 401、随机镜像 500、中途断流后仍运行旧槽;NVS 9 条码与 Wi-Fi 凭据保持。
+证据:[`../docs/evidence/2026-11-21-ota.md`](../docs/evidence/2026-11-21-ota.md)。
+
 ## 跨平台 UI(0.6.0)
 
 | 项 | 值 |
@@ -72,7 +99,7 @@ pio run -e esp32c3 -t upload --upload-port /dev/ttyACM0
 | 模式 | `ap` / `connecting` / `sta` / `apsta`;有凭据先 STA-only,15s 失败回 AP |
 | AP | `RF-Lab-XXXX`(MAC 末两字节),WPA2 `rflab1234`,`192.168.4.1`;仅回退/配网时开 |
 | STA | `WIFI <ssid> <pass>`、Web 设置页或 `/api/wifi`;凭据存 NVS |
-| Web | `/`(gzip 单页)、`/api/hello|state|codes|net|events|cmd|wifi|wifi/clear` |
+| Web | `/`(gzip 单页)、`/api/hello|state|codes|net|events|cmd|wifi|wifi/clear|ota` |
 | SSE | `/api/events`;`httpd_req_async_handler_begin` + 每连接任务,最多 2 条 |
 | BLE | `RF-Lab-XXXX`;Service `5a3d0001-…`;RX `…0002` / TX `…0003`;MTU 247 |
 | BLE PIN | 4 位,NVS `ble_pin`;OLED 开机页 5s;串口 `PIN`(仅串口) |

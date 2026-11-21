@@ -19,7 +19,8 @@ typedef enum {
 } app_src_t;
 
 #define APP_CMD_MAX 96
-#define APP_STATE_JSON_MAX 1280
+/* 1280 was tight after adding the `ota` object; keep one JSON snapshot whole. */
+#define APP_STATE_JSON_MAX 1536
 #define APP_CODES_JSON_MAX 2816
 
 /* 入队一行命令。成功 0,队列满 -1。线程安全。 */

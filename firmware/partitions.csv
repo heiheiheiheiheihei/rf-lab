@@ -1,11 +1,17 @@
-# RF-Lab 0.6.0 — 4MB flash, single app, 2MB app partition.
+# RF-Lab 0.6.0 — 4MB flash, dual OTA slots (no factory), UI still embedded.
 #
-# 0.5.0 used IDF's singleapp_large (1500K app). Wi-Fi + HTTP + NimBLE + embedded
-# UI assets push the image close to that ceiling, so the app gets 2MB and the
-# remaining flash stays unused (no OTA, no filesystem: the UI is embedded).
+# Why no factory: OTA needs otadata + two app slots, and a factory partition
+# would waste the space. A blank/invalid otadata boots ota_0, so the first
+# USB flash (bootloader + this table + app at 0x20000) is still recoverable.
 #
-# NVS stays at 0x9000/0x6000, so the existing code store survives this repartition.
-# Name,   Type, SubType, Offset,  Size,     Flags
-nvs,      data, nvs,     0x9000,  0x6000,
-phy_init, data, phy,     0xf000,  0x1000,
-factory,  app,  factory, 0x10000, 0x200000,
+# Sizes: 2 x 0x1F0000 = 1,984 KiB per slot; the image is ~1.08MB, so an OTA
+# can write the inactive slot without touching the running one.
+#
+# NVS stays at 0x9000/0x6000, so codes / Wi-Fi / BLE PIN survive repartition
+# and OTA. Never move NVS.
+# Name,   Type, SubType, Offset,   Size,     Flags
+nvs,      data, nvs,     0x9000,   0x6000,
+phy_init, data, phy,     0xf000,   0x1000,
+otadata,  data, ota,     0x10000,  0x2000,
+ota_0,    app,  ota_0,   0x20000,  0x1F0000,
+ota_1,    app,  ota_1,   0x210000, 0x1F0000,

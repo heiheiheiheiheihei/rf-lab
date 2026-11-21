@@ -116,5 +116,8 @@ BLE 参数(与固件一致):
 - release 密钥自签,不上应用商店;个人侧载可以。与历史 debug 包签名不同,不能覆盖安装。
 - APP 只走 BLE,不提供 Wi-Fi 配网;配网请用浏览器打开 `http://192.168.4.1`。
 - BLE PIN 是应用层鉴权,不加密链路;见 [`../docs/01-ui.md`](../docs/01-ui.md) §4。
+- **OTA 不更新 APK**:固件 OTA 只换设备端整包(含设备页面);APP 里的页面是 APK 构建时
+  冻结的副本。UI 变更后仍要 bump/重打 APK 并重装;设备与 APP 的 `build`/`ui` 可在帮助
+  面板或 `/api/hello` 对比。APP 走 BLE,不提供 OTA 上传入口(Web 的帮助面板 `U` 才有)。
 - Android 12+ 的 `neverForLocation` 扫描标志已声明;若某些 ROM 仍过滤 BLE 结果,
   检查系统定位开关/厂商省电策略。
