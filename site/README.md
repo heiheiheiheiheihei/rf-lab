@@ -107,6 +107,7 @@ CHROME="$HOME/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome"
 
 当前线上地址:<https://heiheiheiheiheihei.github.io/rf-lab/>。仓库已公开,
 Pages 使用 **GitHub Actions** 发布,工作流:[`../.github/workflows/pages.yml`](../.github/workflows/pages.yml)。
+当前 action:checkout v7 / configure-pages v6 / upload-pages-artifact v5 / deploy-pages v5。
 
 - 触发:`push master` 或 `gh workflow run pages.yml`。
 - 产物:工作流把 `site/` 作为 Pages artifact 上传;不需要构建,不需要 token。
