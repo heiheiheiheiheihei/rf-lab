@@ -12,7 +12,7 @@
 | [`2026-11-16-ui-refresh.md`](2026-11-16-ui-refresh.md) | Web 资源 refresh;`build_web` + `pio run` + `assembleDebug` + mock API 布局 | 新皮肤构建事实;截图是 mock,新皮肤**未上机** |
 | [`2026-11-21-pages.md`](2026-11-21-pages.md) | 仓库转 public + GitHub Actions Pages + URL/资源 200 | 官方入口切到 GitHub Pages;设备/固件无变更 |
 | [`2026-11-21-ui-unify.md`](2026-11-21-ui-unify.md) | `build_web` + `pio run` + `assembleDebug` + mock API CDP 布局/交互 | `web/` 与官网同源 token/组件;gzip 16,418B;新皮肤**未上机** |
-| [`2026-11-21-site-live-demo.md`](2026-11-21-site-live-demo.md) | 官网 iframe 真 UI + 本地传输 shim;CDP 交互/网络审计 | 终端区不再放截图;21/21 交互、0 `/api`、0 外部;gzip 16,745B;**未上机/未部署** |
+| [`2026-11-21-site-live-demo.md`](2026-11-21-site-live-demo.md) | 官网 iframe 真 UI + 本地传输 shim;CDP 交互/网络审计 | 终端区不再放截图;21/21 交互、0 `/api`、0 外部;gzip 16,745B;**未上机**;Pages 已部署 |
 | [`2026-11-15-ui-serial.log`](2026-11-15-ui-serial.log) | `tools/device_selftest.py --tx` 串口全文 | 18 项上机检查的原始输出 |
 | [`ui-desktop-1440.png`](ui-desktop-1440.png) 等 | Playwright + mock API | 0.6.0 旧皮肤桌面/uConsole/手机布局;不是设备截图 |
 | [`ui-2026-11-16-desktop.png`](ui-2026-11-16-desktop.png) 等 | [`tools/ui_mock_server.py`](../tools/ui_mock_server.py) + Chromium | 2026-11-16 品牌/频谱带布局;不是设备截图;新皮肤未上机 |

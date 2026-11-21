@@ -5,6 +5,8 @@
 `site/assets/terminal-demo.js`、`tools/build_web.py`、`docs/01-ui.md` §5.2 / UI-17。
 规格:[`../01-ui.md`](../01-ui.md) §5.2 · 同源视觉:[`2026-11-21-ui-unify.md`](2026-11-21-ui-unify.md)
 
+> 部署结果见 §8;§5 的“未部署”是推送前的状态。
+
 > **不是上机截图。** 官网终端区跑的是**真实的 Web 单页 UI**,但网络层由本地 shim 接管;
 > 设备没有重新烧录,页面上的 `SIM` 不代表真机在线。
 
@@ -99,3 +101,15 @@ python3 -m http.server 8088 -d site
   - ❌ 直接把 iframe 指向 `web/dist/index.html`:Pages 只发布 `site/`,线上 404;
     → 由 `build_web.py` 预生成到 `site/assets/`。
   - ❌ 把 SIM 演示写成“真机在线”:页面与文案都明确 `SIM/本地模拟/无网络`。
+
+
+## 8. 部署补记(2026-11-21)
+
+推送 `master` 后 GitHub Actions `pages.yml` 成功:
+
+- commit `798a6ee`(ui: unify terminal with site and add live demo)
+- run `44874345132` / job `136755615973`,结论 **success**
+- 线上检查(2026-11-21):`/rf-lab/`、`/rf-lab/assets/terminal.html`、
+  `/rf-lab/assets/terminal-demo.js`、`/rf-lab/style.css`、`/rf-lab/app.js` 均 **200**;
+  首页包含 `assets/terminal.html`,demo 页包含 `terminal-demo.js`。
+- 仍未做:线上浏览器交互回归、真机烧录、Safari/Firefox、低端手机帧率。

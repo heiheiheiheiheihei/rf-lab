@@ -1,6 +1,7 @@
 # site/ — RF-LAB 官网 / 配装台
 
 **线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **部署:** GitHub Pages / Actions(见文末)
+**2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机连接与线上交互回归仍未验证。
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
 无站点构建、无外部字体、无 CDN、无外部/API 请求;直接打开 `site/index.html` 就能看。

@@ -131,8 +131,8 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,503B;⏳ 新皮肤未上机 |
 | Web/固件 UI 视觉统一(2026-11-21) | ✅ 构建 + 主机 + mock 布局(1440/1280/390);gzip 16,745B;固件 1,069,052B;⏳ **新皮肤未上机** |
 | 官网 / 配装台(静态 + 交互 demo) | ✅ 2026-11-21 主机 Chromium 1440×1250 / 390×844,无 console error;`site_check.py` 通过;iframe 零 `/api`、零外部请求 |
-| 官网交互式终端(2026-11-21) | ✅ 本地 Chromium:ARM/SEND/LONG/STOP/LEARN/RESET + 三视口;21/21 + 移动 12/12;iframe 零 `/api`、零外部请求;⏳ **Pages 未重新部署** |
-| 官网线上(GitHub Pages) | ✅ 2026-11-21 已部署;<https://heiheiheiheiheihei.github.io/rf-lab/>;**本次交互 demo 尚未重新部署**,线上仍为旧版 |
+| 官网交互式终端(2026-11-21) | ✅ 本地 Chromium:ARM/SEND/LONG/STOP/LEARN/RESET + 三视口;21/21 + 移动 12/12;iframe 零 `/api`、零外部请求;**✅ Pages 已部署**(资源 200);⏳ 线上交互未回归 |
+| 官网线上(GitHub Pages) | ✅ 2026-11-21 已部署交互 demo;<https://heiheiheiheiheihei.github.io/rf-lab/>;`terminal.html` / `terminal-demo.js` 均 200 |
 | 路线图:MQTT / HA / 多模块 | ○ **未实现**,接口草案见官网 §04 |
 | 上机:距离 / 长发时接收器是否真持续 | ⏳ 未测,见规格 §7 |
 | 上机证据 | [`2026-11-15-bringup.md`](docs/evidence/2026-11-15-bringup.md) · [`2026-11-15-oled.md`](docs/evidence/2026-11-15-oled.md) · [`2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md) |
