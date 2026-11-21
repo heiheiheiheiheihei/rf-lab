@@ -45,8 +45,10 @@
     的 token 与组件语法):`web/`/固件页只复制视觉、不复制脚本/依赖,细则见 `docs/01-ui.md` §5.1。
     改官网版式不动 `web/` 与固件;设备 UI 变了才重生成 `site/assets/terminal.html`(官网交互 demo)。
 11. **OTA 边界**:`POST /api/ota` 默认关闭,只有串口 `OTA` armed 后才接受;token 是应用层门,
-    不是签名/加密,没有 secure boot。**OTA 只更新设备,不更新 APK**;不要把 UI 单独更新
-    或 APP 自更新写成已实现。
+    不是签名/加密,没有 secure boot。**设备 OTA 只更新设备,不更新 APK**。APK 自更新是独立的
+    客户端路径(0.7.0 起,`android/.../Updater.java`):只读 GitHub Release,过 SHA-256/包名/
+    版本/签名自检后交给系统 `PackageInstaller`,由用户确认。**真机自更新未验证**——不要把
+    "构建/主机测试通过"写成"已上机自更新";也不要让 APP 自更新去碰设备固件。
 12. **接线单一源**:`hardware/wiring.json` 同时生成 `firmware/src/wiring_config.h`、
     两张文档接线表和 `web/art/hw-*.svg`;改引脚只改 JSON,再跑 `python3 tools/gen_wiring.py`。
     `--check` 已进主机测试与固件构建前;不要手改生成物,也不要让图/表/代码各写一套。
@@ -66,7 +68,8 @@ cd firmware && pio run -e esp32c3    # 构建(含 Web gzip/build 指纹 + 分区
 python3 tools/ota.py --host <ip> --serial /dev/ttyACM0   # 之后的固件更新
 python3 tools/device_selftest.py --port /dev/ttyACM0 --tx
 python3 tools/wifi_selftest.py --port /dev/ttyACM0
-cd android && ./gradlew assembleDebug
+cd android && ./gradlew assembleDebug   # 或 assembleRelease(需仓库外密钥)
+./tools/app_update_test.sh            # APP 自更新:版本比较 + SHA256SUMS 查表(无需 SDK)
 ```
 
 真机/模拟器未覆盖的项见 `docs/evidence/2026-11-15-ui.md` §6 与
