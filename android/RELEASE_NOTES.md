@@ -6,7 +6,7 @@
 | `rf-lab-0.6.0.apk` | 版本归档副本 |
 | `SHA256SUMS.txt` | 上述 APK 的 SHA-256 |
 
-要求 **Android 8.0（API 26）及以上**。APK 使用本仓库的 release 密钥签名（APK Signature Scheme v2），证书 SHA-256：
+要求 **Android 8.0（API 26）及以上**。APK 使用本项目的 release 密钥签名（APK Signature Scheme v2），证书 SHA-256：
 
 ```
 B8:CC:EA:6C:1B:2F:BA:85:BD:BF:59:DA:DA:0D:21:BF:98:7F:60:DD:97:70:3C:0C:88:21:BB:63:D8:AB:0D:EA

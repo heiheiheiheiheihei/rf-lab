@@ -104,3 +104,42 @@ android/app/src/main/assets/     同哈希
 - 不把 keystore 提交进仓库换 CI 方便——那等于把更新链公开。
 - 不因为官网按钮 `200` 就写成"已上机验证";Release 只证明可分发,不证明 BLE 链路。
 - 不给 Release 写"兼容旧 debug 包"——签名不同,已在下载说明里要求先卸载。
+
+## CI 发布结果
+
+工作流 run [44885442743](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44885442743)
+在 `v0.6.0` 标签上完成:Build → Verify signature → Publish GitHub release 全绿。
+
+Release:<https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.6.0>
+
+| 资产 | 大小 | 说明 |
+|---|---:|---|
+| `rf-lab-android.apk` | 967,996 B | 稳定名,官网按钮目标 |
+| `rf-lab-0.6.0.apk` | 967,996 B | 版本归档 |
+| `SHA256SUMS.txt` | 172 B | 两个 APK 的 SHA-256 |
+
+CI 产物 `rf-lab-android.apk`:
+
+```
+sha256 e68db13b849e5b314c3964ab15f0f1936c0adfbf35b6330b76887ae635c40ffa
+apksigner verify: Verifies, v2 true
+cert SHA-256: B8:CC:...:0D:EA(与本地构建相同)
+```
+
+本地构建与 CI 产物**字节哈希不同**(本地 `4d5b53…`,CI `e68db1…`),但解包后
+`diff -rq` 无差异、大小同为 967,996 B、证书相同:差异来自打包/签名的时间戳元数据,
+APK 内容一致。**不要**把哈希当作可复现构建的证明。
+
+线上核验:
+
+```
+https://github.com/.../releases/latest/download/rf-lab-android.apk  200
+https://heiheiheiheiheihei.github.io/rf-lab/                        含 3 处下载入口
+https://heiheiheiheiheihei.github.io/rf-lab/assets/terminal.html     200
+```
+
+## 后续
+
+- Actions 注解提示 `setup-java@v4` / `setup-android@v3` 跑在 Node 24 兼容层上;
+  已在 `master` 把它们升到 `@v6` / `@v4`(下一次 tag 发布时验证)。
+- 真机安装与 BLE 链路仍需一台 Android 手机;在那之前状态板保持 `◐`。
