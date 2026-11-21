@@ -9,8 +9,9 @@
 | tag | `v0.7.1`(annotated) |
 | commit | `a7b4bf3` |
 | Release | <https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1> |
-| CI run | [44918804371](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44918804371),Android release APK,1m46s,success |
-| Pages | [44918796317](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44918796317),success |
+| CI run | [44918804371](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44918804371),Android release APK,1m50s,success |
+| Pages(首发) | [44918796317](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44918796317),success |
+| Pages(状态文档) | [44919106234](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44919106234),success |
 
 ## 资产(从 Release 下载后复核)
 
@@ -35,8 +36,9 @@ APK 内 `assets/index.html` sha256 `ed65b7c5…`,与仓库 `web/dist/index.html`
 ## Pages
 
 ```text
-https://heiheiheiheiheihei.github.io/rf-lab/                  200  45,279 B
+https://heiheiheiheiheihei.github.io/rf-lab/                  200  45,390 B
 https://heiheiheiheiheihei.github.io/rf-lab/assets/terminal.html 200 129,449 B
+线上已含 `0.7.1 · ↓` / `0.7.1 · release 签名 · 1.05 MB`。
 ```
 
 ## 仍未验证
