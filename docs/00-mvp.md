@@ -208,12 +208,12 @@ FD F3 03 55 55 03 3C DF  FD F3 03 55 55 03 4B DF
 | AC-15 | 无屏降级 | 0x3C 不应答时仍启动、串口可用 | ⏳ 未上机(屏焊死);`DISP SHOW` 可脱屏验证 |
 | AC-16 | Web/HTTP/SSE | 设备内 `WEBTEST` hello/state/events 200 + POST 202,SSE 有 hello+state | ✅ 2026-11-15,见 `evidence/2026-11-15-ui.md` |
 | AC-17 | BLE 广播 | `INFO` 显示 `adv=yes`;手机可扫到 `RF-Lab-*` | ✅ 广播 + 真机 APP 连接/鉴权/码表刷新(2026-11-21);⏳ nRF 抓包 |
-| AC-18 | Android APK | `assembleRelease` 成功、release 签名、资源/权限正确、Release 可下载 | ✅ 0.7.1 已发 [Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1)(1,050,176B,versionCode 3);⏳ 0.7.1 真机安装/自更新未测(0.7.0 已真机连 BLE) |
+| AC-18 | Android APK | `assembleRelease` 成功、release 签名、资源/权限正确、Release 可下载 | ✅ 0.7.1 已发 [Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1)(1,050,176B,versionCode 3);✅ 真机安装/自更新(2026-11-22) |
 | AC-19 | uConsole TUI | 主机解析/键位 12 项测试;PTY 布局 | ✅ 主机;⏳ 真机未测 |
 | AC-20 | 跨平台 UI 回归 | 0.5.0 串口 `LIST/SEND/LONG/STOP` 与 OLED 行为不变 | ✅ 2026-11-15 |
 | AC-21 | Wi-Fi STA/AP 回退 | 有凭据先 STA-only;15s 失败打开 AP;AP 内可配网;`WIFI CLEAR` 回 AP | ✅ 真实 LAN `SSID-A`→192.168.5.117;回退 15/15;⏳ STA 掉线回退 |
 | AC-22 | 码库 v1→v2 迁移 | 9 条旧码经 OTA 后 `LIST` 逐字节一致;`INFO` 显示 `codebook ver=2 … migrated=yes` | ✅ 2026-11-21 真机(9/9 保留);重启后 `migrated=no` |
-| AC-23 | 名称/分组/符号 | HTTP UTF-8 写入后 `/api/codes`、`LIST LONG`、Web 同步;重启仍保留 | ✅ 真机 `客厅大门`/`家门`/`🚪`;⏳ BLE 写入 |
+| AC-23 | 名称/分组/符号 | HTTP UTF-8 写入后 `/api/codes`、`LIST LONG`、Web 同步;重启仍保留 | ✅ 真机 `客厅大门`/`家门`/`🚪`;✅ BLE `NAME/GROUP/SYM/EDIT` 写入(2026-11-22) |
 | AC-24 | 手工建码 | `NEW` 合法码成功;重复/满 32/非法 hex 拒绝;id 追加 | ✅ 真机 + UI 新建(10/11 号测试后删除) |
 | AC-25 | 编辑原始参数 | `EDIT band/code` 对学习码/手工码同一路径;重复码/TX 中拒绝;UI 原始帧预览一致 | ✅ 真机编辑测试码 band/code;⏳ 现场学习码未改值 |
 | AC-26 | 兼容/回归 | `LIST/SEND/LONG/STOP` 输出不变;旧固件 `hello.codebook` 缺失时 UI 禁用编辑 | ✅ `LIST` 逐字节一致、`SEND` F0 814ms;⏳ 旧固件+新 APK 真机 |

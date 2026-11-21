@@ -50,8 +50,8 @@ B8:CC:EA:6C:1B:2F:BA:85:BD:BF:59:DA:DA:0D:21:BF:98:7F:60:DD:97:70:3C:0C:88:21:BB
 | `assembleRelease` + 签名 | ✅ 2026-11-21,1,050,176B,versionCode 3,v2 签名,`apksigner verify` 通过 |
 | Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 3/0.7.1,minSdk 26,targetSdk 35 |
 | 页面资源 | ✅ 与固件同一次 `build_web.py` 产出;`assets/index.html` 与 `web/dist` 逐字节一致 |
-| 码库 UI | ✅ 主机 Chromium 1440/390;真机浏览器同页;⏳ **APK 内 BLE 页面未上机** |
-| 真机安装 / BLE / 自更新弹窗 | ⏳ 未验证;0.7.0→0.7.1 自更新需真机回归 |
+| 码库 UI | ✅ 主机 Chromium 1440/390;真机浏览器同页;✅ 真机 BLE `NAME/GROUP/SYM/EDIT` 写入(2026-11-22) |
+| 真机安装 / 自更新 | ✅ 2026-11-22:0.7.1 安装、0.7.0→0.7.1 弹窗/下载/系统安装器/覆盖安装成功(用户确认);⏳ BLE `SEND` 未单独验 |
 
 > 0.7.0（release 签名）可直接覆盖安装到 0.7.1；0.6.0 没有自更新，需手动装一次。
 

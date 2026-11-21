@@ -1,7 +1,7 @@
 # site/ — RF-LAB 官网 / 配装台
 
 **线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **部署:** GitHub Pages / Actions(见文末)
-**2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机连接与线上交互回归仍未验证。
+**2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机 BLE 连接/码表已验(2026-11-21);线上交互回归仍未验证。
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
 无站点构建、无外部字体、无 CDN、无外部/API 请求;直接打开 `site/index.html` 就能看。
@@ -43,7 +43,7 @@ python3 -m http.server 8088 -d site
 
 用 `releases/latest/download/<固定文件名>` 而不是写死 tag:每次发版覆盖同名资产,官网按钮
 无需改动。APK 由 `.github/workflows/android-release.yml` 在 `v*` 标签上构建、验签后上传;
-**真机安装/BLE 仍未验证**,页面状态板保持 `◐` 而不是 `●`。
+**真机安装/自更新/BLE 已验(2026-11-22)**;页面状态板对应行已改为 `●`;uConsole 仍保持 `◐`。
 
 ## 预算与配装
 
@@ -93,7 +93,7 @@ python3 -m http.server 8088 -d site
 
 ## 现役 / 路线图边界(硬规则)
 
-- **现役**:YS-RF34DL 315/433 固定码学习/发射;Web HTTP+SSE;BLE 广播;Android APK 构建;
+- **现役**:YS-RF34DL 315/433 固定码学习/发射;Web HTTP+SSE;BLE 广播/真机码表;Android APK 0.7.1;
   uConsole TUI 主机测试。上机证据在 `../docs/evidence/`。
 - **路线图**:CC1101 / NRF24L01 / SI4463 / LR1121、SPI 背板、MQTT bridge、
   Home Assistant Discovery。页面里必须保持“路线图 / 未实现 / 概念”标识。

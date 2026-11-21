@@ -108,7 +108,8 @@ APP 不再等用户手动回来下载:每次冷启动/回前台,节流 6 小时�
 - **忽略不跨版本**:忽略只对当前版本号生效。
 - 代码:`Updater.java`(网络/校验/安装)、`AppVersion.java`(比较)、`Sums.java`(查表);
   主机测试 `./tools/app_update_test.sh`(36 checks,不需要 SDK/模拟器)。
-- 证据与未验证项:[`../docs/evidence/2026-11-21-app-update.md`](../docs/evidence/2026-11-21-app-update.md)。
+- 证据与未验证项:[`../docs/evidence/2026-11-21-app-update.md`](../docs/evidence/2026-11-21-app-update.md) ·
+  [`../docs/evidence/2026-11-22-app-ble.md`](../docs/evidence/2026-11-22-app-ble.md)。
 
 ## 结构
 
@@ -139,10 +140,10 @@ BLE 参数(与固件一致):
 | 资源内嵌 | ✅ `assets/index.html` 129,449B,与 `web/dist` 一致 |
 | Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 3/0.7.1,minSdk 26,targetSdk 35,INTERNET + REQUEST_INSTALL_PACKAGES |
 | 自更新逻辑(主机) | ✅ `./tools/app_update_test.sh` 36 checks;真实 Release 的 `./name` SUMS 查表与实际哈希一致 |
-| 自更新真机链路 | ⏳ **未验证**:弹窗/下载/设置跳转/系统安装器/覆盖安装都需要 Android 手机 |
+| 自更新真机链路 | ✅ 2026-11-22:0.7.0→0.7.1 弹窗/下载/系统安装器/覆盖安装成功(用户确认) |
 | GitHub Release 发布 | ✅ [v0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1)(CI run 44918804371,1,050,176B,sha256 `59f763…`,`SHA256SUMS.txt` 与实际哈希一致);v0.7.0 历史 Release 保留;官网按钮指向 `latest/download` |
-| 真机安装/启动 | ✅ 0.7.0 已在真机安装并连 BLE;⏳ 0.7.1 安装/自更新 |
-| 真机 BLE 扫描/连接/鉴权 | ✅ 0.7.0 手机连接、AUTH、`DISP TEST 30` 回显、码表 9 条(2026-11-21);⏳ BLE `SEND`/码库编辑 |
+| 真机安装/启动 | ✅ 0.7.1 已在真机安装;0.7.0 亦已真机连 BLE |
+| 真机 BLE 扫描/连接/鉴权/码库 | ✅ 手机连接、AUTH、`DISP TEST 30` 回显、码表 9 条(2026-11-21);✅ BLE `NAME/GROUP/SYM/EDIT` 写入(2026-11-22);⏳ BLE `SEND` |
 | Android 15 edge-to-edge 视觉 | ⏳ 需要真机 |
 
 ## 已知限制
