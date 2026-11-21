@@ -39,4 +39,15 @@ int link_read(uint32_t *cursor, char *out, size_t cap, uint32_t *seq);
 /* JSON 字符串内容转义(不含两侧引号)。返回写入长度,保证 NUL 结尾。 */
 size_t link_json_escape(const char *src, char *dst, size_t cap);
 
+/*
+ * 下行分帧:把一条消息(json,len)连同帧结束符 '\n' 按 chunk 字节切片。
+ * offset 从 0 起,每次调用填一片到 out(最多 cap 字节)并返回本片长度;
+ * 返回 0 表示整帧已发完。不变式:所有片拼起来恰好是 json + '\n',
+ * 每片 ≤ chunk,'\n' 只出现在最后一个字节 —— BLE/TUI 客户端都按 '\n'
+ * 切行再整行解析,终止符漏发或提前出现都会让两条消息拼成一行。
+ * 纯函数,主机可单测(见 test/host/test_link.c)。
+ */
+size_t link_frame_fill(const char *json, size_t len, size_t chunk, size_t offset,
+                       uint8_t *out, size_t cap);
+
 #endif /* RFLAB_LINK_H */

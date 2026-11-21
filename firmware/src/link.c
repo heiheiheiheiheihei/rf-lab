@@ -164,3 +164,29 @@ size_t link_json_escape(const char *src, char *dst, size_t cap)
     dst[o] = 0;
     return o;
 }
+
+size_t link_frame_fill(const char *json, size_t len, size_t chunk, size_t offset,
+                       uint8_t *out, size_t cap)
+{
+    if (!json || !out || cap == 0 || chunk == 0) {
+        return 0;
+    }
+
+    size_t total = len + 1; /* 数据 + 帧结束符 '\n' */
+    if (offset >= total) {
+        return 0;
+    }
+
+    size_t n = total - offset;
+    if (n > chunk) {
+        n = chunk;
+    }
+    if (n > cap) {
+        n = cap; /* 调用方 cap 偏小时截断,但 offset 必须按返回值推进 */
+    }
+    for (size_t i = 0; i < n; i++) {
+        size_t at = offset + i;
+        out[i] = (at < len) ? (uint8_t)json[at] : (uint8_t)'\n';
+    }
+    return n;
+}

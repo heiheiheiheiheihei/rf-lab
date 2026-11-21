@@ -72,7 +72,19 @@ static portMUX_TYPE s_pending_mux = portMUX_INITIALIZER_UNLOCKED;
 static int gap_event(struct ble_gap_event *event, void *arg);
 static int start_adv(void);
 
-static bool notify_bytes(const uint8_t *data, size_t len)
+/*
+ * 唯一的 BLE 下行发送口:每一帧(一条 JSON)由这里补 '\n' 帧结束符。
+ *
+ * 为什么必须集中:客户端(Android BleClient.handleNotify → web/app.js handleLine)
+ * 按 '\n' 切行、整行 JSON.parse。任何一条消息漏掉 '\n',都会被下一条拼成一行,
+ * 整行解析失败 —— 两条消息一起丢,日志里只剩
+ * "JSON: Unexpected non-whitespace character after JSON at position <前一条长度>"。
+ * 0.7.1 之前的 state / codes 走裸字节发送就漏了换行(现场 app 报 position 666)。
+ * 所以这里不再保留"不带换行"的发送口,避免同类回归。
+ *
+ * 发送长度是 len + 1:数据和 '\n' 在同一个分片序列里连续发出,不多一次 notify。
+ */
+static bool notify_message(const char *json, size_t len)
 {
     uint16_t conn = s_conn;
     if (conn == BLE_HS_CONN_HANDLE_NONE || !s_subscribed || len == 0) {
@@ -90,14 +102,17 @@ static bool notify_bytes(const uint8_t *data, size_t len)
     }
 
     bool ok = true;
+    size_t total = len + 1; /* 数据 + 帧结束符 '\n'(link_frame_fill 保证) */
     size_t sent = 0;
     int retries = 0;
-    while (sent < len) {
-        size_t n = len - sent;
-        if (n > chunk) {
-            n = chunk;
+    uint8_t part[201]; /* chunk 上限 200 */
+    while (sent < total) {
+        size_t n = link_frame_fill(json, len, chunk, sent, part, sizeof(part));
+        if (n == 0) {
+            ok = false;
+            break;
         }
-        struct os_mbuf *om = ble_hs_mbuf_from_flat(data + sent, (uint16_t)n);
+        struct os_mbuf *om = ble_hs_mbuf_from_flat(part, (uint16_t)n);
         if (!om) {
             ok = false;
             break;
@@ -130,11 +145,7 @@ static void notify_line(const char *line)
     if (!line || !*line) {
         return;
     }
-    char buf[LINK_LINE_MAX + 2];
-    int n = snprintf(buf, sizeof(buf), "%s\n", line);
-    if (n > 0 && n < (int)sizeof(buf)) {
-        notify_bytes((const uint8_t *)buf, (size_t)n);
-    }
+    notify_message(line, strlen(line));
 }
 
 /* 从 NimBLE host 任务调用:只复制到 pending,由 TX task 发送。 */
@@ -420,9 +431,12 @@ static void tx_task(void *param)
                 if (app_state_seq() != st_seq && now - last_state >= 200) {
                     app_copy_state(s_line, APP_STATE_JSON_MAX);
                     char tmp[APP_STATE_JSON_MAX + 64];
-                    snprintf(tmp, sizeof(tmp), "{\"t\":\"state\",\"seq\":%lu,\"data\":%s}",
-                             (unsigned long)app_state_seq(), s_line);
-                    if (notify_bytes((const uint8_t *)tmp, strlen(tmp))) {
+                    int n = snprintf(tmp, sizeof(tmp),
+                                     "{\"t\":\"state\",\"seq\":%lu,\"data\":%s}",
+                                     (unsigned long)app_state_seq(), s_line);
+                    /* 截断就整帧丢(n > 0 && n < cap):不发半截 JSON。 */
+                    if (n > 0 && (size_t)n < sizeof(tmp) &&
+                        notify_message(tmp, (size_t)n)) {
                         st_seq = app_state_seq();
                         last_state = now;
                     }
@@ -430,10 +444,11 @@ static void tx_task(void *param)
 
                 if (app_codes_seq() != cd_seq) {
                     app_copy_codes(s_codes, sizeof(s_codes));
-                    snprintf(s_line, sizeof(s_line),
-                             "{\"t\":\"codes\",\"seq\":%lu,\"items\":%s}",
-                             (unsigned long)app_codes_seq(), s_codes);
-                    if (notify_bytes((const uint8_t *)s_line, strlen(s_line))) {
+                    int n = snprintf(s_line, sizeof(s_line),
+                                     "{\"t\":\"codes\",\"seq\":%lu,\"items\":%s}",
+                                     (unsigned long)app_codes_seq(), s_codes);
+                    if (n > 0 && (size_t)n < sizeof(s_line) &&
+                        notify_message(s_line, (size_t)n)) {
                         cd_seq = app_codes_seq();
                     }
                 }

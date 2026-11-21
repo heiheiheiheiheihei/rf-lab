@@ -1,6 +1,5 @@
 /*
- * link.c 的主机单测:事件环回绕、多消费者 cursor、JSON 转义。
- *
+ * link.c 的主机单测:事件环回绕、多消费者 cursor、JSON 转义、下行分帧。
  * 这是 Web/BLE 事件通路的纯 C 部分;不依赖 ESP-IDF,秒级可跑。
  */
 #include <stdio.h>
@@ -125,12 +124,72 @@ static void test_escape(void)
     CHECK(out[0] == 0);
 }
 
+/*
+ * 下行分帧回归:客户端(Android BleClient → web/app.js handleLine)按 '\n'
+ * 切行、整行 JSON.parse。任何一条消息漏掉 '\n' 都会和下一条拼成一行,
+ * 整行解析失败 —— 两条消息一起丢。0.7.1 前的 state/codes 就这么漏了终止符,
+ * 现场 app 日志是
+ *   "JSON: Unexpected non-whitespace character after JSON at position 666"
+ * (666 = 那条不带换行的 state 帧长度)。这里锁死 link_frame_fill 的不变式。
+ */
+static void test_frame(void)
+{
+    static const size_t lens[] = {0, 1, 2, 19, 20, 21, 199, 200, 201, 666, 3000};
+    static const size_t chunks[] = {1, 20, 200};
+
+    for (size_t li = 0; li < sizeof(lens) / sizeof(lens[0]); li++) {
+        size_t len = lens[li];
+        static char json[3001];
+        for (size_t i = 0; i < len; i++) {
+            json[i] = (char)('a' + (int)(i % 26));
+        }
+        json[len] = 0;
+
+        for (size_t ci = 0; ci < sizeof(chunks) / sizeof(chunks[0]); ci++) {
+            size_t chunk = chunks[ci];
+            uint8_t part[256]; /* 容量大于 chunk,模拟 ble_link 的 part[] */
+            static char got[3002];
+            size_t used = 0;
+            size_t off = 0;
+            size_t parts = 0;
+            size_t n;
+
+            while ((n = link_frame_fill(json, len, chunk, off, part, sizeof(part))) > 0) {
+                CHECK(n <= chunk);
+                CHECK(used + n <= sizeof(got));
+                memcpy(got + used, part, n);
+                used += n;
+                off += n;
+                parts++;
+            }
+            /* 拼起来 = json + '\n',一片不多一片不少。 */
+            CHECK(used == len + 1);
+            CHECK(off == len + 1);
+            CHECK(got[len] == '\n');
+            CHECK(memcmp(got, json, len) == 0);
+            CHECK(parts == (len + 1 + chunk - 1) / chunk);
+        }
+    }
+
+    /* cap 比 chunk 小时按 cap 截断(不越界),offset 按返回值推进即可拼回。 */
+    uint8_t small[4];
+    CHECK(link_frame_fill("abcdef", 6, 200, 0, small, sizeof(small)) == 4);
+    CHECK(memcmp(small, "abcd", 4) == 0);
+    CHECK(link_frame_fill("abcdef", 6, 200, 4, small, sizeof(small)) == 3);
+    CHECK(small[2] == '\n');
+    CHECK(link_frame_fill("a", 1, 200, 2, small, sizeof(small)) == 0);
+    CHECK(link_frame_fill(NULL, 3, 20, 0, small, sizeof(small)) == 0);
+    CHECK(link_frame_fill("a", 1, 0, 0, small, sizeof(small)) == 0);
+    CHECK(link_frame_fill("a", 1, 20, 0, NULL, sizeof(small)) == 0);
+}
+
 int main(void)
 {
     test_basic();
     test_too_long();
     test_wrap_and_cursors();
     test_escape();
+    test_frame();
 
     printf("%d checks, %d failure(s)\n", g_checks, g_fails);
     return g_fails == 0 ? 0 : 1;
