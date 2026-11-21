@@ -1,7 +1,7 @@
 # 2026-11-21 APP 报 “JSON: … position 666”:BLE 下行 state/codes 漏了 `\n`
 
 状态:根因 `measured`(源码 + 真机 `STATE` 抓取 + 主机复现)· 修复 `flashed`(构建 + 主机测试 + 真机启动/JSON 合法)·
-**手机 BLE 端到端仍待一次点按验证** · 固件工作树 `0.7.1`
+**手机 BLE 已实测:警告消失、命令回显正常** · 固件 `0.7.1`
 
 **结论:不是 APP 的解析问题,是固件 BLE 下行少了帧结束符。`state`/`codes` 两条消息走裸
 `notify_bytes()` 发送(没有结尾 `\n`),而客户端(`BleClient.handleNotify`)按 `\n` 切行、
@@ -120,15 +120,17 @@ APP 侧保持“整行解析失败 → 丢弃 + 警告”,让固件违约时**�
 | Build | `pio run -e esp32c3` ✅ `[SUCCESS]`,image **1,098,032 B / slot 2,031,616 B(54.0%)**,编译警告 0 条(`grep -c "warning:"` = 0)。**注意:这次构建包含工作树里并行进行中的 codebook 改动**(`firmware/src/codebook.*`、`0.7.1` 版本号),不是本次修复的独立基线 |
 | Host tests | `./tools/host_test.sh` ✅ 全绿:rf34dl 76、codebook 218、link **9418**(新增分帧用例)、ota 41、wiring/web/partitions、TUI 12、OLED 1286 |
 | 真机烧录 | ✅ 23:02 `tools/flash.sh` 写入 app→ota_0,NVS 保留;设备启动、`STATE`/`/api/*` JSON 合法(§8) |
-| Unverified | APP 连 BLE 后 state/codes 是否逐行解析成功;`\n` 在手机侧抓包里的实际字节 |
+| 手机 BLE(23:11) | ✅ 两条连接、一次 `DISP TEST 30`:**0 条 `JSON:` 警告**,命令回显 `OK disp=test 30s …` 正常解析(§8) |
+| 仍待目视 | 状态栏 uptime 是否每秒走动、码表是否出现 9 条(§7 第 4 步) |
 
 ## 7 手机侧最后一跳(待做,约 1 分钟)
 
 1. ~~给设备上新固件~~ ✅ 已烧(见 §8)。后续固件更新走 `tools/ota.py` 或 Web UI。
-2. 手机 APP 连接 → 输 PIN 鉴权。
-3. 按 `MODE CONT` / `MODE SINGLE` / `OLED TEST`:日志里应**没有** `JSON:` 警告。
-4. 看状态栏与码表:uptime 应每秒走动、码表应出现设备里存的 9 条(修复前这两项在 BLE 下
-   必然是冻住/空的 —— 这是最好的反向判据)。
+2. ~~手机 APP 连接 → 输 PIN 鉴权~~ ✅ 23:11:05 / 23:11:07。
+3. ~~按 `MODE CONT` / `MODE SINGLE` / `OLED TEST`:日志里应没有 `JSON:` 警告~~ ✅ 23:11:25
+   `DISP TEST 30`:0 条警告,回显正常(§8)。
+4. **剩这一步**:看状态栏与码表 —— uptime 应每秒走动、码表应出现设备里存的 9 条
+   (修复前这两项在 BLE 下必然是冻住/空的,这是最好的反向判据)。
 5. 可选:nRF Connect 订阅 TX,`state`/`codes` 每帧最后一个字节应为 `0A`。
 
 ## 8 上机结果(2026-11-21 23:02,`/dev/ttyACM0`)
@@ -157,6 +159,27 @@ OK stored=9/32 ...
 
 > 这次烧的是**工作树镜像**(含并行进行中的 codebook/UI 改动),而提交只含本 BLE 修复;
 > 工作树其余改动由对应改动自己提交。设备端行为与提交不是一一对应,验证结论按此理解。
+
+### 手机侧(2026-11-21 23:11,Android APP,连的是 0.7.1 设备)
+
+```
+23:07:53  RF-LAB FIELD TERMINAL // BLE // UI 62111123
+23:08:28  BLE 已连接 RF-Lab-1B59
+23:08:34  BLE AUTH OK
+23:08:39  BLE 已断开
+23:11:05  BLE 已连接 RF-Lab-1B59
+23:11:07  BLE AUTH OK
+23:11:25  > DISP TEST 30
+23:11:25  OK disp=test 30s (DISP ON to leave test)
+```
+
+- 修复前同一操作:`> MODE …` 之后必跟一条 `JSON: … position 666`,而且**命令回显被吞掉**
+  (state 帧没换行 → 与 log 帧拼成一行 → 整行丢弃)。§1 的日志里确实一条 `OK …` 都没有。
+- 修复后:同一条链路 **0 条 `JSON:` 警告**,并且 `OK disp=test 30s …` 这条 log 帧
+  (`execute_one_queued()` → `link_publishf({"t":"log"…})` → BLE)被正常逐行解析。
+  这同时证明 `state` 帧不再吞掉后续消息。
+- 仍未直接看到:`state`/`codes` 帧解析后的 UI 效果(uptime 走动、码表 9 条)—— 见 §7 第 4 步。
+- 23:08:39 那次 5 秒后断开未查明(疑似手机锁屏/离开);23:11 这次连接持续正常。
 
 ## 9 残余问题(未修,记录在案)
 
