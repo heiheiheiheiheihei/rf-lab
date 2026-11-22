@@ -1787,7 +1787,8 @@ static void cmd_ota(const char *args, app_src_t src)
     out("OK ota armed token=%s ttl=%us\n", token, (unsigned)ota_remaining_s());
     out("# upload: POST /api/ota  X-RFLAB-OTA: <token>  body=firmware.bin\n");
 
-    char line[UI_COLS + 1];
+    /* token 8 hex + "OTA " + NUL = 13;按 token 缓冲留足,OLED 侧再截 12 列。 */
+    char line[sizeof(token) + 5];
     snprintf(line, sizeof(line), "OTA %s", token);
     ui_note_boot(&s_ui, line, "10 MIN");
     s_boot_until_ms = now_ms() + 10000;
@@ -2056,7 +2057,6 @@ static void load_ble_pin(void)
 {
     nvs_handle_t h;
     uint32_t pin = 0;
-    size_t len = sizeof(pin);
     bool ok = false;
 
     if (nvs_open(NVS_NS, NVS_READWRITE, &h) == ESP_OK) {

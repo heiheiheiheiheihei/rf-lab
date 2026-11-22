@@ -404,7 +404,10 @@ esp_err_t net_init(void)
     }
 
     wifi_config_t ap = {0};
-    snprintf((char *)ap.ap.ssid, sizeof(ap.ap.ssid), "%s", s_info.ap_ssid);
+    /* 显式 precision:SSID 最多 31 字符 + NUL,避免新版 GCC 的
+     * -Werror=format-truncation 把「可能 33 字节」判成错误。 */
+    snprintf((char *)ap.ap.ssid, sizeof(ap.ap.ssid), "%.*s",
+             (int)sizeof(ap.ap.ssid) - 1, s_info.ap_ssid);
     ap.ap.ssid_len = (uint8_t)strlen((char *)ap.ap.ssid);
     snprintf((char *)ap.ap.password, sizeof(ap.ap.password), "%s", RFLAB_AP_PASS);
     ap.ap.channel = 6;
@@ -422,8 +425,10 @@ esp_err_t net_init(void)
 
     if (have_sta) {
         wifi_config_t sta = {0};
-        snprintf((char *)sta.sta.ssid, sizeof(sta.sta.ssid), "%s", ssid);
-        snprintf((char *)sta.sta.password, sizeof(sta.sta.password), "%s", pass);
+        snprintf((char *)sta.sta.ssid, sizeof(sta.sta.ssid), "%.*s",
+                 (int)sizeof(sta.sta.ssid) - 1, ssid);
+        snprintf((char *)sta.sta.password, sizeof(sta.sta.password), "%.*s",
+                 (int)sizeof(sta.sta.password) - 1, pass);
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta));
     }
 
@@ -488,8 +493,10 @@ esp_err_t net_set_sta(const char *ssid, const char *pass)
     }
 
     wifi_config_t sta = {0};
-    snprintf((char *)sta.sta.ssid, sizeof(sta.sta.ssid), "%s", ssid);
-    snprintf((char *)sta.sta.password, sizeof(sta.sta.password), "%s", pass);
+    snprintf((char *)sta.sta.ssid, sizeof(sta.sta.ssid), "%.*s",
+             (int)sizeof(sta.sta.ssid) - 1, ssid);
+    snprintf((char *)sta.sta.password, sizeof(sta.sta.password), "%.*s",
+             (int)sizeof(sta.sta.password) - 1, pass);
 
     esp_wifi_set_mode(WIFI_MODE_APSTA);
     esp_wifi_set_config(WIFI_IF_STA, &sta);
