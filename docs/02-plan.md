@@ -16,7 +16,7 @@
    [`evidence/2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md)。
 
 2. **自动化基线是绿的,但没有人替它守门。**
-   2026-11-22 复跑:主机 **11,051 + 36** checks 全过(含 `SAN=1`);固件构建
+   2026-11-22 复跑:主机 **11,068 + 36** checks 全过(含 `SAN=1`);固件构建
    **1,098,608 B / 2,031,616 B 槽(54.1%)**,RAM **73,540 B(22.4%)**;官网 `SITE OK`。
    但 `.github/workflows/` 只有「打 tag 发 APK」和「推 master 发 Pages」,
    **push/PR 不跑主机测试、不构建固件**。
@@ -55,7 +55,7 @@ UI 项必须写视口、浏览器与 console 结果。
 | 项 | 结果 | 证据 |
 |---|---|---|
 | Git | `dd71bf6` `master`;A2/A3 与上机证据未提交 | `git status` |
-| 主机测试 | 协议 76 + 码库 218 + 事件环 9,418 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,051**;+ `device_selftest` **18**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
+| 主机测试 | 协议 76 + 码库 235 + 事件环 9,418 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,068**;+ `device_selftest` **18**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
 | Sanitizer | `SAN=1 ./tools/host_test.sh` 全过 | 本次复跑 |
 | 固件构建 | **1,098,608 B / 2,031,616 B(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)**;70.6s | `cd firmware && pio run -e esp32c3` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,490 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
@@ -95,6 +95,12 @@ UI 项必须写视口、浏览器与 console 结果。
 | RF-05 | 真断电 NVS | 只验证过复位/重烧,没拔 USB | 拔电 10s 再上电,码库/Wi-Fi/BLE PIN 保留(条数以测试前 `LIST` 为准) | U |
 | RF-06 | 无屏降级 | 屏焊死,未上机 | 0x3C 不应答时仍启动、串口/HTTP 可用;`DISP SHOW` 可脱屏复核 | U |
 | RF-07 | 72 字节 stray | 2026-11-15 教学期间一次,未复现 | 复现则解释来源;不能解释就保留告警并记录条件 | U |
+
+> **RF-03 进展(2026-11-22,模块手册确认)**:4B payload = `地址2/地址1/按键/osc`,
+> 身份不含 osc。巡检里的 `433M 00000093/94/95/53` 地址与按键都是 0,**属越界帧**;
+> 固件自本提交起不学习这类帧并计入 `bad`。现有 32 条按身份去重后是 **21 条**
+> (11 条只是 osc 不同:315M/433M `555503`、`155530`、`855630`、`D0C701` 四族),
+> 用串口 `DEDUP` 合并。24h 静态复测仍未做。
 
 #### BLE / Android
 
@@ -138,6 +144,12 @@ UI 项必须写视口、浏览器与 console 结果。
 | CI-02 | Sanitizer 进 CI | 只在本地手动 `SAN=1` | CI 跑 ASan/UBSan,清零 | A |
 | CI-03 | 文档一致性 | README/site/AGENTS 有 0.6.0、9 条、旧测试计数 | 脚本校验版本/体积/条数/链接;过期值失败 | A |
 | CI-04 | Release 固件资产 | Release 只有 APK | 附 `firmware.bin` + sha256 + `build=`;与 tag 一致 | A |
+
+> **CI-01/CI-02 进展(2026-11-22)**:`.github/workflows/ci.yml` 已在 `master` 绿
+> ([run 44998608006](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44998608006),
+> 提交 `d447494`):host(含 `SAN=1`)、static、`pio run -e esp32c3` 三个 job 全过。
+> **「失败阻断合并」尚未生效**:`master` 无 branch protection/required checks。
+> 见 [`evidence/2026-11-22-ci-gate.md`](evidence/2026-11-22-ci-gate.md)。
 
 ### 3.3 P2 — 覆盖率与硬化
 

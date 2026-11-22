@@ -62,17 +62,18 @@ LIST_071 = """\
 # LIST LONG 未在 11-22 巡检里原样留存:按固件 cmd_list_long 的格式从上面的真实 LIST
 # 派生(仅第 1 条带 name/group/sym,其余为固件默认的 "-");条数必须与 INFO 一致。
 LIST_LONG_071 = "".join(
-    (f' 1  315M 5555034C  name="Gate A" group="Home" sym="A"\n'
+    (f' 1  315M 5555034C osc=0x3C  name="Gate A" group="Home" sym="A"\n'
      if c["id"] == 1 else
-     f'{c["id"]:2d}  {c["band"]} {c["code"]}  name="-" group="-" sym="-"\n')
+     f'{c["id"]:2d}  {c["band"]} {c["code"]} osc=0x{int(c["code"][-2:], 16):02X}  '
+     f'name="-" group="-" sym="-"\n')
     for c in ds.parse_list(LIST_071)
 )
 
 # 只用于测 flags 解析(manual/edited 是固件 0.7.1 的 LIST LONG 后缀)。
 LIST_LONG_FLAGS = """\
- 1  315M 5555034C  name="Gate A" group="Home" sym="A" manual
- 2  315M 5555033C  name="-" group="-" sym="-"
- 3  433M 00000093  name="-" group="-" sym="-" edited
+ 1  315M 5555034C osc=0x3C  name="Gate A" group="Home" sym="A" manual
+ 2  315M 5555033C osc=0x3C  name="-" group="-" sym="-"
+ 3  433M 00000093 osc=0x93  name="-" group="-" sym="-" edited
 """
 
 HELP_071 = """\
@@ -194,6 +195,12 @@ class TestParsers(unittest.TestCase):
         self.assertEqual(recs[0]["name"], "Gate A")
         self.assertEqual(recs[0]["flags"], ["manual"])
         self.assertEqual(recs[2]["flags"], ["edited"])
+        self.assertEqual(recs[0]["osc"], 0x3C)
+
+        # 旧固件(0.7.1)的 LIST LONG 没有 osc=,仍要能解析。
+        old = ds.parse_list_long(' 1  315M 5555034C  name="Gate" group="-" sym="-"\n')
+        self.assertEqual(len(old), 1)
+        self.assertIsNone(old[0]["osc"])
 
     def test_summarize_skip_is_not_failure(self):
         with mock.patch.object(ds, "serial", None):

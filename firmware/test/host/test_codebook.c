@@ -22,9 +22,12 @@ static int g_fails = 0;
         }                                                                  \
     } while (0)
 
+/* 模块协议:code[0..3] = 地址2 / 地址1 / 按键 / 震荡参数。
+ * A 与 A2 是同一个键(只有 osc 不同);B/C 是别的键。 */
 static const uint8_t CODE_A[4] = {0x55, 0x55, 0x03, 0x3c};
-static const uint8_t CODE_B[4] = {0x55, 0x55, 0x03, 0x4b};
-static const uint8_t CODE_C[4] = {0xa1, 0xb2, 0xc3, 0xd4};
+static const uint8_t CODE_A2[4] = {0x55, 0x55, 0x03, 0x4b};
+static const uint8_t CODE_B[4] = {0xa1, 0xb2, 0xc3, 0xd4};
+static const uint8_t CODE_C[4] = {0x12, 0x34, 0x05, 0x60};
 
 static void test_add_find(void)
 {
@@ -43,14 +46,26 @@ static void test_add_find(void)
     CHECK(codebook_find(&cb, RF34DL_BAND_433, CODE_A) == -1);
     CHECK(strcmp(codebook_get(&cb, 1)->name, "大门") == 0);
 
-    CHECK(codebook_add(&cb, RF34DL_BAND_315, CODE_A, NULL, false, NULL) == CODEBOOK_ERR_DUP);
-    CHECK(codebook_add(&cb, RF34DL_BAND_433, CODE_B, NULL, true, &id) == CODEBOOK_OK);
+    /* 同身份、只有震荡参数不同 -> 重复;换频段 -> 不同身份。 */
+    CHECK(codebook_find(&cb, RF34DL_BAND_315, CODE_A2) == 0);
+    CHECK(codebook_add(&cb, RF34DL_BAND_315, CODE_A2, NULL, false, NULL) == CODEBOOK_ERR_DUP);
+    CHECK(codebook_add(&cb, RF34DL_BAND_433, CODE_A2, NULL, true, &id) == CODEBOOK_OK);
     CHECK(id == 2);
     CHECK((codebook_get(&cb, 2)->flags & CODEBOOK_FLAG_MANUAL) != 0);
     CHECK(codebook_add(&cb, 0, CODE_C, NULL, false, NULL) == CODEBOOK_ERR_BAND);
 
+    /* 协议范围:地址/按键非 0,osc 0x30..0xF0。 */
+    const uint8_t bad_addr[4] = {0x00, 0x22, 0x33, 0x60};
+    const uint8_t bad_btn[4] = {0x11, 0x22, 0x00, 0x60};
+    const uint8_t osc_low[4] = {0x11, 0x22, 0x33, 0x2f};
+    const uint8_t osc_high[4] = {0x11, 0x22, 0x33, 0xf1};
+    CHECK(codebook_add(&cb, RF34DL_BAND_315, bad_addr, NULL, false, NULL) == CODEBOOK_ERR_CODE);
+    CHECK(codebook_add(&cb, RF34DL_BAND_315, bad_btn, NULL, false, NULL) == CODEBOOK_ERR_CODE);
+    CHECK(codebook_add(&cb, RF34DL_BAND_315, osc_low, NULL, false, NULL) == CODEBOOK_ERR_CODE);
+    CHECK(codebook_add(&cb, RF34DL_BAND_315, osc_high, NULL, false, NULL) == CODEBOOK_ERR_CODE);
+
     for (int i = 3; i <= CODEBOOK_MAX; i++) {
-        uint8_t code[4] = {0, 0, (uint8_t)i, 0};
+        uint8_t code[4] = {0x10, 0x20, (uint8_t)i, 0x60};
         CHECK(codebook_add(&cb, RF34DL_BAND_315, code, NULL, false, NULL) == CODEBOOK_OK);
     }
     CHECK(cb.count == CODEBOOK_MAX);
@@ -113,17 +128,26 @@ static void test_edit_erase(void)
 
     codebook_init(&cb);
     CHECK(codebook_add(&cb, RF34DL_BAND_315, CODE_A, "A", false, &id) == CODEBOOK_OK);
-    CHECK(codebook_add(&cb, RF34DL_BAND_433, CODE_B, "B", false, &id) == CODEBOOK_OK);
+    CHECK(codebook_add(&cb, RF34DL_BAND_433, CODE_A2, "B", false, &id) == CODEBOOK_OK);
 
-    CHECK(codebook_set_code(&cb, 1, CODE_B) == CODEBOOK_OK);
+    /* 只改震荡参数:身份没变、id 就是自己,必须允许。 */
+    CHECK(codebook_set_code(&cb, 1, CODE_A2) == CODEBOOK_OK);
+    CHECK(codebook_get(&cb, 1)->code[3] == 0x4b);
     CHECK((codebook_get(&cb, 1)->flags & CODEBOOK_FLAG_EDITED) != 0);
+
+    /* 换到 433 会与 id=2 的身份冲突。 */
     CHECK(codebook_set_band(&cb, 1, RF34DL_BAND_433) == CODEBOOK_ERR_DUP);
+
     CHECK(codebook_set_code(&cb, 1, CODE_C) == CODEBOOK_OK);
     CHECK(memcmp(codebook_get(&cb, 1)->code, CODE_C, 4) == 0);
 
     /* 同值不算编辑。 */
-    CHECK(codebook_set_code(&cb, 2, CODE_B) == CODEBOOK_OK);
+    CHECK(codebook_set_code(&cb, 2, CODE_A2) == CODEBOOK_OK);
     CHECK((codebook_get(&cb, 2)->flags & CODEBOOK_FLAG_EDITED) == 0);
+
+    /* 越界值不能写进去。 */
+    const uint8_t bad[4] = {0x00, 0x00, 0x00, 0x60};
+    CHECK(codebook_set_code(&cb, 1, bad) == CODEBOOK_ERR_CODE);
 
     CHECK(codebook_erase(&cb, 1) == CODEBOOK_OK);
     CHECK(cb.count == 1);
@@ -198,6 +222,36 @@ static void test_v1_migration(void)
     CHECK(codebook_migrate_v1(&cb, v1, sizeof(v1)) == CODEBOOK_ERR_BAND);
 }
 
+static void test_protocol_rules(void)
+{
+    codebook_t cb;
+    codebook_rec_t a;
+    codebook_rec_t b;
+
+    CHECK(codebook_code_valid(RF34DL_BAND_315, CODE_A));
+    CHECK(codebook_code_valid(RF34DL_BAND_433, CODE_A));
+    CHECK(!codebook_code_valid(0, CODE_A));
+    const uint8_t osc_min[4] = {0x01, 0x02, 0x03, 0x30};
+    const uint8_t osc_max[4] = {0x01, 0x02, 0x03, 0xf0};
+    CHECK(codebook_code_valid(RF34DL_BAND_315, osc_min));
+    CHECK(codebook_code_valid(RF34DL_BAND_315, osc_max));
+
+    codebook_init(&cb);
+    CHECK(codebook_add(&cb, RF34DL_BAND_315, CODE_A, NULL, false, NULL) == CODEBOOK_OK);
+    CHECK(codebook_add(&cb, RF34DL_BAND_315, CODE_A2, NULL, false, NULL) == CODEBOOK_ERR_DUP);
+    CHECK(codebook_add(&cb, RF34DL_BAND_433, CODE_A2, NULL, false, NULL) == CODEBOOK_OK);
+
+    memset(&a, 0, sizeof(a));
+    memset(&b, 0, sizeof(b));
+    a.band = RF34DL_BAND_315;
+    memcpy(a.code, CODE_A, 4);
+    b.band = RF34DL_BAND_315;
+    memcpy(b.code, CODE_A2, 4);
+    CHECK(codebook_same_identity(&a, &b));
+    b.code[2] = 0x04; /* 按键不同 */
+    CHECK(!codebook_same_identity(&a, &b));
+}
+
 static void test_json(void)
 {
     codebook_t cb;
@@ -244,7 +298,7 @@ static void test_json_max(void)
 
     codebook_init(&cb);
     for (int i = 0; i < CODEBOOK_MAX; i++) {
-        uint8_t code[4] = {0, 0, 0, (uint8_t)(i + 1)};
+        uint8_t code[4] = {0x10, 0x20, (uint8_t)(i + 1), 0x60};
         int id = 0;
         CHECK(codebook_add(&cb, RF34DL_BAND_315, code, name, false, &id) == CODEBOOK_OK);
         CHECK(codebook_set_group(&cb, id, group) == CODEBOOK_OK);
@@ -261,6 +315,7 @@ int main(void)
     test_text_limits();
     test_text_limits_clean();
     test_edit_erase();
+    test_protocol_rules();
     test_blob_roundtrip();
     test_v1_migration();
     test_json();

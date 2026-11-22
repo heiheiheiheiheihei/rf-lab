@@ -98,6 +98,8 @@ static uint32_t s_rx_bytes = 0;
 static uint32_t s_frames = 0;
 static uint32_t s_acks = 0;
 static uint32_t s_dups = 0;
+static uint32_t s_bad_frames = 0;
+static int64_t s_bad_note_ms = 0;
 static uint8_t s_ack_last = 0;
 
 static uint8_t s_last_band = 0;
@@ -263,12 +265,12 @@ static void build_state_json(char *out, size_t cap)
                 ble_link_is_on() ? 1 : 0, ble_link_connected() ? 1 : 0, name);
     o = jappend(out, cap, o,
                 "\"module\":{\"baud\":%d,\"rx_bytes\":%lu,\"frames\":%lu,\"acks\":%lu,"
-                "\"dups\":%lu,\"stray\":%lu,\"resync\":%lu},"
+                "\"dups\":%lu,\"bad\":%lu,\"stray\":%lu,\"resync\":%lu},"
                 "\"store\":{\"count\":%d,\"max\":%d,\"ver\":%d},"
                 "\"oled\":{\"present\":%d,\"on\":%d,\"flush\":%lu,\"err\":%lu,"
                 "\"last_us\":%lu,\"max_us\":%lu},",
                 s_mod_baud, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
-                (unsigned long)s_acks, (unsigned long)s_dups,
+                (unsigned long)s_acks, (unsigned long)s_dups, (unsigned long)s_bad_frames,
                 (unsigned long)s_parser.stray, (unsigned long)s_parser.dropped,
                 s_codebook.count, MAX_CODES, CODEBOOK_VERSION,
                 s_oled_ok ? 1 : 0, s_ui.enabled ? 1 : 0,
@@ -768,6 +770,20 @@ static void handle_frame_locked(const rf34dl_frame_t *f)
         s_last_ms = now;
         return;
     }
+    /* 模块协议:地址1/地址2/按键 0x01..0xFF,震荡参数 0x30..0xF0。
+     * 越界帧(如旧日志里的 000000xx)不学、不占码库,单独计数。 */
+    if (!codebook_code_valid(f->band, f->code)) {
+        s_bad_frames++;
+        s_last_event_ms = now;
+        /* 噪声可能持续刷同一种坏帧:计数每次加,串口提示最多 1 秒一条。 */
+        if (s_echo && now - s_bad_note_ms >= 1000) {
+            s_bad_note_ms = now;
+            out("RX band=%s code=%s (bad frame: addr/button 0 or osc outside 0x30..0xF0)\n",
+                rf34dl_band_name(f->band), hex);
+        }
+        return;
+    }
+
     s_last_ms = now;
     s_last_band = f->band;
     memcpy(s_last_code, f->code, RF34DL_CODE_LEN);
@@ -1008,6 +1024,7 @@ static void cmd_help(void)
     out("  LONG <id>             start continuous transmit (dur=FE)\n");
     out("  STOP <id>             stop continuous transmit (dur=FF)\n");
     out("  ERASE <id|all>        delete one code / all codes (ids shift)\n");
+    out("  DEDUP                 merge records with same band+addr+button (osc differs)\n");
     out("  NEW <band> <hex> [name]  add a manual code (315/433, 8 hex)\n");
     out("  NAME <id> [text]      set/clear UTF-8 name (max 24 bytes)\n");
     out("  SYM <id> [text]       set/clear symbol (max 8 bytes)\n");
@@ -1027,6 +1044,8 @@ static void cmd_help(void)
     out("  STATE                 print JSON state snapshot\n");
     out("  WEBTEST               self-check HTTP /api/hello + /api/events\n");
     out("  RESET                 restart ESP32\n");
+    out("\ncode = addr2 addr1 button osc (8 hex); osc 0x30..0xF0 (default 0x60)\n");
+    out("identity = band + addr2 + addr1 + button; osc is NOT part of identity\n");
     out("\nlearn: press a remote button; firmware prints LEARN id=... automatically\n");
     out("note: SEND gets F0 after ~0.85s; LONG gets 0xFE heartbeat; STOP gets 0xFF (measured)\n");
 }
@@ -1059,10 +1078,10 @@ static void cmd_info(void)
         ble_link_advertising() ? "yes" : "no", ble_link_connected() ? "yes" : "no", s_dev_name);
     out("# codebook ver=%d count=%d/%d migrated=%s\n", CODEBOOK_VERSION,
         s_codebook.count, CODEBOOK_MAX, s_store_migrated ? "yes" : "no");
-    out("OK stored=%d/%d rx_bytes=%lu frames=%lu acks=%lu dups=%lu stray=%lu resync=%lu\n",
+    out("OK stored=%d/%d rx_bytes=%lu frames=%lu acks=%lu dups=%lu bad=%lu stray=%lu resync=%lu\n",
         s_codebook.count, MAX_CODES, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
-        (unsigned long)s_acks, (unsigned long)s_dups, (unsigned long)s_parser.stray,
-        (unsigned long)s_parser.dropped);
+        (unsigned long)s_acks, (unsigned long)s_dups, (unsigned long)s_bad_frames,
+        (unsigned long)s_parser.stray, (unsigned long)s_parser.dropped);
 }
 
 static void cmd_list(void)
@@ -1185,6 +1204,38 @@ static void snap_give(void)
     }
 }
 
+static void cmd_dedup(void)
+{
+    snap_take();
+    store_backup();
+    int removed = 0;
+    for (int i = 0; i < s_codebook.count;) {
+        bool dup = false;
+        for (int j = 0; j < i; j++) {
+            if (codebook_same_identity(&s_codebook.recs[j], &s_codebook.recs[i])) {
+                dup = true;
+                break;
+            }
+        }
+        if (dup) {
+            codebook_erase(&s_codebook, i + 1);
+            removed++;
+        } else {
+            i++;
+        }
+    }
+    if (removed > 0) {
+        if (!store_commit()) {
+            snap_give();
+            return;
+        }
+        ui_note_count(&s_ui, s_codebook.count);
+        app_mark_codes_dirty();
+    }
+    snap_give();
+    out("OK dedup removed=%d count=%d\n", removed, s_codebook.count);
+}
+
 static void cmd_list_long(void)
 {
     if (s_codebook.count == 0) {
@@ -1195,8 +1246,8 @@ static void cmd_list_long(void)
         const codebook_rec_t *r = &s_codebook.recs[i];
         char hex[9];
         hex4(r->code, hex);
-        out("%2d  %-4s %s  name=\"%s\" group=\"%s\" sym=\"%s\"%s%s\n",
-            i + 1, rf34dl_band_name(r->band), hex,
+        out("%2d  %-4s %s osc=0x%02X  name=\"%s\" group=\"%s\" sym=\"%s\"%s%s\n",
+            i + 1, rf34dl_band_name(r->band), hex, r->code[3],
             r->name[0] ? r->name : "-", r->group[0] ? r->group : "-",
             r->sym[0] ? r->sym : "-",
             (r->flags & CODEBOOK_FLAG_MANUAL) ? " manual" : "",
@@ -1257,7 +1308,11 @@ static void cmd_new(const char *args)
     codebook_err_t e = codebook_add(&s_codebook, band, code, name, true, &id);
     if (e != CODEBOOK_OK) {
         snap_give();
-        out("ERR new: %s\n", codebook_err_name(e));
+        if (e == CODEBOOK_ERR_DUP) {
+            out("ERR new: dup (same band+addr+button; EDIT <id> code <8hex> to change osc)\n");
+        } else {
+            out("ERR new: %s\n", codebook_err_name(e));
+        }
         return;
     }
     if (!store_commit()) {
@@ -1315,7 +1370,11 @@ static void cmd_edit(const char *args)
     }
     if (e != CODEBOOK_OK) {
         snap_give();
-        out("ERR edit: %s (id=%d)\n", codebook_err_name(e), id);
+        if (e == CODEBOOK_ERR_DUP) {
+            out("ERR edit: dup (another record has the same band+addr+button)\n");
+        } else {
+            out("ERR edit: %s (id=%d)\n", codebook_err_name(e), id);
+        }
         return;
     }
     if (!store_commit()) {
@@ -1933,6 +1992,8 @@ static void handle_line(char *line, app_src_t src)
         do_tx(p, RF34DL_DUR_LONG, "long");
     } else if (strcmp(cmd, "STOP") == 0) {
         do_tx(p, RF34DL_DUR_STOP, "stop");
+    } else if (strcmp(cmd, "DEDUP") == 0) {
+        cmd_dedup();
     } else if (strcmp(cmd, "ERASE") == 0) {
         cmd_erase(p);
     } else if (strcmp(cmd, "MODE") == 0) {

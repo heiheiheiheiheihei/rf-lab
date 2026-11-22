@@ -34,18 +34,44 @@ codebook_rec_t *codebook_get_mut(codebook_t *cb, int id)
     return &cb->recs[id - 1];
 }
 
-int codebook_find(const codebook_t *cb, uint8_t band, const uint8_t code[4])
+bool codebook_code_valid(uint8_t band, const uint8_t code[4])
+{
+    if (!code || !rf34dl_band_ok(band)) {
+        return false;
+    }
+    /* 协议:地址1/地址2/按键 0x01..0xFF,震荡参数 0x30..0xF0(建议 0x60)。 */
+    if (code[0] == 0 || code[1] == 0 || code[2] == 0) {
+        return false;
+    }
+    return code[3] >= CODEBOOK_OSC_MIN && code[3] <= CODEBOOK_OSC_MAX;
+}
+
+bool codebook_same_identity(const codebook_rec_t *a, const codebook_rec_t *b)
+{
+    return a && b && a->band == b->band &&
+           memcmp(a->code, b->code, CODEBOOK_ID_LEN) == 0;
+}
+
+static int find_except(const codebook_t *cb, uint8_t band, const uint8_t code[4], int except_id)
 {
     if (!cb || !code) {
         return -1;
     }
     for (int i = 0; i < cb->count; i++) {
+        if (i + 1 == except_id) {
+            continue;
+        }
         if (cb->recs[i].band == band &&
-            memcmp(cb->recs[i].code, code, sizeof(cb->recs[i].code)) == 0) {
+            memcmp(cb->recs[i].code, code, CODEBOOK_ID_LEN) == 0) {
             return i;
         }
     }
     return -1;
+}
+
+int codebook_find(const codebook_t *cb, uint8_t band, const uint8_t code[4])
+{
+    return find_except(cb, band, code, 0);
 }
 
 bool codebook_utf8_valid(const char *s)
@@ -158,9 +184,15 @@ static codebook_err_t text_set(char *dst, size_t cap, const char *src)
     return CODEBOOK_OK;
 }
 
-static codebook_err_t check_code(const uint8_t code[4])
+static codebook_err_t check_code(uint8_t band, const uint8_t code[4])
 {
-    return code ? CODEBOOK_OK : CODEBOOK_ERR_ARG;
+    if (!code) {
+        return CODEBOOK_ERR_ARG;
+    }
+    if (!rf34dl_band_ok(band)) {
+        return CODEBOOK_ERR_BAND;
+    }
+    return codebook_code_valid(band, code) ? CODEBOOK_OK : CODEBOOK_ERR_CODE;
 }
 
 codebook_err_t codebook_add(codebook_t *cb, uint8_t band, const uint8_t code[4],
@@ -172,7 +204,7 @@ codebook_err_t codebook_add(codebook_t *cb, uint8_t band, const uint8_t code[4],
     if (!rf34dl_band_ok(band)) {
         return CODEBOOK_ERR_BAND;
     }
-    codebook_err_t e = check_code(code);
+    codebook_err_t e = check_code(band, code);
     if (e != CODEBOOK_OK) {
         return e;
     }
@@ -240,7 +272,7 @@ codebook_err_t codebook_set_band(codebook_t *cb, int id, uint8_t band)
     if (rec->band == band) {
         return CODEBOOK_OK;
     }
-    if (codebook_find(cb, band, rec->code) >= 0) {
+    if (find_except(cb, band, rec->code, id) >= 0) {
         return CODEBOOK_ERR_DUP;
     }
     rec->band = band;
@@ -254,14 +286,15 @@ codebook_err_t codebook_set_code(codebook_t *cb, int id, const uint8_t code[4])
     if (!rec) {
         return CODEBOOK_ERR_RANGE;
     }
-    codebook_err_t e = check_code(code);
+    codebook_err_t e = check_code(rec->band, code);
     if (e != CODEBOOK_OK) {
         return e;
     }
     if (memcmp(rec->code, code, sizeof(rec->code)) == 0) {
         return CODEBOOK_OK;
     }
-    if (codebook_find(cb, rec->band, code) >= 0) {
+    /* 允许只改震荡参数:身份相同但 id 就是自己时不算重复。 */
+    if (find_except(cb, rec->band, code, id) >= 0) {
         return CODEBOOK_ERR_DUP;
     }
     memcpy(rec->code, code, sizeof(rec->code));

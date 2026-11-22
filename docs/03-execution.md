@@ -28,15 +28,15 @@
 
 | 项 | 状态 |
 |---|---|
-| Git | `dd71bf6` `master`;A2/A3(工具/CI/文档)未提交 |
-| 主机 | `host_test.sh` **11,051 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
+| Git | `d447494` `master`(已推送);工作树还有并发 watch 会话的改动,未提交 |
+| 主机 | `host_test.sh` **11,068 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
 | 固件构建 | **1,098,608 B / 2,031,616 B 槽(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)** |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
-| 设备 | `/dev/ttyACM0`,fw 0.7.1,**`build=c4c9378`**(IP 修复;先 dd71bf6,均为 master HEAD,不是 tag),STA `192.168.5.125` |
+| 设备 | `/dev/ttyACM0`,15:37 为 **`eaed71d+dirty` / `ui=6f8b9a42` / `ota_slot=1`**(并发会话的 BLE 修复构建);本会话最后刷的是 `c4c9378`(IP 修复),**设备与 master 不一致**,见 [CI 证据](evidence/2026-11-22-ci-gate.md) §4 |
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
 | 码库 | 08:59 烧录时 **13/32**;13:46 自检已是 **32/32**(全部自动学码、无 manual/edited);**满库会挡住后续学码**,原因待用户确认(见 [自检](evidence/2026-11-22-device-selftest.md)) |
 | 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |
-| CI | `.github/workflows/ci.yml` 已加(host+SAN / static / firmware),**未推送、未首跑**;master 尚无 required checks |
+| CI | `.github/workflows/ci.yml` 已绿(`d447494`:host+SAN / static / firmware);**master 仍无 required checks**,合并阻断未生效 |
 | Android | 本机无 JDK/SDK,APK 只能靠 CI;v0.7.1 Release 资产 1,050,176 B |
 
 关键证据:
@@ -55,7 +55,7 @@
 |---|---|---|---|
 | **A1** | 用户(上机) | 冷启动;查 VCC/GND/RXD 焊点/电压;`SEND 1` ×10;`LONG 1`;`STOP 1`;接收器/学习遥控器观察 | ≥9/10 次 `F0`(~850ms);`LONG` 接收器持续动作;`STOP` 停止;记录失败曲线 |
 | **A2** ✅ | Agent(主机) | 修 `tools/device_selftest.py`:版本无关 + `--json` + 保留 `--tx` 门 | **已上机(2026-11-22 13:46):26 pass / 0 fail / 1 skip**,见 [`evidence/2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
-| **A3** ⏳ | Agent(主机) | 新增 `.github/workflows/ci.yml`:push/PR 跑 host(含 `SAN=1`)+ `pio run -e esp32c3` + `gen_wiring --check` + `build_web --check` + `site_check` + `node --check` + `app_update_test` | 代码已就绪;**待推送后首跑绿 + 配置 required checks 才算「失败能阻断」** |
+| **A3** ✅ | Agent(主机) | 新增 `.github/workflows/ci.yml`:push/PR 跑 host(含 `SAN=1`)+ `pio run -e esp32c3` + `gen_wiring --check` + `build_web --check` + `site_check` + `node --check` + `app_update_test` | **已首跑绿(`d447494`)**;仅剩「配置 required checks」这一仓库设置未做 |
 | **A4** | 用户(上机) | BLE `SEND`;错误 PIN 5 次/重连;`NAME/GROUP/SYM/EDIT` 后重启;OTA Web 浏览器上传 / 崩溃回滚 / AP 路径 | 每项一条 evidence;失败也写 |
 | **A5** | 用户(上机) | uConsole 真机;AP 模式外部浏览器;STA 运行中掉线;Android 15 edge-to-edge;旧固件 0.6.x + 新 APK | 按 `02-plan.md` §3.2 的通过标准 |
 | **A6** | Agent + 用户 | 用**当前发布 tag**(`v0.7.1`;若 0.7.2 有固件改动则 `v0.7.2`)重建/重烧;Release 附 `firmware.bin` + `SHA256SUMS.txt`(仅在发版时);写证据 | `build=` 不含 `dirty`;设备运行 tag 构建;Release 资产可核验 |
@@ -108,7 +108,7 @@
 ## 5. 验收命令与证据
 
 ```bash
-./tools/host_test.sh                 # 协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh                 # 协议 76 + 码库 235 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh           # ASan/UBSan
 ./tools/app_update_test.sh           # 36 checks
 python3 tools/gen_wiring.py --check

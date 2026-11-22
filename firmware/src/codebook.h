@@ -18,6 +18,11 @@
 #include <stdint.h>
 
 #define CODEBOOK_MAX 32
+/* 协议字段(code[0..3]):地址2 / 地址1 / 按键 / 震荡参数。
+ * 身份 = band + 前 3 字节;震荡参数不参与去重,只影响发射脉冲。 */
+#define CODEBOOK_ID_LEN 3
+#define CODEBOOK_OSC_MIN 0x30
+#define CODEBOOK_OSC_MAX 0xF0
 #define CODEBOOK_NAME_MAX 24
 #define CODEBOOK_GROUP_MAX 16
 #define CODEBOOK_SYM_MAX 8
@@ -83,6 +88,11 @@ codebook_err_t codebook_set_sym(codebook_t *cb, int id, const char *text);
 codebook_err_t codebook_set_band(codebook_t *cb, int id, uint8_t band);
 codebook_err_t codebook_set_code(codebook_t *cb, int id, const uint8_t code[4]);
 codebook_err_t codebook_erase(codebook_t *cb, int id);
+
+/* 地址/按键非 0、震荡参数在 0x30..0xF0(模块手册范围),band 合法。 */
+bool codebook_code_valid(uint8_t band, const uint8_t code[4]);
+/* 两条记录是否同一个键:band + 前 3 字节相同(忽略震荡参数)。 */
+bool codebook_same_identity(const codebook_rec_t *a, const codebook_rec_t *b);
 
 /* 全量序列化/反序列化;成功返回 blob 字节数,失败返回 0。 */
 size_t codebook_serialize(const codebook_t *cb, uint8_t *out, size_t cap);

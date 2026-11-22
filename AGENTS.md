@@ -78,7 +78,7 @@
 ## 验证命令
 
 ```bash
-./tools/host_test.sh                 # 协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12 + selftest 18
+./tools/host_test.sh                 # 协议 76 + 码库 235 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12 + selftest 18
 SAN=1 ./tools/host_test.sh           # 同上 + ASan/UBSan
 node --check web/app.js
 python3 tools/gen_wiring.py --check   # JSON -> 代码头/表/SVG

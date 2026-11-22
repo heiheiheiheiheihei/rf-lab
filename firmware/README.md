@@ -57,7 +57,7 @@ pio run -e esp32c3
 ## 主机单测(不接硬件)
 
 ```bash
-./tools/host_test.sh        # 协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh        # 协议 76 + 码库 235 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh  # 加 ASan/UBSan
 ```
 

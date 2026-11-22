@@ -52,7 +52,7 @@ RE_OTA = re.compile(r"#\s*ota\s+slot=(-?\d+)\s+next=(-?\d+)\s+state=(\S+)")
 RE_DISP = re.compile(r"OK disp=(on|off) present=(yes|no) test=(on|off)")
 RE_LIST = re.compile(r"^\s*(\d+)\s+(315M|433M)\s+([0-9A-Fa-f]{8})\s*$", re.M)
 RE_LIST_LONG = re.compile(
-    r'^\s*(\d+)\s+(315M|433M)\s+([0-9A-Fa-f]{8})\s+'
+    r'^\s*(\d+)\s+(315M|433M)\s+([0-9A-Fa-f]{8})\s+(?:osc=0x([0-9A-Fa-f]{2})\s+)?'
     r'name="([^"]*)"\s+group="([^"]*)"\s+sym="([^"]*)"((?:\s+(?:manual|edited))*)\s*$',
     re.M,
 )
@@ -140,17 +140,18 @@ def parse_list(text: str) -> list[dict]:
 
 
 def parse_list_long(text: str) -> list[dict]:
-    """`LIST LONG`:id band code name group sym [manual] [edited]。"""
+    """`LIST LONG`:id band code osc=0xNN name group sym [manual] [edited]。"""
     out = []
     for m in RE_LIST_LONG.finditer(text):
-        flags = m.group(7).split()
+        flags = m.group(8).split()
         out.append({
             "id": int(m.group(1)),
             "band": m.group(2),
             "code": m.group(3).upper(),
-            "name": m.group(4),
-            "group": m.group(5),
-            "sym": m.group(6),
+            "osc": int(m.group(4), 16) if m.group(4) else None,
+            "name": m.group(5),
+            "group": m.group(6),
+            "sym": m.group(7),
             "flags": flags,
         })
     return out
