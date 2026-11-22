@@ -192,7 +192,9 @@ static esp_err_t cmd_post(httpd_req_t *req)
             return send_json(req, "{\"ok\":false,\"error\":\"cmd\"}");
         }
     } else {
-        snprintf(cmd, sizeof(cmd), "%s", body);
+        /* 明文命令:cmd 缓冲 96B,body 可到 383B;显式截断,避免
+         * 新版 GCC 把「可能截断」升级成 -Werror=format-truncation。 */
+        snprintf(cmd, sizeof(cmd), "%.*s", (int)sizeof(cmd) - 1, body);
     }
 
     if (cmd[0] == 0) {
