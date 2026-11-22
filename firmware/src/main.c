@@ -127,9 +127,12 @@ static char s_ble_pin[5] = "0000";
 
 static char s_last_kind[12] = "boot";
 
-/* 网络事件 → OLED:net 任务只入队,main 负责改 ui_model。 */
-static char s_net_note1[UI_COLS + 1];
-static char s_net_note2[UI_COLS + 1];
+/* 网络事件 → OLED/串口:net 任务只入队,main 负责改 ui_model。
+ * 缓冲按完整 IPv4 留足(OLED 由 ui_note_boot 的 copy_trunc 再截到 12 列);
+ * 以前复用 UI_COLS+1 会在串口把 192.168.5.125 打成 192.168.5.12。 */
+#define NET_NOTE_MAX 32
+static char s_net_note1[NET_NOTE_MAX];
+static char s_net_note2[NET_NOTE_MAX];
 static volatile bool s_net_note_pending;
 static portMUX_TYPE s_net_note_mux = portMUX_INITIALIZER_UNLOCKED;
 static int s_last_id;
@@ -337,8 +340,8 @@ static void poll_net_note(void)
     if (!s_net_note_pending) {
         return;
     }
-    char l1[UI_COLS + 1];
-    char l2[UI_COLS + 1];
+    char l1[NET_NOTE_MAX];
+    char l2[NET_NOTE_MAX];
     portENTER_CRITICAL(&s_net_note_mux);
     snprintf(l1, sizeof(l1), "%s", s_net_note1);
     snprintf(l2, sizeof(l2), "%s", s_net_note2);
