@@ -840,8 +840,9 @@
       return;
     }
     const isNew = idx == null;
-    if (isNew && S.codes.length >= 32) {
-      toast('码库已满 32 条', true);
+    const storeMax = (S.state && S.state.store && S.state.store.max) || 128;
+    if (isNew && S.codes.length >= storeMax) {
+      toast('码库已满 ' + storeMax + ' 条', true);
       return;
     }
     const rec = isNew

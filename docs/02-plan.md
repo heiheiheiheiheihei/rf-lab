@@ -16,7 +16,7 @@
    [`evidence/2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md)。
 
 2. **自动化基线是绿的,但没有人替它守门。**
-   2026-11-22 复跑:主机 **11,068 + 36** checks 全过(含 `SAN=1`);固件构建
+   2026-11-22 复跑:主机 **11,453 + 36** checks 全过(含 `SAN=1`);固件构建
    **1,098,608 B / 2,031,616 B 槽(54.1%)**,RAM **73,540 B(22.4%)**;官网 `SITE OK`。
    但 `.github/workflows/` 只有「打 tag 发 APK」和「推 master 发 Pages」,
    **push/PR 不跑主机测试、不构建固件**。
@@ -55,7 +55,7 @@ UI 项必须写视口、浏览器与 console 结果。
 | 项 | 结果 | 证据 |
 |---|---|---|
 | Git | `dd71bf6` `master`;A2/A3 与上机证据未提交 | `git status` |
-| 主机测试 | 协议 76 + 码库 235 + 事件环 9,418 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,068**;+ `device_selftest` **18**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
+| 主机测试 | 协议 76 + 码库 620 + 事件环 9,418 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,453**;+ `device_selftest` **18**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
 | Sanitizer | `SAN=1 ./tools/host_test.sh` 全过 | 本次复跑 |
 | 固件构建 | **1,098,608 B / 2,031,616 B(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)**;70.6s | `cd firmware && pio run -e esp32c3` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,490 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
@@ -158,7 +158,7 @@ UI 项必须写视口、浏览器与 console 结果。
 |---|---|---|---|
 | COV-01 | BLE 分帧纯 C 单测 | 把按 `\n` 重组/分片逻辑从 NimBLE 回调里抽出,主机测 `MTU-3` 分片、半包、粘包 | A |
 | COV-02 | `web_server` / `net` / OTA 流主机测试 | 目前只测 `rf34dl/codebook/link/ota_ticket/ui`;路由、状态机、上传流没有主机测试 | A |
-| COV-03 | 32 条满库真机 | 主机覆盖 32 条最大载荷;真机 JSON/BLE 快照未压满 | U |
+| COV-03 | 128 条满库真机 | 主机覆盖 128 条最大载荷;真机 JSON/BLE 快照未压满 | U |
 | COV-04 | 模块 VCC–GND / 冷启动失效曲线 | 11-21 只做到「重焊后短暂恢复」;没量电压、没做失效曲线、没换模块对照 | U |
 | COV-05 | nRF Connect 逐帧 `0A` | 行为已由手机端到端覆盖,属可选核对 | U |
 | DOC-01 | `gen_wiring.py` 版本字面量 | SVG 里仍写 `● LIVE // 0.6.0`;应改为读固件版本或去掉版本号 | A |

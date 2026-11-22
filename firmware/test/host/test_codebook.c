@@ -284,7 +284,7 @@ static void test_json(void)
 static void test_json_max(void)
 {
     codebook_t cb;
-    char json[6144];
+    char json[24576];
     char name[CODEBOOK_NAME_MAX + 1];
     char group[CODEBOOK_GROUP_MAX + 1];
     char sym[CODEBOOK_SYM_MAX + 1];
@@ -307,6 +307,8 @@ static void test_json_max(void)
     size_t n = codebook_codes_json(&cb, json, sizeof(json));
     CHECK(n > 0 && n < sizeof(json));
     CHECK(json[0] == '[' && json[n - 1] == ']');
+    /* 128 条满长名称的 JSON 必须真的装得下,不能退化成 "[]"。 */
+    CHECK(n > 10000);
 }
 
 int main(void)

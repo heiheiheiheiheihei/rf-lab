@@ -17,7 +17,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CODEBOOK_MAX 32
+/* 128 条 × 57B = 7.3KB blob;NVS 分区固定 24KB(0x6000),
+ * 留出 GC 与 Wi-Fi/BLE key 的余量。JSON 侧见 APP_CODES_JSON_MAX。 */
+#define CODEBOOK_MAX 128
 /* 协议字段(code[0..3]):地址2 / 地址1 / 按键 / 震荡参数。
  * 身份 = band + 前 3 字节;震荡参数不参与去重,只影响发射脉冲。 */
 #define CODEBOOK_ID_LEN 3

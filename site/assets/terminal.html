@@ -4,7 +4,7 @@
 <meta name="robots" content="noindex">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="rflab-ui" content="85a1a9b4">
+<meta name="rflab-ui" content="d0824ba5">
 <meta name="theme-color" content="#070906">
 <meta name="color-scheme" content="dark">
 <title>RF-LAB // 百元射频实验室 · FIELD TERMINAL</title>
@@ -1756,8 +1756,9 @@ body.txing .last-code{animation:none}
       return;
     }
     const isNew = idx == null;
-    if (isNew && S.codes.length >= 32) {
-      toast('码库已满 32 条', true);
+    const storeMax = (S.state && S.state.store && S.state.store.max) || 128;
+    if (isNew && S.codes.length >= storeMax) {
+      toast('码库已满 ' + storeMax + ' 条', true);
       return;
     }
     const rec = isNew
