@@ -151,6 +151,15 @@ UI 项必须写视口、浏览器与 console 结果。
 | DOC-01 | `gen_wiring.py` 版本字面量 | SVG 里仍写 `● LIVE // 0.6.0`;应改为读固件版本或去掉版本号 | A |
 | DOC-02 | 官网 demo 体积 | `terminal.html` 127,490 B 触发 120KB WARN;要么提高阈值并说明,要么压页面 | A |
 | ENV-01 | Android 本机构建 | 当前无 JDK/SDK,APK 只能靠 CI;补工具链或明确「CI-only」 | A+U |
+| WATCH-01 | 手表 APK 构建/安装 | 构建过只证明编译;需在真机确认 ColorOS 允许侧载、启动不崩 | A+U |
+| WATCH-02 | 46/42mm 屏幕适配 | 402×476 / 372×430 两档无裁切,按钮命中区域正确 | U |
+| WATCH-03 | 手表 BLE 控制 | 扫描/连接/AUTH/`SEND`/`LONG`/`STOP` 与设备回显一致;错误 PIN 失败关闭 | U |
+| WATCH-04 | 长发失败关闭 | 松手/退后台/断链均 STOP;断链后重连先 STOP,不把长发留在设备 | U |
+
+2026-11-22 真机进展(OW20W1 / API 27,证据
+[`evidence/2026-11-22-watch-device.md`](evidence/2026-11-22-watch-device.md)):
+WATCH-03/04/05 的 46mm 部分已关闭;WATCH-06 只关了错误 PIN 与退后台 STOP,
+断链长发自动 STOP 仍未复现;42mm 实机、5 次 PIN 锁定、外部接收器观察仍开放。
 
 ### 3.4 明确不做(不是测试债务)
 

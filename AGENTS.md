@@ -20,6 +20,7 @@
 | 接线、引脚、上电检查 | `hardware/wiring.json`、`hardware/README.md` |
 | 固件构建、烧录、排障 | `firmware/README.md` |
 | Android APK 构建/权限/BLE 桥/自更新 | `android/README.md` |
+| OPPO Watch 2 客户端(UI/BLE/ADB 上机) | `watch/README.md`、`docs/01-ui.md` §7.1 |
 | 发版 / Release / 官网下载入口 | `android/README.md`、`.github/workflows/android-release.yml`、`site/README.md` |
 | uConsole 安装/键位/`Ctrl+Alt+R` | `uconsole/README.md` |
 
@@ -92,6 +93,8 @@ python3 tools/device_selftest.py --port /dev/ttyACM0 --tx
 python3 tools/wifi_selftest.py --port /dev/ttyACM0
 cd android && ./gradlew assembleDebug   # 或 assembleRelease(需仓库外密钥)
 ./tools/app_update_test.sh            # APP 自更新:版本比较 + SHA256SUMS 查表(无需 SDK)
+./watch/check.sh                      # 手表:JVM 协议测试 + debug APK + aapt2 元数据
+cd watch && ../android/gradlew lintDebug
 ```
 
 真机/模拟器未覆盖的项见 `docs/02-plan.md` §3;历史边界见
