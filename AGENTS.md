@@ -14,6 +14,7 @@
 | 改 UI 一键固件更新 / 固件发布到 Pages | `docs/01-ui.md` §3.4.1、`docs/02-plan.md` §5.2、`.github/workflows/pages.yml` |
 | 看当前状态、上机证据、未验证项 | `README.md`、`docs/02-plan.md`、`docs/evidence/2026-11-22-device-audit.md` |
 | 排期、版本计划、发布门槛、测试债务 | `docs/02-plan.md` |
+| CI 守门 / 回归门槛 | `.github/workflows/ci.yml`、`docs/02-plan.md` §3.2 |
 | 新会话接手、执行顺序、交接 | `docs/03-execution.md` |
 | 看/改官网、配装器、价格与文案 | `site/README.md`、`site/index.html`、`site/app.js` |
 | 接线、引脚、上电检查 | `hardware/wiring.json`、`hardware/README.md` |
@@ -76,7 +77,7 @@
 ## 验证命令
 
 ```bash
-./tools/host_test.sh                 # 协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh                 # 协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12 + selftest 18
 SAN=1 ./tools/host_test.sh           # 同上 + ASan/UBSan
 node --check web/app.js
 python3 tools/gen_wiring.py --check   # JSON -> 代码头/表/SVG

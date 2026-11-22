@@ -1,0 +1,166 @@
+{
+  "tool": "device_selftest",
+  "schema": 1,
+  "generated_at": "2026-11-22T13:46:16+0800",
+  "port": "/dev/ttyACM0",
+  "baud": 115200,
+  "tx": false,
+  "log": "docs/evidence/2026-11-22-device-selftest.log",
+  "device": {
+    "fw": "0.7.1",
+    "build": "dd71bf6",
+    "ui": "85a1a9b4",
+    "codebook_version": 2,
+    "stored": 32,
+    "max": 32,
+    "net_mode": "sta",
+    "oled_present": true,
+    "ble_on": true,
+    "ble_adv": true,
+    "ota_slot": 0
+  },
+  "checks": [
+    {
+      "name": "boot banner",
+      "status": "pass",
+      "detail": "fw=0.7.1"
+    },
+    {
+      "name": "INFO fw",
+      "status": "pass",
+      "detail": "fw=0.7.1"
+    },
+    {
+      "name": "INFO build/ui",
+      "status": "pass",
+      "detail": "build=dd71bf6 ui=85a1a9b4"
+    },
+    {
+      "name": "fw consistent boot/info",
+      "status": "pass",
+      "detail": "boot=0.7.1 info=0.7.1"
+    },
+    {
+      "name": "INFO codebook count",
+      "status": "pass",
+      "detail": "stored=32/32"
+    },
+    {
+      "name": "codebook within capacity",
+      "status": "pass",
+      "detail": "32/32"
+    },
+    {
+      "name": "OLED present",
+      "status": "pass",
+      "detail": "0x3C"
+    },
+    {
+      "name": "BLE advertising",
+      "status": "pass",
+      "detail": "on=True adv=True"
+    },
+    {
+      "name": "LIST count matches INFO",
+      "status": "pass",
+      "detail": "LIST=32 INFO=32"
+    },
+    {
+      "name": "LIST LONG count matches INFO",
+      "status": "pass",
+      "detail": "LIST LONG=32 LIST=32"
+    },
+    {
+      "name": "LIST LONG ids 1..N",
+      "status": "pass",
+      "detail": "ids=[1, 2, 3, 4, 5]..."
+    },
+    {
+      "name": "HELP 0.7.1 command surface",
+      "status": "pass",
+      "detail": "LIST LONG/NAME/GROUP/SYM/EDIT/MODE/WEBTEST"
+    },
+    {
+      "name": "STATE JSON",
+      "status": "pass",
+      "detail": "fw=0.7.1 count=32"
+    },
+    {
+      "name": "STATE fw matches INFO",
+      "status": "pass",
+      "detail": "STATE=0.7.1 INFO=0.7.1"
+    },
+    {
+      "name": "STATE count matches INFO",
+      "status": "pass",
+      "detail": "STATE=32 INFO=32"
+    },
+    {
+      "name": "network up",
+      "status": "pass",
+      "detail": "mode=sta"
+    },
+    {
+      "name": "OLED on (DISP)",
+      "status": "pass",
+      "detail": "OK disp=on present=yes test=off flush=3 err=0"
+    },
+    {
+      "name": "DISP TEST",
+      "status": "pass",
+      "detail": "OK disp=test 1s (DISP ON to leave test)"
+    },
+    {
+      "name": "DISP SHOW framebuffer",
+      "status": "pass",
+      "detail": "72x40"
+    },
+    {
+      "name": "BLE OFF",
+      "status": "pass",
+      "detail": "adv=False"
+    },
+    {
+      "name": "BLE ON",
+      "status": "pass",
+      "detail": "adv=True"
+    },
+    {
+      "name": "HTTP /api/hello 200",
+      "status": "pass",
+      "detail": "OK webtest 200 http://192.168.5.125/api/hello -> {\"fw\":\"0.7.1\",\"build\":\"dd71bf6\",\"ui\":\"85a1a9b4\",\"proto\":1,\"codebook\":2,\"name\":\"RF-Lab-1B59\",\"ap_ssid\":\"RF-Lab-1B59\",\"ip\":\"192.168.5.125\",\"auth\":1}"
+    },
+    {
+      "name": "HTTP /api/state 200",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "name": "SSE /api/events 200",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "name": "POST /api/cmd 202",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "name": "POST executed",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "name": "SEND/LONG/STOP",
+      "status": "skip",
+      "detail": "no --tx (no RF sent)"
+    }
+  ],
+  "summary": {
+    "total": 27,
+    "passed": 26,
+    "failed": 0,
+    "skipped": 1
+  },
+  "ok": true
+}

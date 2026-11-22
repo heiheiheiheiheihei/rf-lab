@@ -72,6 +72,9 @@ PY
 echo "== tui:解析 + 键位分发(不启动 curses)"
 python3 -m unittest discover -s "$ROOT/tools" -p 'test_tui.py' -v
 
+echo "== device_selftest:版本无关解析 + 一致性 + --json(不碰串口)"
+python3 -m unittest discover -s "$ROOT/tools" -p 'test_device_selftest.py' -v
+
 echo "== oled:帧缓冲/字库/状态页/面板几何"
 "$CC" "${CFLAGS[@]}" \
     "$ROOT/firmware/src/rf34dl.c" \

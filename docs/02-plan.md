@@ -1,6 +1,6 @@
 # RF-Lab 测试债务与开发计划(2026-11-22)
 
-状态:**现行计划** · 基线 `HEAD e5a3fbd` · 固件/APK `0.7.1` · 设备 `RF-Lab-1B59`
+状态:**现行计划** · 基线 `HEAD dd71bf6` · 固件/APK `0.7.1` · 设备 `RF-Lab-1B59`
 单一所有者:**未完成测试登记 + 版本计划**。验收口径仍由 [`00-mvp.md`](00-mvp.md) §7 与
 [`01-ui.md`](01-ui.md) §8 定义;实测事实只写进 [`evidence/`](evidence/);本文件只回答
 「还差什么、谁做、怎么算过、先做哪个」。
@@ -9,9 +9,11 @@
 
 1. **现役链路的最大风险不是功能缺失,是「证据与当前设备状态脱节」。**
    2026-11-21 真机出现「ESP→模块命令方向 0 应答」;2026-11-22 只读巡检 `MODE single`
-   已回 `F2`、`acks` 0→1,但**没有发 `SEND`**,空口发射仍未复测。设备当前跑的是
-   `511afca+dirty`,不是 `v0.7.1` tag 构建;码库 13 条,不是 README 记录的 9 条。
-   详见 [`evidence/2026-11-22-device-audit.md`](evidence/2026-11-22-device-audit.md)。
+   已回 `F2`、`acks` 0→1,但**没有发 `SEND`**,空口发射仍未复测。设备原先跑的是
+   `511afca+dirty`;2026-11-22 已用 `tools/flash.sh` 重烧为 **`dd71bf6`**(master HEAD,
+   不是 `v0.7.1` tag),码库 13 条,不是 README 记录的 9 条。
+   详见 [`evidence/2026-11-22-device-audit.md`](evidence/2026-11-22-device-audit.md) 与
+   [`evidence/2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md)。
 
 2. **自动化基线是绿的,但没有人替它守门。**
    2026-11-22 复跑:主机 **11,051 + 36** checks 全过(含 `SAN=1`);固件构建
@@ -52,13 +54,14 @@ UI 项必须写视口、浏览器与 console 结果。
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| Git | `e5a3fbd` `master`;基线查询时工作树干净 | `git status` |
-| 主机测试 | 协议 76 + 码库 218 + 事件环 9,418 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,051**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
+| Git | `dd71bf6` `master`;A2/A3 与上机证据未提交 | `git status` |
+| 主机测试 | 协议 76 + 码库 218 + 事件环 9,418 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,051**;+ `device_selftest` **18**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
 | Sanitizer | `SAN=1 ./tools/host_test.sh` 全过 | 本次复跑 |
 | 固件构建 | **1,098,608 B / 2,031,616 B(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)**;70.6s | `cd firmware && pio run -e esp32c3` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,490 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
 | Android 本机构建 | **不可复现**:本机没有 JDK / Android SDK;只能依赖 CI 或补工具链 | `java`/`adb` 未找到 |
-| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,`build=511afca+dirty ui=85a1a9b4`,STA `192.168.5.125`,码库 **13/32** | [`2026-11-22-device-audit.md`](evidence/2026-11-22-device-audit.md) |
+| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,`build=dd71bf6 ui=85a1a9b4`,STA `192.168.5.125`;码库 **13/32**(08:59 烧录)→ **32/32**(13:46 自检,全部自动学码,无 manual/edited) | [`2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md) · [`2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
+| 设备自检 | `device_selftest --json`: **26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF);`RESET`/`LIST`/`LIST LONG`/`HELP`/`DISP`/`BLE`/`WEBTEST` 全过 | [`2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
 | 设备 UART 命令方向 | `MODE single` → `ACK 0xF2`,`acks` 0→1 | 同上 |
 | 未执行 | `SEND/LONG/STOP`(未发 RF)、BLE、OTA、uConsole、AP 浏览器 | — |
 
@@ -74,7 +77,12 @@ UI 项必须写视口、浏览器与 console 结果。
 | **RF-01** | 空口发射恢复 | 11-21 命令方向 0 应答;11-22 `MODE` 已回 `F2`,但没发 `SEND` | 冷启动后 `SEND 1` ×10 ≥9 次回 `F0`(~850ms);学习遥控器能复解码;失败次数/起始时间记录 | **U** |
 | **RF-02** | `LONG` 持续 / `STOP` 释放 | 只有 `0xFE/0xFF` 状态,没有接收器观察 | `LONG` 期间接收器持续动作;`STOP` 后停止;重复 3 次 | **U** |
 | **TST-01** | 上机自检脚本已过期 | `device_selftest.py` 硬编码 `fw=0.6.0`、`stored=5`;当前 0.7.1/13 条会误报 | 从 `INFO` 读版本/条数;覆盖 0.7.1 命令;输出 PASS/FAIL + 可解析 JSON | **A** |
-| **REL-01** | 设备构建可追溯 | 设备是 `511afca+dirty`,不是 `v0.7.1` tag;Release 只发 APK,没发固件二进制 | 用 tag 重建/重烧;记录 `build=`/`ui=`/sha256;Release 附 `firmware.bin` + `SHA256SUMS.txt` | **A+U** |
+| **REL-01** | 设备构建可追溯 | 设备已重烧为 `dd71bf6`(master HEAD,非 tag),sha256 已记录;**Release 仍只发 APK,没发固件二进制** | 用 tag 重建/重烧;记录 `build=`/`ui=`/sha256;Release 附 `firmware.bin` + `SHA256SUMS.txt` | **A+U** |
+
+> **TST-01 已于 2026-11-22 13:46 上机关闭**:版本/条数改为从 `INFO`/`LIST`/`STATE` 交叉校验,
+> 在 0.7.1 / 32 条真机上 `--json` 输出 **26 pass / 0 fail / 1 skip**、退出码 0(`SEND` 未跑)。
+> 见 [`evidence/2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md)。
+> 仍开放:RF-01 / RF-02(空口)、REL-01(tag + Release 固件资产)。
 
 ### 3.2 P1 — 0.7.2 发布/回归必须覆盖
 
@@ -157,11 +165,13 @@ UI 项必须写视口、浏览器与 console 结果。
    **在 `SEND` 复测前,对外只能说「历史证据存在,当前待复测」。**
 
 2. **P0:发布物与上机物不是同一个构建。**
-   设备 `511afca+dirty`,tag 是 `a7b4bf3`;Release 又只有 APK。结果是「0.7.1 上机通过」
-   无法对应到一个可下载、可校验的固件。**先重烧 tag 构建,再谈发布验收。**
+   设备原先跑 `511afca+dirty`,tag 是 `a7b4bf3`;11-22 已重烧为 `dd71bf6`(master HEAD),
+   但 Release 又只有 APK。结果是「0.7.1 上机通过」无法对应到一个可下载、可校验的固件。
+   **先发带 `firmware.bin` + `SHA256SUMS.txt` 的固件产物,再谈发布验收。**
 
 3. **P1:测试脚本本身会制造假红/假绿。**
-   `device_selftest.py` 仍按 0.6.0/5 条断言;跑在当前设备上必然失败,但失败原因不是设备。
+   旧 `device_selftest.py` 按 0.6.0/5 条断言,跑在 0.7.1 上必然失败且原因不在设备。
+   **2026-11-22 已改为版本无关并上机 26/0/1**,见 [`evidence/2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md)。
    测试工具必须先版本无关化,否则后续上机记录不可比。
 
 4. **P1:没有 CI 门。**

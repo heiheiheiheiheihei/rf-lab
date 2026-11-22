@@ -1,0 +1,104 @@
+name: CI
+
+# push/PR 守门:host(含 SAN)+ 固件构建 + web/wiring/site 静态检查 + APP 自更新逻辑。
+# 只证明能编译/能跑主机测试,不代表真机(BLE/射频/OTA)已验证。
+# 见 docs/02-plan.md §3.2 CI-01/CI-02 与 docs/03-execution.md Phase A A3。
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    name: host tests (incl. ASan/UBSan)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Host tests
+        run: ./tools/host_test.sh
+
+      # ASan/UBSan 之前只在本地手动跑;CI 里必须单独再跑一遍。
+      - name: Host tests (ASan/UBSan)
+        run: SAN=1 ./tools/host_test.sh
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # APP 自更新的版本比较 + SHA256SUMS 查表:纯 Java,不需要 Android SDK。
+      - name: APP self-update logic
+        run: ./tools/app_update_test.sh
+
+  static:
+    name: web / wiring / site / python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Python syntax + self-test CLI
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/device_selftest.py tools/test_device_selftest.py
+          python3 tools/device_selftest.py --help > /dev/null
+
+      - name: JS syntax
+        run: |
+          set -euo pipefail
+          node --check web/app.js
+          node --check site/app.js
+          node --check site/assets/terminal-demo.js
+
+      # 生成物必须与源一致:接线 JSON -> 代码头/表/SVG;web/ -> dist/固件 gzip/Android assets。
+      - name: Wiring check
+        run: python3 tools/gen_wiring.py --check
+
+      - name: Web build check
+        run: python3 tools/build_web.py --check
+
+      - name: Site check
+        run: python3 tools/site_check.py
+
+  firmware:
+    name: firmware build (esp32c3)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # 平台包下载是这里最慢的一步;key 跟着 platformio.ini 变。
+      # 注意:platformio.ini 的 `platform = espressif32` 未锁版本,平台更新仍可能引入漂移。
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: |
+            pio-${{ runner.os }}-
+
+      # 用 setup-python 自己的解释器,避免系统 Python 的 PEP 668 限制。
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PlatformIO
+        run: python3 -m pip install "platformio>=6.1,<7"
+
+      # 构建内含 Web gzip/build 指纹 + 分区表校验(pre/post extra_scripts)。
+      - name: Build esp32c3
+        working-directory: firmware
+        run: pio run -e esp32c3

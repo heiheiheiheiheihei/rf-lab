@@ -2,7 +2,7 @@
 
 > **用途**:另起会话时先读这一页,再按链接读规格。
 > **状态以 [`02-plan.md`](02-plan.md) 为准**;本页只锁「现在做什么、不做什么、怎么算过」。
-> 仓库 `/home/myf/DSH/Dev/rf-lab` · 当前 `HEAD e5a3fbd` · 固件/APK **0.7.1**
+> 仓库 `/home/myf/DSH/Dev/rf-lab` · 当前 `HEAD dd71bf6` · 固件/APK **0.7.1**
 
 ## 0. 一句话
 
@@ -28,20 +28,22 @@
 
 | 项 | 状态 |
 |---|---|
-| Git | `e5a3fbd` `master`;交接时工作树有本轮文档改动,未提交 |
-| 主机 | `host_test.sh` **11,051 checks** + `app_update_test.sh` **36 checks**,全过;`SAN=1` 也过 |
+| Git | `dd71bf6` `master`;A2/A3(工具/CI/文档)未提交 |
+| 主机 | `host_test.sh` **11,051 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
 | 固件构建 | **1,098,608 B / 2,031,616 B 槽(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)** |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
-| 设备 | `/dev/ttyACM0`,fw 0.7.1,**`build=511afca+dirty`**(不是 v0.7.1 tag),STA `192.168.5.125` |
+| 设备 | `/dev/ttyACM0`,fw 0.7.1,**`build=dd71bf6`**(2026-11-22 重烧的 master HEAD,不是 v0.7.1 tag),STA `192.168.5.125` |
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
-| 码库 | **13/32**;10–13 是 `433M 00000093/94/95/53`,疑似自动学码误收 |
-| 空口发射 | **未复测**:本次只做了 `MODE single`,没有发 `SEND/LONG/STOP` |
-| CI | 只有「tag 发 APK」「master 发 Pages」;**push/PR 不跑主机测试、不构建固件** |
+| 码库 | 08:59 烧录时 **13/32**;13:46 自检已是 **32/32**(全部自动学码、无 manual/edited);**满库会挡住后续学码**,原因待用户确认(见 [自检](evidence/2026-11-22-device-selftest.md)) |
+| 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |
+| CI | `.github/workflows/ci.yml` 已加(host+SAN / static / firmware),**未推送、未首跑**;master 尚无 required checks |
 | Android | 本机无 JDK/SDK,APK 只能靠 CI;v0.7.1 Release 资产 1,050,176 B |
 
 关键证据:
 
 - [`evidence/2026-11-22-device-audit.md`](evidence/2026-11-22-device-audit.md)
+- [`evidence/2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md)
+- [`evidence/2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md)
 - [`evidence/2026-11-22-pages-cors.log`](evidence/2026-11-22-pages-cors.log)
 - [`evidence/2026-11-21-send-no-ack.md`](evidence/2026-11-21-send-no-ack.md)
 
@@ -52,8 +54,8 @@
 | 任务 | 执行 | 内容 | 通过标准 |
 |---|---|---|---|
 | **A1** | 用户(上机) | 冷启动;查 VCC/GND/RXD 焊点/电压;`SEND 1` ×10;`LONG 1`;`STOP 1`;接收器/学习遥控器观察 | ≥9/10 次 `F0`(~850ms);`LONG` 接收器持续动作;`STOP` 停止;记录失败曲线 |
-| **A2** | Agent(主机) | 修 `tools/device_selftest.py`:从 `INFO` 读 fw/条数,去掉 `0.6.0`/`stored=5` 硬编码;加 `--json`;保留 `--tx` 门 | 在当前 0.7.1/13 条设备上不再误报;`--help`/`--json` 可解析 |
-| **A3** | Agent(主机) | 新增 `.github/workflows/ci.yml`:push/PR 跑 host(含 `SAN=1`)+ `pio run -e esp32c3` + `gen_wiring --check` + `build_web --check` + `site_check` + `node --check` + `app_update_test` | CI 在 master/PR 绿;失败能阻断 |
+| **A2** ✅ | Agent(主机) | 修 `tools/device_selftest.py`:版本无关 + `--json` + 保留 `--tx` 门 | **已上机(2026-11-22 13:46):26 pass / 0 fail / 1 skip**,见 [`evidence/2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
+| **A3** ⏳ | Agent(主机) | 新增 `.github/workflows/ci.yml`:push/PR 跑 host(含 `SAN=1`)+ `pio run -e esp32c3` + `gen_wiring --check` + `build_web --check` + `site_check` + `node --check` + `app_update_test` | 代码已就绪;**待推送后首跑绿 + 配置 required checks 才算「失败能阻断」** |
 | **A4** | 用户(上机) | BLE `SEND`;错误 PIN 5 次/重连;`NAME/GROUP/SYM/EDIT` 后重启;OTA Web 浏览器上传 / 崩溃回滚 / AP 路径 | 每项一条 evidence;失败也写 |
 | **A5** | 用户(上机) | uConsole 真机;AP 模式外部浏览器;STA 运行中掉线;Android 15 edge-to-edge;旧固件 0.6.x + 新 APK | 按 `02-plan.md` §3.2 的通过标准 |
 | **A6** | Agent + 用户 | 用**当前发布 tag**(`v0.7.1`;若 0.7.2 有固件改动则 `v0.7.2`)重建/重烧;Release 附 `firmware.bin` + `SHA256SUMS.txt`(仅在发版时);写证据 | `build=` 不含 `dirty`;设备运行 tag 构建;Release 资产可核验 |
@@ -97,7 +99,7 @@
 ```text
 仓库:/home/myf/DSH/Dev/rf-lab
 先按顺序读:AGENTS.md → docs/02-plan.md → docs/03-execution.md → docs/01-ui.md §3.4.1。
-当前 HEAD e5a3fbd,固件/APK 0.7.1;设备是 511afca+dirty,空口 SEND 未复测。
+当前 HEAD dd71bf6,固件/APK 0.7.1;设备已于 11-22 重烧为 dd71bf6(master HEAD),空口 SEND 未复测。
 现在只做 Phase A 的 A2/A3(不需要硬件):修 device_selftest + 加 CI。
 不要开始 0.7.3/0.8.0 代码;不要发 RF;不要改 docs/evidence 的旧文件。
 先给改动计划,再动手;完成后分别报告 Build/Host/Device/Unverified。
@@ -116,7 +118,7 @@ node --check site/app.js
 node --check site/assets/terminal-demo.js
 python3 tools/site_check.py
 cd firmware && pio run -e esp32c3    # 构建
-python3 tools/device_selftest.py --port /dev/ttyACM0 --tx   # 上机
+python3 tools/device_selftest.py --port /dev/ttyACM0 --tx   # 上机;--json / --tx-repeat N 可选
 python3 tools/wifi_selftest.py --port /dev/ttyACM0
 ```
 
