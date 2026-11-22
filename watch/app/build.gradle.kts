@@ -32,8 +32,8 @@ android {
         // targetSdk stays at 28: the watch ROM is API 27, and we do not want
         // Android 12+ nearby-device/foreground-service behavior on a phone build.
         targetSdk = 28
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.1.4"
     }
 
     signingConfigs {
@@ -43,6 +43,11 @@ android {
                 storePassword = watchSigningValue("storePassword", "RFLAB_WATCH_KEYSTORE_PASSWORD")
                 keyAlias = watchSigningValue("keyAlias", "RFLAB_WATCH_KEY_ALIAS")
                 keyPassword = watchSigningValue("keyPassword", "RFLAB_WATCH_KEY_PASSWORD")
+                // Some ColorOS Watch builds only show the on-device installer
+                // for v1-signed APKs; keep v1+v2 so the same artifact works via
+                // adb and via PackageInstaller.
+                enableV1Signing = true
+                enableV2Signing = true
             }
         }
     }

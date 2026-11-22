@@ -1,13 +1,9 @@
 package dev.rflab.watch;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.net.Uri;
@@ -74,6 +70,7 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     private boolean pinAborted;
     private boolean updateBusy;
     private String updatePhase = "";
+    private String updateTarget = "";
 
     private int selectedId = -1;
     private String txKind = "";
@@ -88,7 +85,7 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     private String deviceAddress = "";
     private String fw = "";
     private String build = "";
-    private String appVersion = "0.1.3";
+    private String appVersion = "0.1.4";
     private String status = "READY";
     private int statusTone = WatchView.TONE_NEUTRAL;
     private String linkStatus = "IDLE";
@@ -109,7 +106,6 @@ public final class WatchActivity extends Activity implements WatchView.Host {
 
         view = new WatchView(this, this);
         setContentView(view);
-        registerInstallReceiver();
 
         boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         demo = debuggable && getIntent() != null && getIntent().getBooleanExtra("demo", false);
@@ -1177,6 +1173,7 @@ public final class WatchActivity extends Activity implements WatchView.Host {
                         return;
                     }
                     updatePhase = "INSTALL…";
+                    updateTarget = release.version;
                     setStatus("VERIFIED · INSTALL…", WatchView.TONE_WARN);
                     beginInstall(apk);
                 }
@@ -1209,6 +1206,7 @@ public final class WatchActivity extends Activity implements WatchView.Host {
                 if (destroyed) {
                     return;
                 }
+                updateBusy = false;
                 updatePhase = "CONFIRM…";
                 setStatus("CONFIRM INSTALL IN SYSTEM", WatchView.TONE_WARN);
             }
@@ -1233,36 +1231,6 @@ public final class WatchActivity extends Activity implements WatchView.Host {
             startActivity(i);
         } catch (RuntimeException e) {
             openAppSettings();
-        }
-    }
-
-    private final BroadcastReceiver installReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS,
-                    PackageInstaller.STATUS_FAILURE);
-            String message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-            updateBusy = false;
-            if (status == PackageInstaller.STATUS_SUCCESS) {
-                updatePhase = "UPDATED";
-                setStatus("UPDATED · REOPEN", WatchView.TONE_OK);
-            } else if (status == PackageInstaller.STATUS_FAILURE_ABORTED) {
-                updatePhase = "CANCELLED";
-                setStatus("UPDATE CANCELLED", WatchView.TONE_WARN);
-            } else {
-                updatePhase = "INSTALL FAILED";
-                Log.w("RF-Lab.Watch", "install failed: " + status + " " + message);
-                setStatus("INSTALL FAILED", WatchView.TONE_ERROR);
-            }
-        }
-    };
-
-    private void registerInstallReceiver() {
-        IntentFilter filter = new IntentFilter(Updater.ACTION_INSTALL_RESULT);
-        if (Build.VERSION.SDK_INT >= 33) {
-            registerReceiver(installReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(installReceiver, filter);
         }
     }
 
@@ -1562,8 +1530,25 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     protected void onResume() {
         super.onResume();
         keepAwakeAndFullscreen();
+        if (!updateTarget.isEmpty()) {
+            // The installer has no result broadcast for ACTION_VIEW: compare
+            // the installed version when we come back.
+            String target = updateTarget;
+            updateTarget = "";
+            updatePhase = versionName().equals(target) ? "UPDATED" : "CANCELLED";
+            updateBusy = false;
+        }
         if (view != null) {
             view.invalidate();
+        }
+    }
+
+    private String versionName() {
+        try {
+            PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return pi.versionName == null ? "" : pi.versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            return "";
         }
     }
 
@@ -1613,11 +1598,6 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     protected void onDestroy() {
         destroyed = true;
         main.removeCallbacksAndMessages(null);
-        try {
-            unregisterReceiver(installReceiver);
-        } catch (RuntimeException ignored) {
-            // Not registered (demo/early exit) or already torn down.
-        }
         if (ble != null) {
             if (connected && (holdSent || txActive)) {
                 int id = holdSent ? holdId : txId;

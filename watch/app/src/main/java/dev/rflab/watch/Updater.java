@@ -1,11 +1,9 @@
 package dev.rflab.watch;
 
 import android.app.Activity;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Build;
@@ -43,8 +41,8 @@ import java.util.concurrent.Executors;
  *   <li>before the installer runs: asset size, SHA-256, package name,
  *       versionCode/versionName must advance, and the signing certificate must
  *       equal the installed app's certificate;</li>
- *   <li>installation goes through {@link PackageInstaller} — the system shows
- *       the confirmation, nothing is silent and no root is needed.</li>
+ *   <li>installation is handed to the system installer; the user confirms and
+ *       nothing is silent, no root is needed.</li>
  * </ul>
  */
 final class Updater {
@@ -153,47 +151,31 @@ final class Updater {
         });
     }
 
-    /** Writes the verified APK into a PackageInstaller session; the system asks the user. */
+    /**
+     * Hands the verified APK to the system installer through a content URI.
+     * On ColorOS Watch the PackageInstaller session path returns
+     * STATUS_FAILURE without showing UI; ACTION_VIEW reaches InstallStart.
+     */
     void install(final Activity activity, final File apk, final InstallCallback cb) {
-        IO.execute(() -> {
+        MAIN.post(() -> {
             String error = null;
             try {
-                PackageInstaller installer = activity.getPackageManager().getPackageInstaller();
-                PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(
-                        PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-                params.setAppPackageName(activity.getPackageName());
-                params.setSize(apk.length());
-                int sessionId = installer.createSession(params);
-
-                Intent status = new Intent(ACTION_INSTALL_RESULT)
-                        .setPackage(activity.getPackageName());
-                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    flags |= PendingIntent.FLAG_MUTABLE;
-                }
-                PendingIntent pending = PendingIntent.getBroadcast(activity, sessionId,
-                        status, flags);
-
-                try (PackageInstaller.Session session = installer.openSession(sessionId)) {
-                    try (InputStream in = new FileInputStream(apk);
-                         OutputStream out = session.openWrite("base.apk", 0, apk.length())) {
-                        copy(in, out);
-                        session.fsync(out);
-                    }
-                    session.commit(pending.getIntentSender());
-                }
+                Intent i = new Intent(Intent.ACTION_VIEW);
+                i.setDataAndType(ApkProvider.uriFor(activity, apk),
+                        "application/vnd.android.package-archive");
+                i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        | Intent.FLAG_ACTIVITY_NEW_TASK);
+                activity.startActivity(i);
             } catch (Exception e) {
                 error = shortError(e);
-                Log.w(TAG, "install session failed", e);
+                Log.w(TAG, "install intent failed", e);
             }
             final String err = error;
-            MAIN.post(() -> {
-                if (err != null) {
-                    cb.onFailed(err);
-                } else {
-                    cb.onCommitted();
-                }
-            });
+            if (err != null) {
+                cb.onFailed(err);
+            } else {
+                cb.onCommitted();
+            }
         });
     }
 

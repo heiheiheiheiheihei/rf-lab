@@ -208,7 +208,7 @@ UPDATE
      且同时带 rf-lab-watch.apk + SHA256SUMS.txt 的 Release,取最高版本
   → 下载 APK(≤20 MB)→ 大小、SHA-256、包名、versionCode/versionName
   → 签名证书必须与已装 APP 一致
-  → PackageInstaller(MODE_FULL_INSTALL)→ 系统确认框 → 安装
+  → ACTION_VIEW(content://)+只读 provider → 系统安装界面 → 安装
 ```
 
 | 项 | 约定 |
@@ -219,7 +219,7 @@ UPDATE
 | 版本门 | `versionCode` 和 `versionName` 都必须严格前进,同版本重装会被拒绝 |
 | 完整性 | 资产大小 + `SHA256SUMS.txt` 的 SHA-256;不一致立即失败 |
 | 签名 | 证书 SHA-256 必须与已装包一致;系统安装器还会再验一次 |
-| 安装 | `PackageInstaller` 系统确认;首次需允许“安装未知应用”(API 26+) |
+| 安装 | `ACTION_VIEW` + 只读 `content://` provider,由系统安装界面确认;首次需允许“安装未知应用”(API 26+)。本机实测 `PackageInstaller` 会话在该 ROM 上直接返回 `STATUS_FAILURE`,故不用会话路径 |
 | 失败 | 状态行短码:`NO NET` / `RATE LIMIT` / `BAD HASH` / `BAD SIGN` / `NOT NEWER` / `BAD APK` / `INSTALL FAILED`;详情 `adb logcat -s RF-Lab.Watch.Update` |
 
 **未授权安装来源**时 APK 仍会下载并校验,APP 打开系统“安装未知应用”页,状态行提示
@@ -286,7 +286,7 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 | WATCH-04 | 屏幕适配 | 46mm 402×476 无裁切;按钮命中正确 | ✅ 46mm 真机 OW20W1 |
 | WATCH-05 | BLE 控制 | 扫描/连接/AUTH/`SEND`/`LONG`/`STOP` 与设备回显一致 | ✅ 46mm 真机:32 码、`OK TX`、`STOP`;错误 PIN `4 LEFT` |
 | WATCH-06 | 失败关闭 | 错误 PIN、退后台 STOP 均不发飞 | ✅ 错误 PIN `4 LEFT`;退后台 `STOP #1` |
-| WATCH-07 | APP 自更新 | 真机点 UPDATE:发现新版→下载→四项校验→系统确认→版本前进;取消/断网失败关闭 | ⏳ 0.1.2 构建/主机测试过;真机待验 |
+| WATCH-07 | APP 自更新 | 真机点 UPDATE:发现新版→下载→四项校验→系统确认→版本前进;取消/断网失败关闭 | ⏳ 0.1.4 构建/主机测试过;真机待验 |
 
 构建/主机/模拟器证据:[`docs/evidence/2026-11-22-watch.md`](../docs/evidence/2026-11-22-watch.md)。
 真机与 release 签名/公开包证据:[`docs/evidence/2026-11-22-watch-release.md`](../docs/evidence/2026-11-22-watch-release.md)。
