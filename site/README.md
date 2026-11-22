@@ -30,7 +30,7 @@ python3 -m http.server 8088 -d site
 | 01 配装台 | **硬件链路图**(CORE-C3 + YS-RF34DL,四线)、4 档预设、9 个可选模块、实时物料小计/余量/能力矩阵 | 勾选、预算滑杆、随机配装、削到预算内、复制配装单;点图打开 SVG 原图 |
 | 02 模块阵列 | 对数频段覆盖图、模块规格表、**主控/模块两张硬件细节卡**、三条设计判断 | 表格/频段条;点图打开 SVG 原图 |
 | 03 战术终端 | **内嵌真实单页 UI**(iframe,`assets/terminal.html`);WEB/APP/UCONSOLE 三视口 | 直接 ARM/SEND/LONG/STOP/ERASE;模拟遥控器/重置;事件流(标 SIM) |
-| 04 手表控制 | OPPO Watch 2 实机截图(402×476)、LINK→PIN→CONTROL、HOLD/LONG/STOP | 静态截图 + 源码/规格链接;不提供未发布 APK |
+| 04 手表控制 | OPPO Watch 2 实机截图(402×476)、LINK→PIN→CONTROL、HOLD/LONG/STOP | 静态截图 + 公开 APK / 源码 / 规格链接 |
 | 05 无线上行 | 本地 MQTT + Home Assistant Discovery 拓扑与 topic 草案 | 强制 `ROADMAP / 未实现` 标识 |
 | 06 作战状态 | 构建 / 主机 / 上机分开列;版本线 | 无 |
 | Footer | 安全边界、文档入口、来源(含 APK / Releases) | 键盘 `B/T/W/U/R/?` |

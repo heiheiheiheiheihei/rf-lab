@@ -182,7 +182,7 @@ cd watch && ../android/gradlew assembleRelease
 | 证书 SHA-256 | `ED:C2:A5:C1:0E:68:C3:35:A9:D7:7B:BD:44:C6:C1:34:18:A8:08:7B:EE:DD:D8:47:BE:05:51:3B:A4:90:94:A7` |
 | 签名方案 | APK Signature Scheme v2(Android 8.1 支持) |
 | 产物 | `watch/app/build/outputs/apk/release/app-release.apk` |
-| 公开 Release | [watch-v0.1.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/watch-v0.1.0) |
+| 公开 Release | [watch-v0.1.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/watch-v0.1.0) · sha256 `739afa…` |
 
 **debug → release 不能覆盖安装**:签名不同,必须先 `adb uninstall dev.rflab.watch`,
 会清掉记住的 PIN/设备/选中码。首装 release 后重新配对即可。
@@ -245,7 +245,7 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 
 | ID | 项 | 通过标准 | 状态 |
 |---|---|---|---|
-| WATCH-01 | 构建/签名 | debug 可构建;release 用独立 key,v2 验签通过 | ✅ 2026-11-22,debug 103,784B;release 48,244B/sha256 `4bd74c…`;v2 签名;Lint 0 |
+| WATCH-01 | 构建/签名 | debug 可构建;release 用独立 key,v2 验签通过 | ✅ debug 103,784B;公开资产 48,244B/sha256 `739afa…`;v2;Lint 0 |
 | WATCH-02 | 主机测试 | 协议解析/选择逻辑全过 | ✅ 2026-11-22,`ProtocolTest` 9/9 |
 | WATCH-03 | 安装/启动 | 手表 `adb install` 成功;冷启动无崩溃 | ✅ 2026-11-22,OW20W1 / API 27 |
 | WATCH-04 | 屏幕适配 | 46mm 402×476 无裁切;按钮命中正确 | ✅ 46mm 真机 OW20W1 |

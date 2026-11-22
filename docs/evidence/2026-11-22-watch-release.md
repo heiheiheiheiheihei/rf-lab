@@ -31,7 +31,8 @@ cd watch && ../android/gradlew assembleRelease
 |---|---|
 | 产物 | `watch/app/build/outputs/apk/release/app-release.apk` |
 | 大小 | 48,244 B |
-| sha256 | `4bd74ccae418342163d6fe4a0fb23d90dab07e35b5df377786d7fad9b6bb7e26` |
+| 本地构建 sha256 | `4bd74ccae418342163d6fe4a0fb23d90dab07e35b5df377786d7fad9b6bb7e26` |
+| **公开资产 sha256** | `739afa68e675bbca0f4452d66389eaa7d33babb46842d0d4f94886ca55d6ba1d` |
 | 包 / 版本 | `dev.rflab.watch` 0.1.0(versionCode 1) |
 | 签名 | v1 false / **v2 true** |
 | debuggable | 无(`aapt2 dump badging` 无 `application-debuggable`) |
@@ -45,7 +46,7 @@ adb shell pm grant dev.rflab.watch android.permission.ACCESS_FINE_LOCATION
 ```
 
 签名不同,**必须卸载 debug**;手表上的 PIN/设备/选中码被清空,首装后重新配对。
-`firstInstallTime=2026-11-22 15:57:31`,release 包已安装在 OW20W1。
+`firstInstallTime=2026-11-22 15:57:31`;公开资产在 16:28:41 覆盖安装成功。
 
 ## Release 真机回归
 
@@ -78,11 +79,12 @@ html 43,620 B gzip 13,751 B
 - [site-watch-desktop](2026-11-22-watch-release/site-watch-desktop.png)
 - [site-watch-mobile](2026-11-22-watch-release/site-watch-mobile.png)
 
-**已部署(2026-11-22)**:commit `e359992`;CI
-[45001726458](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45001726458) 绿,
-Pages [45001726431](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45001726431) 成功。
-线上 `https://heiheiheiheiheihei.github.io/rf-lab/` 返回 200,页面含 `id="watch"`,
-`assets/watch-control.webp` / `watch-hold.webp` 均 200。
+**已部署(2026-11-22)**:commit `519f124`;CI
+[45002834740](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45002834740) 绿,
+Pages [45002834771](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45002834771) 成功。
+线上 `https://heiheiheiheiheihei.github.io/rf-lab/` 返回 200,页面含 `id="watch"` 和
+`releases/download/watch-v0.1.0/rf-lab-watch.apk`;`watch-control.webp` / `watch-hold.webp`
+均 200。手表区截图已更新为含下载按钮的版本。
 
 ## 公开 Release
 
@@ -93,7 +95,10 @@ Pages [45001726431](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45
 | 下载 | <https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/rf-lab-watch.apk> |
 | 构建 | `.github/workflows/watch-release.yml`(tag 触发,独立 watch key secrets) |
 | latest | **明确 false**:不抢手机 APK 的 `releases/latest` |
+| 构建 run | [45002842295](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45002842295) |
+| 资产 sha256 | `739afa68e675bbca0f4452d66389eaa7d33babb46842d0d4f94886ca55d6ba1d`(48,244 B) |
 | 安装 | `adb install -r rf-lab-watch.apk`;debug → release 仍需卸载 debug |
+| 公开包回归 | 覆盖安装后自动重连/PIN 记忆保留;`SEND` → `OK TX #1 · 736ms`([public-send](2026-11-22-watch-release/public-send.png)) |
 
 公开包只覆盖 0.1.0 的 46mm 控制路径;码库编辑/OTA 不在范围内。安装包 SHA-256
 以 Release 的 `SHA256SUMS.txt` 为准。
