@@ -1,0 +1,212 @@
+# RF-Lab protocol/dedupe on-device test (2026-11-22)
+# port=/dev/ttyACM0 115200
+
+$ INFO
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# build=200cc4e ui=85a1a9b4
+# ota slot=0 next=-1 state=idle pct=0 pending=0
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=3 err=0 last_us=8722 max_us=9884
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=Mark sta_ip=192.168.5.125 rssi=-29
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+# codebook ver=2 count=32/32 migrated=no
+OK stored=32/32 rx_bytes=0 frames=0 acks=0 dups=0 bad=0 stray=0 resync=0
+
+$ LIST
+ 1  315M 5555033C
+ 2  315M 5555034B
+ 3  433M 5555034B
+ 4  433M 5555033C
+ 5  433M 1555304B
+ 6  315M 5555034D
+ 7  433M 5555034D
+ 8  433M B6A56252
+ 9  433M 85D7384B
+10  433M 8556304A
+11  433M 8556344A
+12  433M 8556384A
+13  433M 8F76304A
+14  433M 855E304A
+15  433M 2F0B0E4A
+16  433M 52BB184A
+17  433M 7477304A
+18  433M E50D9A63
+19  433M 8F7E744A
+20  433M 7FE6624A
+21  433M ADB9514A
+22  433M 85563094
+23  433M 855630AD
+24  433M 15553046
+25  433M 15550C46
+26  433M D0C70146
+27  433M D0C70147
+28  433M 6BB04146
+29  433M D0C70145
+30  433M D0C70141
+31  433M 6BB04846
+32  433M D0C70140
+
+$ LIST LONG
+ 1  315M 5555033C osc=0x3C  name="-" group="-" sym="-"
+ 2  315M 5555034B osc=0x4B  name="-" group="-" sym="-"
+ 3  433M 5555034B osc=0x4B  name="-" group="-" sym="-"
+ 4  433M 5555033C osc=0x3C  name="-" group="-" sym="-"
+ 5  433M 1555304B osc=0x4B  name="-" group="-" sym="-"
+ 6  315M 5555034D osc=0x4D  name="-" group="-" sym="-"
+ 7  433M 5555034D osc=0x4D  name="-" group="-" sym="-"
+ 8  433M B6A56252 osc=0x52  name="-" group="-" sym="-"
+ 9  433M 85D7384B osc=0x4B  name="-" group="-" sym="-"
+10  433M 8556304A osc=0x4A  name="-" group="-" sym="-"
+11  433M 8556344A osc=0x4A  name="-" group="-" sym="-"
+12  433M 8556384A osc=0x4A  name="-" group="-" sym="-"
+13  433M 8F76304A osc=0x4A  name="-" group="-" sym="-"
+14  433M 855E304A osc=0x4A  name="-" group="-" sym="-"
+15  433M 2F0B0E4A osc=0x4A  name="-" group="-" sym="-"
+16  433M 52BB184A osc=0x4A  name="-" group="-" sym="-"
+17  433M 7477304A osc=0x4A  name="-" group="-" sym="-"
+18  433M E50D9A63 osc=0x63  name="-" group="-" sym="-"
+19  433M 8F7E744A osc=0x4A  name="-" group="-" sym="-"
+20  433M 7FE6624A osc=0x4A  name="-" group="-" sym="-"
+21  433M ADB9514A osc=0x4A  name="-" group="-" sym="-"
+22  433M 85563094 osc=0x94  name="-" group="-" sym="-"
+23  433M 855630AD osc=0xAD  name="-" group="-" sym="-"
+24  433M 15553046 osc=0x46  name="-" group="-" sym="-"
+25  433M 15550C46 osc=0x46  name="-" group="-" sym="-"
+26  433M D0C70146 osc=0x46  name="-" group="-" sym="-"
+27  433M D0C70147 osc=0x47  name="-" group="-" sym="-"
+28  433M 6BB04146 osc=0x46  name="-" group="-" sym="-"
+29  433M D0C70145 osc=0x45  name="-" group="-" sym="-"
+30  433M D0C70141 osc=0x41  name="-" group="-" sym="-"
+31  433M 6BB04846 osc=0x46  name="-" group="-" sym="-"
+32  433M D0C70140 osc=0x40  name="-" group="-" sym="-"
+
+$ DEDUP
+OK dedup removed=11 count=21
+
+$ LIST
+ 1  315M 5555033C
+ 2  433M 5555034B
+ 3  433M 1555304B
+ 4  433M B6A56252
+ 5  433M 85D7384B
+ 6  433M 8556304A
+ 7  433M 8556344A
+ 8  433M 8556384A
+ 9  433M 8F76304A
+10  433M 855E304A
+11  433M 2F0B0E4A
+12  433M 52BB184A
+13  433M 7477304A
+14  433M E50D9A63
+15  433M 8F7E744A
+16  433M 7FE6624A
+17  433M ADB9514A
+18  433M 15550C46
+19  433M D0C70146
+20  433M 6BB04146
+21  433M 6BB04846
+
+$ DEDUP
+OK dedup removed=0 count=21
+
+$ NEW 315M 12121260
+OK new id=22 band=315M code=12121260
+
+$ LIST LONG
+ 1  315M 5555033C osc=0x3C  name="-" group="-" sym="-"
+ 2  433M 5555034B osc=0x4B  name="-" group="-" sym="-"
+ 3  433M 1555304B osc=0x4B  name="-" group="-" sym="-"
+ 4  433M B6A56252 osc=0x52  name="-" group="-" sym="-"
+ 5  433M 85D7384B osc=0x4B  name="-" group="-" sym="-"
+ 6  433M 8556304A osc=0x4A  name="-" group="-" sym="-"
+ 7  433M 8556344A osc=0x4A  name="-" group="-" sym="-"
+ 8  433M 8556384A osc=0x4A  name="-" group="-" sym="-"
+ 9  433M 8F76304A osc=0x4A  name="-" group="-" sym="-"
+10  433M 855E304A osc=0x4A  name="-" group="-" sym="-"
+11  433M 2F0B0E4A osc=0x4A  name="-" group="-" sym="-"
+12  433M 52BB184A osc=0x4A  name="-" group="-" sym="-"
+13  433M 7477304A osc=0x4A  name="-" group="-" sym="-"
+14  433M E50D9A63 osc=0x63  name="-" group="-" sym="-"
+15  433M 8F7E744A osc=0x4A  name="-" group="-" sym="-"
+16  433M 7FE6624A osc=0x4A  name="-" group="-" sym="-"
+17  433M ADB9514A osc=0x4A  name="-" group="-" sym="-"
+18  433M 15550C46 osc=0x46  name="-" group="-" sym="-"
+19  433M D0C70146 osc=0x46  name="-" group="-" sym="-"
+20  433M 6BB04146 osc=0x46  name="-" group="-" sym="-"
+21  433M 6BB04846 osc=0x46  name="-" group="-" sym="-"
+22  315M 12121260 osc=0x60  name="-" group="-" sym="-" manual
+
+$ EDIT 22 code 12121270
+OK edit id=22 code=12121270
+
+$ LIST LONG
+ 1  315M 5555033C osc=0x3C  name="-" group="-" sym="-"
+ 2  433M 5555034B osc=0x4B  name="-" group="-" sym="-"
+ 3  433M 1555304B osc=0x4B  name="-" group="-" sym="-"
+ 4  433M B6A56252 osc=0x52  name="-" group="-" sym="-"
+ 5  433M 85D7384B osc=0x4B  name="-" group="-" sym="-"
+ 6  433M 8556304A osc=0x4A  name="-" group="-" sym="-"
+ 7  433M 8556344A osc=0x4A  name="-" group="-" sym="-"
+ 8  433M 8556384A osc=0x4A  name="-" group="-" sym="-"
+ 9  433M 8F76304A osc=0x4A  name="-" group="-" sym="-"
+10  433M 855E304A osc=0x4A  name="-" group="-" sym="-"
+11  433M 2F0B0E4A osc=0x4A  name="-" group="-" sym="-"
+12  433M 52BB184A osc=0x4A  name="-" group="-" sym="-"
+13  433M 7477304A osc=0x4A  name="-" group="-" sym="-"
+14  433M E50D9A63 osc=0x63  name="-" group="-" sym="-"
+15  433M 8F7E744A osc=0x4A  name="-" group="-" sym="-"
+16  433M 7FE6624A osc=0x4A  name="-" group="-" sym="-"
+17  433M ADB9514A osc=0x4A  name="-" group="-" sym="-"
+18  433M 15550C46 osc=0x46  name="-" group="-" sym="-"
+19  433M D0C70146 osc=0x46  name="-" group="-" sym="-"
+20  433M 6BB04146 osc=0x46  name="-" group="-" sym="-"
+21  433M 6BB04846 osc=0x46  name="-" group="-" sym="-"
+22  315M 12121270 osc=0x70  name="-" group="-" sym="-" manual edited
+
+$ ERASE 22
+OK erased id=22 (21 left)
+
+$ INFO
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# build=200cc4e ui=85a1a9b4
+# ota slot=0 next=-1 state=idle pct=0 pending=0
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=4 err=0 last_us=8726 max_us=9884
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=Mark sta_ip=192.168.5.125 rssi=-30
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+# codebook ver=2 count=21/32 migrated=no
+OK stored=21/32 rx_bytes=0 frames=0 acks=0 dups=0 bad=0 stray=0 resync=0
+
+$ NEW 433M D0C70146
+ERR new: dup (same band+addr+button; EDIT <id> code <8hex> to change osc)
+
+$ NEW 433M D0C70160
+ERR new: dup (same band+addr+button; EDIT <id> code <8hex> to change osc)
+
+$ NEW 433M 00000093
+ERR new: code
+
+$ LIST
+ 1  315M 5555033C
+ 2  433M 5555034B
+ 3  433M 1555304B
+ 4  433M B6A56252
+ 5  433M 85D7384B
+ 6  433M 8556304A
+ 7  433M 8556344A
+ 8  433M 8556384A
+ 9  433M 8F76304A
+10  433M 855E304A
+11  433M 2F0B0E4A
+12  433M 52BB184A
+13  433M 7477304A
+14  433M E50D9A63
+15  433M 8F7E744A
+16  433M 7FE6624A
+17  433M ADB9514A
+18  433M 15550C46
+19  433M D0C70146
+20  433M 6BB04146
+21  433M 6BB04846

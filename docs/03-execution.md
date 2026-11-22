@@ -2,7 +2,7 @@
 
 > **用途**:另起会话时先读这一页,再按链接读规格。
 > **状态以 [`02-plan.md`](02-plan.md) 为准**;本页只锁「现在做什么、不做什么、怎么算过」。
-> 仓库 `/home/myf/DSH/Dev/rf-lab` · 当前 `HEAD dd71bf6` · 固件/APK **0.7.1**
+> 仓库 `/home/myf/DSH/Dev/rf-lab` · 当前 `HEAD 200cc4e`(未推送)· 固件/APK **0.7.1**
 
 ## 0. 一句话
 
@@ -28,15 +28,15 @@
 
 | 项 | 状态 |
 |---|---|
-| Git | `d447494` `master`(已推送);工作树还有并发 watch 会话的改动,未提交 |
+| Git | 本地 `200cc4e`(协议去重,未推送);`origin/master` = `89ad522`(CI 绿) |
 | 主机 | `host_test.sh` **11,068 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
 | 固件构建 | **1,098,608 B / 2,031,616 B 槽(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)** |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
-| 设备 | `/dev/ttyACM0`,15:37 为 **`eaed71d+dirty` / `ui=6f8b9a42` / `ota_slot=1`**(并发会话的 BLE 修复构建);本会话最后刷的是 `c4c9378`(IP 修复),**设备与 master 不一致**,见 [CI 证据](evidence/2026-11-22-ci-gate.md) §4 |
+| 设备 | `/dev/ttyACM0`,已全量刷 **`build=200cc4e` / `ui=85a1a9b4` / `ota_slot=0`**(协议去重固件;master 提交,不是 tag);自检 26/0/1,见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
-| 码库 | 08:59 烧录时 **13/32**;13:46 自检已是 **32/32**(全部自动学码、无 manual/edited);**满库会挡住后续学码**,原因待用户确认(见 [自检](evidence/2026-11-22-device-selftest.md)) |
+| 码库 | 13:46 为 **32/32**;16:52 按协议 `DEDUP` 后 **21/32**(11 条只是 osc 不同,已合并);`bad=0`(本轮未接收),见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
 | 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |
-| CI | `.github/workflows/ci.yml` 已绿(`d447494`:host+SAN / static / firmware);**master 仍无 required checks**,合并阻断未生效 |
+| CI | `.github/workflows/ci.yml` 在 `89ad522` 上绿;`200cc4e` **未推送,未跑 CI**;master 仍无 required checks |
 | Android | 本机无 JDK/SDK,APK 只能靠 CI;v0.7.1 Release 资产 1,050,176 B |
 
 关键证据:

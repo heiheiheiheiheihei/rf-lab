@@ -61,6 +61,10 @@ SAN=1 ./tools/host_test.sh  # 同上,ASan/UBSan 0 failure
 本会话没有再动板子,也没有发 `SEND/LONG/STOP`。
 `DEDUP` 对真实 32 条的效果(预期 21 条)也**没有上机验证**。
 
+> **后续(2026-11-22 16:52)**:本改动已提交 `200cc4e` 并全量烧录到设备:
+> `DEDUP` 实测 `removed=11 count=21`、`osc` 只改不新建、越界 `NEW` 被拒、自检 26/0/1。
+> 见 [`2026-11-22-protocol-device-test.md`](2026-11-22-protocol-device-test.md)。
+
 ## 6. Unverified
 
 1. 新固件上机:学习去重、`DEDUP`、`bad` 计数、`LIST LONG` osc。

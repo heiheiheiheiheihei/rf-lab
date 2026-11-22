@@ -1,6 +1,6 @@
 # RF-Lab 测试债务与开发计划(2026-11-22)
 
-状态:**现行计划** · 基线 `HEAD dd71bf6` · 固件/APK `0.7.1` · 设备 `RF-Lab-1B59`
+状态:**现行计划** · 基线 `HEAD 200cc4e`(未推送)· 固件/APK `0.7.1` · 设备 `RF-Lab-1B59`
 单一所有者:**未完成测试登记 + 版本计划**。验收口径仍由 [`00-mvp.md`](00-mvp.md) §7 与
 [`01-ui.md`](01-ui.md) §8 定义;实测事实只写进 [`evidence/`](evidence/);本文件只回答
 「还差什么、谁做、怎么算过、先做哪个」。
@@ -60,8 +60,8 @@ UI 项必须写视口、浏览器与 console 结果。
 | 固件构建 | **1,098,608 B / 2,031,616 B(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)**;70.6s | `cd firmware && pio run -e esp32c3` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,490 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
 | Android 本机构建 | **不可复现**:本机没有 JDK / Android SDK;只能依赖 CI 或补工具链 | `java`/`adb` 未找到 |
-| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,`build=dd71bf6 ui=85a1a9b4`,STA `192.168.5.125`;码库 **13/32**(08:59 烧录)→ **32/32**(13:46 自检,全部自动学码,无 manual/edited);14:20 烧 IP 修复 `c4c9378` | [`2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md) · [`2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
-| 设备自检 | `device_selftest --json`: **26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF);`RESET`/`LIST`/`LIST LONG`/`HELP`/`DISP`/`BLE`/`WEBTEST` 全过 | [`2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
+| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,**`build=200cc4e`**(协议去重固件,master 提交,不是 tag),`ui=85a1a9b4`,STA `192.168.5.125`;码库 **21/32**(DEDUP 后) | [`2026-11-22-protocol-device-test.md`](evidence/2026-11-22-protocol-device-test.md) |
+| 设备自检 | `device_selftest --json`: **26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF);DEDUP 后 `stored=21/32` | [`2026-11-22-protocol-device-test.md`](evidence/2026-11-22-protocol-device-test.md) |
 | 设备 UART 命令方向 | `MODE single` → `ACK 0xF2`,`acks` 0→1 | 同上 |
 | 未执行 | `SEND/LONG/STOP`(未发 RF)、BLE、OTA、uConsole、AP 浏览器 | — |
 
@@ -100,7 +100,8 @@ UI 项必须写视口、浏览器与 console 结果。
 > 身份不含 osc。巡检里的 `433M 00000093/94/95/53` 地址与按键都是 0,**属越界帧**;
 > 固件自本提交起不学习这类帧并计入 `bad`。现有 32 条按身份去重后是 **21 条**
 > (11 条只是 osc 不同:315M/433M `555503`、`155530`、`855630`、`D0C701` 四族),
-> 用串口 `DEDUP` 合并。24h 静态复测仍未做。
+> 用串口 `DEDUP` 合并。**2026-11-22 16:52 已在设备上执行**:`removed=11 count=21`,
+> `bad=0`(未接收);24h 静态复测仍未做。
 
 #### BLE / Android
 
