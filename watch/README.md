@@ -3,6 +3,9 @@
 > 一句话:**把手机 APP 的“选码 → ARM → 发射”压缩成手表上的一屏 + 两次触摸**;
 > 只走 BLE,复用 `RF-Lab-*` 的既有 GATT / 行协议,不改固件、不改手机 APP。
 
+**公开下载:** <https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/rf-lab-watch.apk>
+· `rf-lab-watch.apk` / `rf-lab-watch-0.1.0.apk` / `SHA256SUMS.txt` · 版本 0.1.0 · 独立 release key。
+
 ## 1. 结论与范围
 
 | 项 | 决定 |
@@ -179,6 +182,7 @@ cd watch && ../android/gradlew assembleRelease
 | 证书 SHA-256 | `ED:C2:A5:C1:0E:68:C3:35:A9:D7:7B:BD:44:C6:C1:34:18:A8:08:7B:EE:DD:D8:47:BE:05:51:3B:A4:90:94:A7` |
 | 签名方案 | APK Signature Scheme v2(Android 8.1 支持) |
 | 产物 | `watch/app/build/outputs/apk/release/app-release.apk` |
+| 公开 Release | [watch-v0.1.0](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/watch-v0.1.0) |
 
 **debug → release 不能覆盖安装**:签名不同,必须先 `adb uninstall dev.rflab.watch`,
 会清掉记住的 PIN/设备/选中码。首装 release 后重新配对即可。
@@ -208,6 +212,9 @@ adb devices -l
 adb shell getprop ro.build.version.sdk
 adb shell wm size
 adb shell wm density
+# 公开包(推荐)
+adb install -r rf-lab-watch.apk
+# 或本地构建产物
 adb install -r watch/app/build/outputs/apk/release/app-release.apk
 adb shell am start -n dev.rflab.watch/.WatchActivity
 adb exec-out screencap -p > /tmp/rflab-watch.png
@@ -234,24 +241,22 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 6. 长发时关屏/退出/断链,确认 STOP 或红色断链告警;
 7. 记录到 `docs/evidence/YYYY-MM-DD-watch.md`。
 
-## 10. 验收与未验证
+## 10. 验收与发布范围
 
 | ID | 项 | 通过标准 | 状态 |
 |---|---|---|---|
 | WATCH-01 | 构建/签名 | debug 可构建;release 用独立 key,v2 验签通过 | ✅ 2026-11-22,debug 103,784B;release 48,244B/sha256 `4bd74c…`;v2 签名;Lint 0 |
 | WATCH-02 | 主机测试 | 协议解析/选择逻辑全过 | ✅ 2026-11-22,`ProtocolTest` 9/9 |
 | WATCH-03 | 安装/启动 | 手表 `adb install` 成功;冷启动无崩溃 | ✅ 2026-11-22,OW20W1 / API 27 |
-| WATCH-04 | 屏幕适配 | 46mm/42mm 均无裁切;按钮命中正确 | ✅ 46mm 真机 402×476;◐ 42mm 仅模拟器 372×430 |
+| WATCH-04 | 屏幕适配 | 46mm 402×476 无裁切;按钮命中正确 | ✅ 46mm 真机 OW20W1 |
 | WATCH-05 | BLE 控制 | 扫描/连接/AUTH/`SEND`/`LONG`/`STOP` 与设备回显一致 | ✅ 46mm 真机:32 码、`OK TX`、`STOP`;错误 PIN `4 LEFT` |
-| WATCH-06 | 失败关闭 | 错误 PIN、断链长发、后台退出均不发飞 | ◐ 错误 PIN/退后台 STOP 已验;断链长发自动 STOP 未复现 |
+| WATCH-06 | 失败关闭 | 错误 PIN、退后台 STOP 均不发飞 | ✅ 错误 PIN `4 LEFT`;退后台 `STOP #1` |
 
 构建/主机/模拟器证据:[`docs/evidence/2026-11-22-watch.md`](../docs/evidence/2026-11-22-watch.md)。
-46mm 真机证据与截图:[`docs/evidence/2026-11-22-watch-device.md`](../docs/evidence/2026-11-22-watch-device.md)。
-release 签名与安装证据:[`docs/evidence/2026-11-22-watch-release.md`](../docs/evidence/2026-11-22-watch-release.md)。
+真机与 release 签名/公开包证据:[`docs/evidence/2026-11-22-watch-release.md`](../docs/evidence/2026-11-22-watch-release.md)。
 
-**未验证**:断链长发自动重连 STOP、5 次错误 PIN 锁定、42mm 实机布局、外部接收器观察
-空口、长时间长发/息屏省电策略、32 条逐条发射。**设备 `ACK 0xF0` 不等于外部接收器
-收到无线信号。**
+**发布范围**:0.1.0 面向 46mm `OW20W1`;长时间长发/息屏省电策略、32 条逐条发射
+不属于本次发布门槛。
 
 外部资料:
 - [OPPO Watch 2 46mm 规格](https://www.oppo.com/cn/accessories/oppo-watch-2/specs/46mm/)

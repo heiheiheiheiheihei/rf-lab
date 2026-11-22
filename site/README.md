@@ -43,12 +43,13 @@ python3 -m http.server 8088 -d site
 | 首屏 CTA 第三颗按钮 | 同上,标 `0.7.1 · ↓` |
 | 状态板 Android APK 行 | 文字标 `0.7.1 · release 签名 · 1.05 MB`;下载走导航/页脚 |
 | 页脚 SOURCE | 同上 + [Releases](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest) |
-| 手表 | 源码/规格链接 `watch/README.md`;**无公开 watch APK 下载** |
+| 手表 | [`releases/download/watch-v0.1.0/rf-lab-watch.apk`](https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/rf-lab-watch.apk) · 源码/规格 `watch/README.md` |
 
 用 `releases/latest/download/<固定文件名>` 而不是写死 tag:每次发版覆盖同名资产,官网按钮
 无需改动。APK 由 `.github/workflows/android-release.yml` 在 `v*` 标签上构建、验签后上传;
-**OPPO Watch 2 是独立 release key / 0.1.0 本地签名包,尚未进入 Release 流水线**,
-官网页只放真机截图、规格与源码,不伪造 watch 下载入口;
+**OPPO Watch 2 是独立 release key / 0.1.0 公开包**,Release 由
+`.github/workflows/watch-release.yml` 在 `watch-v*` 标签构建,标为非 latest
+(不影响手机 APK 的 `releases/latest`);
 **真机安装/自更新/BLE 已验(2026-11-22)**;页面状态板对应行已改为 `●`;uConsole 仍保持 `◐`。
 发射行在 2026-11-21 后改为 `◐ 待复测`(UART 命令方向已恢复,`SEND` 未复测);
 完整测试登记与 0.7.2 退出条件见 [`../docs/02-plan.md`](../docs/02-plan.md)。

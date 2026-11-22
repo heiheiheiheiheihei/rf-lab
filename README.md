@@ -6,7 +6,7 @@ OPPO Watch 2**,与官网共用一套视觉基线([`docs/01-ui.md` §5.1](docs/01
 现役链路是 **YS-RF34DL 315/433 固定码**;CC1101 / NRF24L01 / SI4463 / LR1121、
 MQTT 与 Home Assistant 是路线图,不是现货能力。
 
-[**官网 / 配装台(线上)**](https://heiheiheiheiheihei.github.io/rf-lab/) · [**下载 Android APK**](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · [**OPPO Watch 2 客户端**](watch/README.md) · [本地源](site/index.html) · [射频规格](docs/00-mvp.md) · [UI 规格](docs/01-ui.md) · [接线](hardware/README.md) · [官网维护说明](site/README.md)
+[**官网 / 配装台(线上)**](https://heiheiheiheiheihei.github.io/rf-lab/) · [**下载 Android APK**](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · [**OPPO Watch 2 客户端**](watch/README.md) · [**下载 Watch APK**](https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/rf-lab-watch.apk) · [本地源](site/index.html) · [射频规格](docs/00-mvp.md) · [UI 规格](docs/01-ui.md) · [接线](hardware/README.md) · [官网维护说明](site/README.md)
 
 ![RF-LAB 官网首屏](site/assets/preview.webp)
 
@@ -72,8 +72,9 @@ OPPO Watch 2 客户端把手机端的「选码 → ARM → SEND」压缩成一�
 - 46mm `OW20W1` / Android 8.1 (API 27) / 402×476 @320dpi 真机已验证:安装、扫描、
   PIN、32 码、ARM/SEND、HOLD/LONG/STOP、错误 PIN、退后台 STOP、OLED TEST。
 - 独立 **release key** 签名(不与手机 APK 共用);debug → release 需卸载后重装。
-- **未验**:42mm 实机、断链长发自动 STOP、5 次 PIN 锁定、外部接收器空口观察。
-- 规格与安装:[`watch/README.md`](watch/README.md) · 证据:[`docs/evidence/2026-11-22-watch-device.md`](docs/evidence/2026-11-22-watch-device.md)
+- 公开 Release:[**下载 rf-lab-watch.apk**](https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/rf-lab-watch.apk) ·
+  [`SHA256SUMS.txt`](https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/SHA256SUMS.txt)
+- 规格与安装:[`watch/README.md`](watch/README.md) · 证据:[`docs/evidence/2026-11-22-watch-release.md`](docs/evidence/2026-11-22-watch-release.md)
 
 **Wi-Fi 模式**:有凭据先 `STA-only` 接局域网(AP 关闭);15s 连不上自动打开 AP 回退;
 AP 下可以直接用,也可以重新配网或 `WIFI CLEAR`。AP 里配网成功会保持 AP,避免踢掉

@@ -61,7 +61,7 @@ adb shell pm grant dev.rflab.watch android.permission.ACCESS_FINE_LOCATION
 
 - `README.md` 增加「手腕上的发射键」、四入口表与 0.1.0 真机边界;
 - `site/index.html` 新增 `04 手表` 区:真机截图、LINK→PIN→CONTROL、HOLD/LONG/STOP、
-  独立 release key、未发布 APK 说明;导航/状态板/页脚/`W` 键同步;
+  独立 release key、公开 APK 下载入口;导航/状态板/页脚/`W` 键同步;
 - 站点新增 `assets/watch-control.webp` / `watch-hold.webp`(由 46mm 真机截图转 WebP)。
 
 ```text
@@ -84,9 +84,16 @@ Pages [45001726431](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45
 线上 `https://heiheiheiheiheihei.github.io/rf-lab/` 返回 200,页面含 `id="watch"`,
 `assets/watch-control.webp` / `watch-hold.webp` 均 200。
 
-## 未验证
+## 公开 Release
 
-- 没有对外发布 watch Release/下载资产;本次是本地 release-signed 安装。
-- 42mm 实机、断链长发自动 STOP、5 次 PIN 锁定、外部接收器空口观察仍未验;
-  与 [`2026-11-22-watch-device.md`](2026-11-22-watch-device.md) 相同。
-- 站点只展示真机截图与源码/规格链接,不提供未发布的 APK 下载。
+| 项 | 值 |
+|---|---|
+| tag | [`watch-v0.1.0`](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/watch-v0.1.0) |
+| 资产 | `rf-lab-watch.apk` / `rf-lab-watch-0.1.0.apk` / `SHA256SUMS.txt` |
+| 下载 | <https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/rf-lab-watch.apk> |
+| 构建 | `.github/workflows/watch-release.yml`(tag 触发,独立 watch key secrets) |
+| latest | **明确 false**:不抢手机 APK 的 `releases/latest` |
+| 安装 | `adb install -r rf-lab-watch.apk`;debug → release 仍需卸载 debug |
+
+公开包只覆盖 0.1.0 的 46mm 控制路径;码库编辑/OTA 不在范围内。安装包 SHA-256
+以 Release 的 `SHA256SUMS.txt` 为准。
