@@ -29,20 +29,49 @@ jobs:
         with:
           packages: "platforms;android-35 build-tools;35.0.0"
 
-      # 标签与 versionName 必须一致,避免 v0.7.0 的 Release 里装出 0.6.0。
-      - name: Check tag matches versionName
+      # tag / versionName / 固件版本必须一致,避免 Release 里装出旧版。
+      - name: Check tag matches APK and firmware versions
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           GRADLE_VERSION=$(sed -n 's/^[[:space:]]*versionName = "\(.*\)"/\1/p' android/app/build.gradle.kts | head -n1)
-          if [ "$GRADLE_VERSION" != "$VERSION" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match versionName '$GRADLE_VERSION'"
+          FW_VERSION=$(python3 - <<'PY'
+          import re
+          s = open('firmware/platformio.ini', encoding='utf-8').read()
+          m = re.search(r'RFLAB_FW_VERSION=\\"([0-9.]+)\\"', s)
+          print(m.group(1) if m else '')
+          PY
+          )
+          if [ "$GRADLE_VERSION" != "$VERSION" ] || [ "$FW_VERSION" != "$VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME != versionName '$GRADLE_VERSION' / firmware '$FW_VERSION'"
             exit 1
           fi
+          echo "tag/APK/firmware = $VERSION"
 
       # 固件/APK/官网三处资源必须来自同一份 web/,标签上的生成物不能过期。
       - name: Check generated Web assets
         run: python3 tools/build_web.py --check
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-release-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: |
+            pio-release-${{ runner.os }}-
+
+      - name: Install PlatformIO
+        run: python3 -m pip install "platformio>=6.1,<7"
+
+      # Release 必须同时附固件:APP 与固件是两条更新链路,不能只发 APK。
+      - name: Build firmware
+        working-directory: firmware
+        run: pio run -e esp32c3
 
       - name: Import release keystore
         env:
@@ -89,7 +118,8 @@ jobs:
           mkdir -p dist
           cp "$APK" dist/rf-lab-android.apk
           cp "$APK" "dist/rf-lab-$VERSION.apk"
-          (cd dist && sha256sum ./*.apk > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          cp firmware/.pio/build/esp32c3/firmware.bin dist/rf-lab-firmware.bin
+          (cd dist && sha256sum ./* > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - name: Publish GitHub release
         env:
@@ -98,7 +128,7 @@ jobs:
           set -euo pipefail
           TAG="$GITHUB_REF_NAME"
           VERSION="${TAG#v}"
-          TITLE="RF-Lab v${VERSION} — Android APK"
+          TITLE="RF-Lab v${VERSION} — Android APK + firmware"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
             gh release edit "$TAG" --title "$TITLE" --notes-file android/RELEASE_NOTES.md

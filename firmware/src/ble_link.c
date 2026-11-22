@@ -20,7 +20,7 @@
 extern void ble_store_config_init(void);
 
 #ifndef RFLAB_FW_VERSION
-#define RFLAB_FW_VERSION "0.7.1"
+#define RFLAB_FW_VERSION "0.7.2"
 #endif
 #ifndef RFLAB_BUILD_ID
 #define RFLAB_BUILD_ID "dev"

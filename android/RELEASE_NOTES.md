@@ -1,60 +1,62 @@
-# RF-Lab Android 0.7.1 — 码库：名称 / 符号 / 分组 / 原始参数
+# RF-Lab 0.7.2 — 协议去重 / 容量 64 / APP 码库修复
 
-本次 APP 与固件同为 **0.7.1**。APP 内置页面换成码库 v2；设备端仍需 OTA 0.7.1，
-否则 APP 会禁用编辑并提示升级（`hello.codebook` 能力位）。
+本次 APP 与固件同为 **0.7.2**。APP 内置页面仍与固件同源；设备固件走 OTA/串口，
+APP 走自更新，两条链路互不影响。
 
-## 新功能
+> **RF 边界**：0.7.2 是代码/兼容版本，`SEND/LONG/STOP` 本轮**没有**复测，
+> RF-01/02 仍未关闭；不要据此宣称空口发射已通过。
 
-- **名称 / 符号**：每条码可设 UTF-8 名称（≤24B，约 8 个汉字）与符号/emoji（≤8B）。
-- **单分组**：每条码一个分组（≤16B）；码库顶部按分组筛选，未分组单独一档。
-- **搜索**：按名称 / hex / 分组 / id 过滤。
-- **新建自定义码**：`+ NEW` 指定 band 315/433 + 8 位 hex，可直接命名/分组。
-- **编辑原始参数**：`EDIT` 改 band 与 4B payload；弹层显示 `FD F3/F4 03 … DF` 原始帧预览，
-  重复码/非法 hex 拒绝，学习码改 band/code 需确认。
-- **删除**：行内两次确认或编辑弹层删除；`ERASE` 后 id 前移是既有行为。
+## 新功能 / 修复
 
-> 设备固件 0.7.1 同时修复 BLE 下行 `state/codes` 漏 `\n` 的 framing 问题；APP 端不新增解析逻辑，
-> 但仍需设备 OTA 到 0.7.1 才能在 BLE 下稳定收到码库快照。
+- **4B 码字段按模块协议解析**：`地址2 / 地址1 / 按键 / osc`。
+  身份 = `band + 地址2 + 地址1 + 按键`，**osc 不参与去重**；同键不同 osc 不再新增记录。
+- **`DEDUP`**：合并历史重复（同身份、只差 osc）；设备上实测 32 → 21 条。
+- **越界帧过滤**：地址/按键为 0 或 osc 不在 `0x30..0xF0` 的帧不学习，计入 `bad`；
+  这解释了 2026-11-22 的 `433M 00000093/94/95/53` 一族。
+- **容量 32 → 64**：旧 32 条 blob 自动兼容读取；NVS 不动。128/96 因静态 RAM 不足
+  会在设备上失败，64 是当前架构的实际上限（`heap free ≈ 34 KB`）。
+- **APP 码库空白修复**：BLE `codes` 信封漏了结尾 `}`，APP 解析失败。
+  信封改由主机测试过的 `link_codes_wrap()` 统一生成；SSE 与 BLE 共用。
+- **串口网络日志修复**：`# net LAN OK 192.168.5.125` 不再被 OLED 的 12 列缓冲截成 `.12`。
+- **CI 守门**：push/PR 跑主机（含 ASan/UBSan）+ 7.1.3 固件构建 + 静态检查；
+  Release 同时附 `firmware.bin` 与 `SHA256SUMS.txt`。
+- **上机自检**：`device_selftest.py` 版本无关，支持 `--json` / `--tx-repeat`。
 
 ## 兼容
 
 | APP | 设备固件 | 行为 |
 |---|---|---|
-| 0.7.1 | 0.7.1 | 全功能 |
-| 0.7.1 | 0.6.x | 码库编辑禁用，提示先 OTA 设备 |
-| 0.7.0 | 0.7.1 | 旧页面可用，忽略新字段，无编辑器 |
+| 0.7.2 | 0.7.2 | 全功能；码库上限 64 |
+| 0.7.1 | 0.7.2 | 可显示/编辑码库；容量按 `store.max` 显示；无 `DEDUP` 按钮 |
+| 0.7.2 | 0.7.1 | 可显示/编辑；码库上限仍 32；`DEDUP` 不可用 |
+| 0.6.x | 0.7.2 | 无码库编辑，提示升级 |
 
-- 页面是构建时打入 APK 的 `assets/index.html`，**不会随设备固件自动更新**；
-  APP 自更新只更新 APP，设备固件仍要走 OTA/串口。
-- APP 版本 `versionCode 3` / `versionName 0.7.1`；签名与 0.7.0 相同（release 证书），
-  可由 0.7.0 覆盖安装或自更新。
+- 下行信封 `t/seq/items` 是兼容契约：字段只增不减，容量是数据不是 schema；
+  旧 APP 不因固件升级而失效。
+- 页面是构建时打入 APK 的 `assets/index.html`，不会随设备固件自动更新。
 
 ## 下载
 
 | 文件 | 说明 |
 |---|---|
 | `rf-lab-android.apk` | 稳定文件名，官网按钮指向 `releases/latest/download/rf-lab-android.apk` |
-| `rf-lab-0.7.1.apk` | 版本归档副本 |
-| `SHA256SUMS.txt` | 上述 APK 的 SHA-256（APP 自更新也读这个文件） |
+| `rf-lab-0.7.2.apk` | 版本归档副本 |
+| `rf-lab-firmware.bin` | 设备固件（ESP32-C3，`fw=0.7.2`），用于 OTA/手动上传 |
+| `SHA256SUMS.txt` | APK + 固件的 SHA-256（APP 自更新读 APK 行） |
 
-要求 **Android 8.0（API 26）及以上**。APK 使用本项目的 release 密钥签名（APK Signature Scheme v2），证书 SHA-256：
-
-```
-B8:CC:EA:6C:1B:2F:BA:85:BD:BF:59:DA:DA:0D:21:BF:98:7F:60:DD:97:70:3C:0C:88:21:BB:63:D8:AB:0D:EA
-```
+要求 Android 8.0（API 26）及以上；APK 用 release 密钥签名（v2）。证书 SHA-256 同 0.7.1。
 
 ## 已验证 / 未验证
 
 | 项 | 状态 |
 |---|---|
-| `assembleRelease` + 签名 | ✅ 2026-11-21,1,050,176B,versionCode 3,v2 签名,`apksigner verify` 通过 |
-| Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 3/0.7.1,minSdk 26,targetSdk 35 |
-| 页面资源 | ✅ 与固件同一次 `build_web.py` 产出;`assets/index.html` 与 `web/dist` 逐字节一致 |
-| 码库 UI | ✅ 主机 Chromium 1440/390;真机浏览器同页;✅ 真机 BLE `NAME/GROUP/SYM/EDIT` 写入(2026-11-22) |
-| 真机安装 / 自更新 | ✅ 2026-11-22:0.7.1 安装、0.7.0→0.7.1 弹窗/下载/系统安装器/覆盖安装成功(用户确认);⏳ BLE `SEND` 未单独验 |
-
-> 0.7.0（release 签名）可直接覆盖安装到 0.7.1；0.6.0 没有自更新，需手动装一次。
+| `assembleRelease` + 签名 | 由 tag CI 构建（versionCode 4 / versionName 0.7.2） |
+| 固件构建 | ✅ 主机 + CI（espressif32 7.1.3） |
+| 设备上机 | ✅ 0.7.2 tag 构建全量烧录；码库 21/64；`device_selftest` 26/0/1 |
+| 空口 `SEND/LONG/STOP` | ⏳ 未复测（RF-01/02 仍开放） |
+| 64 条满库 BLE 快照 | ⏳ 未压满 |
 
 ## 历史
 
-- **0.7.0**：APP 自更新（查 GitHub Release、一键/忽略、SHA-256/包名/版本/签名自检、系统安装器）。
+- 0.7.1：码库 v2（名称/符号/分组/原始参数）、BLE 下行 framing。
+- 0.7.0：APP 自更新。

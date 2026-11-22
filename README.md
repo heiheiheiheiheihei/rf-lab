@@ -19,7 +19,7 @@ MQTT 与 Home Assistant 是路线图,不是现货能力。
 | 战术组 TACTICAL | ¥599 | + SI4463 + LR1121 + 收纳盒 | 全频段雏形(路线图) |
 | 全频段 ALL-IN | ¥999 | 全模块 + FIELD DOCK | 全舱位 / 现场终端(路线图) |
 
-> 价格为**参考物料价**,不含运费与工具;路线图模块未接入 0.7.1 固件,不能下单即用。
+> 价格为**参考物料价**,不含运费与工具;路线图模块未接入 0.7.2 固件,不能下单即用。
 > 交互式配装器:[`site/index.html`](site/index.html);预算/边界/发布说明:[`site/README.md`](site/README.md)。
 
 ### 射频模块
@@ -151,7 +151,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 
 | 项 | 状态 |
 |---|---|
-| 构建(ESP32-C3,0.7.1) | ✅ 主机;Flash 1,098,608B / 2,031,616B OTA 槽;RAM 73,540B(2026-11-21,码库 v2) |
+| 构建(ESP32-C3,0.7.2) | ✅ 主机 + CI;Flash 1,100,416B / 2,031,616B OTA 槽;RAM 88,692B(2026-11-22,码库 64) |
 | 主机单测(协议 76 + 码库 368 + 事件环 9427 + OTA 41 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
 | 上机:学码 / 存码 / 改波特率 | ✅ 2026-11-15(0.5.0 证据) |
 | 上机:发射 `SEND/LONG/STOP` | ⚠️ 2026-11-15 有 `F0/FE/FF`;2026-11-21 模块命令方向 0 应答;2026-11-22 `MODE` 已回 `F2`,但 **`SEND` 未复测** |
@@ -162,7 +162,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 上机:重启 AP 关闭 | ✅ `mode=sta ap_on=0`,LAN 仍可访问 |
 | 上机:AP 内配网 / CLEAR | ✅ 设备内;WebTest 经 AP 200,`WIFI CLEAR` 回 AP |
 | 上机:BLE 广播 | ✅ `INFO` `adv=yes`;✅ **真机 BLE 连接/鉴权/命令回显/码表 9 条/状态栏刷新**(2026-11-21);⏳ BLE `SEND`、nRF 逐帧抓包未做 |
-| Android APK | ✅ **0.7.1 已发** [Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1);CI 1,050,176B/versionCode 3/release 签名 v2;✅ 真机安装/自更新(2026-11-22);0.7.1 APK 的 BLE 码库写入 ✅;⏳ BLE `SEND` |
+| Android APK | ✅ **0.7.2 已发** [Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.2);versionCode 4/release 签名 v2;✅ 真机安装/自更新(0.7.1 链路);⏳ 0.7.2 真机安装、BLE `SEND` |
 | APP 自更新(2026-11-21) | ✅ 查 Release + 一键更新/忽略此版本 + SHA-256/签名自检 + 系统安装器;主机 36 checks + 真实 Release 资产校验;✅ v0.7.0/v0.7.1 已发布;✅ **真机弹窗/下载/系统安装器/覆盖安装**(2026-11-22) |
 | BLE 下行分帧(0.7.1) | ✅ 构建 + 主机 9418 checks;✅ **手机 BLE 端到端**(0 条 JSON 警告、命令回显、状态栏/码表刷新);⏳ nRF 逐帧 `0A` 未抓包;证据 [`2026-11-21-ble-framing.md`](docs/evidence/2026-11-21-ble-framing.md) |
 | 码库 v2(0.7.1) | ✅ 真机 9 条码 OTA 迁移(`LIST` 逐字节一致)、UTF-8 名称/分组/符号、手工新建、编辑 band/code、删除、重启保留;✅ Web 1440/390 + APK 0.7.1 发布;✅ **BLE NAME/GROUP/SYM/EDIT 写入**(2026-11-22);证据 [`2026-11-21-codebook.md`](docs/evidence/2026-11-21-codebook.md) · [`2026-11-22-app-ble.md`](docs/evidence/2026-11-22-app-ble.md) |
@@ -182,7 +182,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 > ⚠️ **当前待复测(2026-11-22)**:设备已用 `tools/flash.sh` 重烧为 master HEAD
 > **`build=dd71bf6`**(非 `v0.7.1` tag,见 [`2026-11-22-firmware-flash.md`](docs/evidence/2026-11-22-firmware-flash.md)),
 > 码库 13 条(含 4 条 433M 幻码);UART `MODE` 已回 `F2`,但空口 `SEND` 未复测。
-> 完整测试登记、优先级与 0.7.2 退出条件见 [`docs/02-plan.md`](docs/02-plan.md)。
+> 完整测试登记、优先级与 0.7.3 计划见 [`docs/02-plan.md`](docs/02-plan.md);0.7.2 的 RF 遗留验证仍在该文件 §3。
 
 ## 范围
 
@@ -210,6 +210,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 版本 | 目标 | 状态 |
 |---|---|---|
 | 0.7.1 | 码库 v2:名称/符号/单分组/原始参数编辑/手工建码 | ✅ 实现 + 真机验证 + **已发版** |
+| 0.7.2 | 模块协议去重(osc 不进身份)、`DEDUP`、越界帧过滤、容量 64、APP 码库信封修复、CI 守门 | ✅ 实现 + 真机 26/0/1 + **已发版**;⏳ RF `SEND` 未复测 |
 | 0.7.2 | 验证闭合:测试工具/CI、空口/BLE/OTA 失败路径、发布可追溯 | ○ 计划,见 [`docs/02-plan.md`](docs/02-plan.md) |
 | 0.7.3 | UI 一键固件更新:查 Pages manifest、BOOT 确认、下载/校验/上传 | ○ 规划,见 [`docs/01-ui.md`](docs/01-ui.md) §3.4.1 |
 | 0.8.0 | 模块抽象层 + SPI 背板;CC1101 首发,NRF24/SI4463/LR1121 分批(0.8.x) | ○ 设计目标 |
