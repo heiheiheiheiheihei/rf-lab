@@ -6,7 +6,18 @@
 # tools/build_web.py writes into <meta name="rflab-ui">.
 Import("env")
 
+import os
 import pathlib
+
+# ESP-IDF's target_add_binary_data() (used by EMBED_FILES) builds the .S path as
+# "<BUILD_DIR>/<file>.S". PlatformIO passes BUILD_DIR relative (.pio/build/<env>),
+# and CMake then joins it again -> ".pio/build/esp32c3/.pio/build/esp32c3/...".
+# A clean CI build fails on that; make the build dir absolute before the
+# framework configures CMake (local builds only passed because of stale .S files).
+_pbd = env.subst("$PROJECT_BUILD_DIR")
+if not os.path.isabs(_pbd):
+    _pbd = os.path.normpath(os.path.join(env.subst("$PROJECT_DIR"), _pbd))
+env.Replace(PROJECT_BUILD_DIR=_pbd)
 import re
 import subprocess
 import sys
