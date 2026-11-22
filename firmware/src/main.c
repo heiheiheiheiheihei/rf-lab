@@ -631,9 +631,11 @@ static int store_read_v2(codebook_t *out)
     if (e == ESP_ERR_NVS_NOT_FOUND) {
         return 0;
     }
-    if (e != ESP_OK || len != sizeof(codebook_blob_t)) {
+    if (e != ESP_OK) {
         return -1;
     }
+    /* 长度由 codebook_deserialize 校验:旧 32 条 blob 只有 1,828B,
+     * 这里再要求正好 7,300B 会让容量升级后的第一次启动读不到码库。 */
     return codebook_deserialize(out, s_nvs_blob, len) == CODEBOOK_OK ? 1 : -1;
 }
 
