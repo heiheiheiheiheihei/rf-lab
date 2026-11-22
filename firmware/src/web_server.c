@@ -24,9 +24,9 @@
 #define RFLAB_UI_HASH "unknown"
 #endif
 
-/* CMake EMBED_FILES "web/index.html.gz" 生成的小端二进制符号。 */
-extern const uint8_t index_html_gz_start[] asm("_binary_index_html_gz_start");
-extern const uint8_t index_html_gz_end[] asm("_binary_index_html_gz_end");
+/* scripts/embed_web.py 生成 web_ui_gz.S(.incbin web/index.html.gz)的符号。 */
+extern const uint8_t web_ui_gz_start[];
+extern const uint8_t web_ui_gz_end[];
 
 #define SSE_MAX_CLIENTS 2
 #define HTTP_MAX_BODY 384
@@ -48,11 +48,11 @@ static esp_err_t send_json(httpd_req_t *req, const char *body)
 
 static esp_err_t root_get(httpd_req_t *req)
 {
-    size_t len = (size_t)(index_html_gz_end - index_html_gz_start);
+    size_t len = (size_t)(web_ui_gz_end - web_ui_gz_start);
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-    return httpd_resp_send(req, (const char *)index_html_gz_start, len);
+    return httpd_resp_send(req, (const char *)web_ui_gz_start, len);
 }
 
 static esp_err_t favicon_get(httpd_req_t *req)

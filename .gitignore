@@ -1,4 +1,6 @@
 # 构建产物
+# 由 firmware/scripts/embed_web.py 生成(不入库)
+firmware/src/web/web_ui_gz.S
 build/
 .pio/
 .pio-core/
@@ -47,6 +49,9 @@ android/app/build/
 *.apk
 *.aab
 android/build/
+watch/.gradle/
+watch/local.properties
+watch/app/build/
 
 # 签名材料
 *.jks
