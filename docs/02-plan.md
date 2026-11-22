@@ -165,6 +165,7 @@ UI 项必须写视口、浏览器与 console 结果。
 | DOC-01 | `gen_wiring.py` 版本字面量 | SVG 里仍写 `● LIVE // 0.6.0`;应改为读固件版本或去掉版本号 | A |
 | DOC-02 | 官网 demo 体积 | `terminal.html` 127,490 B 触发 120KB WARN;要么提高阈值并说明,要么压页面 | A |
 | ENV-01 | Android 本机构建 | 当前无 JDK/SDK,APK 只能靠 CI;补工具链或明确「CI-only」 | A+U |
+| SEC-01 | BLE PIN 轮换 | 固件只生成/打印 PIN,无重置入口;证据日志曾含一次 PIN(已脱敏,历史提交仍可能保留) | 串口 `PIN RESET` 重新生成并持久化;文档说明 PIN 是应用层门 | A |
 | WATCH-01 | 手表 APK 构建/安装 | 构建过只证明编译;需在真机确认 ColorOS 允许侧载、启动不崩 | A+U |
 | WATCH-03 | 手表 BLE 控制 | 扫描/连接/AUTH/`SEND`/`LONG`/`STOP` 与设备回显一致;错误 PIN 失败关闭 | U |
 | WATCH-04 | 长发前台失败关闭 | 松手/滑出/退后台均 STOP,不把长发留在设备 | U |

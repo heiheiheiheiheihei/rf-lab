@@ -22,7 +22,7 @@ entry 0x403cbf10
 # stored 21 code(s)
 # build=f75173f ui=d0824ba5 ota_slot=0 pending_verify=0
 # net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
-# ble name=RF-Lab-1B59 pin=8729 (serial PIN; also OLED 5s)
+# ble name=RF-Lab-1B59 pin=<redacted> (serial PIN; also OLED 5s)
 # web: STA connecting; AP fallback opens after 15s if it fails
 # press a remote button to learn; HELP for commands
 
