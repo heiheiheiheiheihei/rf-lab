@@ -32,7 +32,7 @@
 | 主机 | `host_test.sh` **11,051 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
 | 固件构建 | **1,098,608 B / 2,031,616 B 槽(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)** |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
-| 设备 | `/dev/ttyACM0`,fw 0.7.1,**`build=dd71bf6`**(2026-11-22 重烧的 master HEAD,不是 v0.7.1 tag),STA `192.168.5.125` |
+| 设备 | `/dev/ttyACM0`,fw 0.7.1,**`build=c4c9378`**(IP 修复;先 dd71bf6,均为 master HEAD,不是 tag),STA `192.168.5.125` |
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
 | 码库 | 08:59 烧录时 **13/32**;13:46 自检已是 **32/32**(全部自动学码、无 manual/edited);**满库会挡住后续学码**,原因待用户确认(见 [自检](evidence/2026-11-22-device-selftest.md)) |
 | 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |

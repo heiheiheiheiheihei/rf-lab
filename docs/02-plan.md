@@ -60,7 +60,7 @@ UI 项必须写视口、浏览器与 console 结果。
 | 固件构建 | **1,098,608 B / 2,031,616 B(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)**;70.6s | `cd firmware && pio run -e esp32c3` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,490 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
 | Android 本机构建 | **不可复现**:本机没有 JDK / Android SDK;只能依赖 CI 或补工具链 | `java`/`adb` 未找到 |
-| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,`build=dd71bf6 ui=85a1a9b4`,STA `192.168.5.125`;码库 **13/32**(08:59 烧录)→ **32/32**(13:46 自检,全部自动学码,无 manual/edited) | [`2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md) · [`2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
+| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,`build=dd71bf6 ui=85a1a9b4`,STA `192.168.5.125`;码库 **13/32**(08:59 烧录)→ **32/32**(13:46 自检,全部自动学码,无 manual/edited);14:20 烧 IP 修复 `c4c9378` | [`2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md) · [`2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
 | 设备自检 | `device_selftest --json`: **26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF);`RESET`/`LIST`/`LIST LONG`/`HELP`/`DISP`/`BLE`/`WEBTEST` 全过 | [`2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md) |
 | 设备 UART 命令方向 | `MODE single` → `ACK 0xF2`,`acks` 0→1 | 同上 |
 | 未执行 | `SEND/LONG/STOP`(未发 RF)、BLE、OTA、uConsole、AP 浏览器 | — |
