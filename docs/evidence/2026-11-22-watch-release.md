@@ -78,7 +78,11 @@ html 43,620 B gzip 13,751 B
 - [site-watch-desktop](2026-11-22-watch-release/site-watch-desktop.png)
 - [site-watch-mobile](2026-11-22-watch-release/site-watch-mobile.png)
 
-**尚未部署**:按项目流程推送后由 Pages 发布;本文只验证本地静态页面。
+**已部署(2026-11-22)**:commit `e359992`;CI
+[45001726458](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45001726458) 绿,
+Pages [45001726431](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45001726431) 成功。
+线上 `https://heiheiheiheiheihei.github.io/rf-lab/` 返回 200,页面含 `id="watch"`,
+`assets/watch-control.webp` / `watch-hold.webp` 均 200。
 
 ## 未验证
 

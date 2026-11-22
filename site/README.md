@@ -2,7 +2,8 @@
 
 **线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **手表:** [OPPO Watch 2 客户端源码](https://github.com/heiheiheiheiheihei/rf-lab/tree/master/watch) · **部署:** GitHub Pages / Actions(见文末)
 **2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机 BLE 连接/码表已验(2026-11-21);线上交互回归仍未验证。
-**2026-11-22 新增手表区:** 46mm OW20W1 真机截图、独立 release key / 0.1.0;本次推送后由 Pages 发布。
+**2026-11-22 新增手表区:** 46mm OW20W1 真机截图、独立 release key / 0.1.0;
+已由 Pages 发布(commit `e359992` / [run 45001726431](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45001726431))。
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
 无站点构建、无外部字体、无 CDN、无外部/API 请求;直接打开 `site/index.html` 就能看。
