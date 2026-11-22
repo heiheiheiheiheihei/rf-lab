@@ -294,6 +294,7 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 | WATCH-07 | APP 自更新 | 真机点 UPDATE:发现新版→下载→四项校验→系统确认→版本前进;取消/断网失败关闭 | ⏳ 0.1.4 下载/校验真机已验;系统安装界面未验(设备断开);0.1.4 为 pre-release |
 
 构建/主机/模拟器证据:[`docs/evidence/2026-11-22-watch.md`](../docs/evidence/2026-11-22-watch.md)。
+自更新真机记录:[`docs/evidence/2026-11-22-watch-update.md`](../docs/evidence/2026-11-22-watch-update.md)。
 真机与 release 签名/公开包证据:[`docs/evidence/2026-11-22-watch-release.md`](../docs/evidence/2026-11-22-watch-release.md)。
 
 **发布范围**:0.1.0 面向 46mm `OW20W1`;长时间长发/息屏省电策略、32 条逐条发射

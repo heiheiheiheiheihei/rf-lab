@@ -174,6 +174,9 @@ UI 项必须写视口、浏览器与 console 结果。
 2026-11-22 真机进展(OW20W1 / API 27):WATCH-01/03/04 的 46mm 部分已关闭;
 0.1.0 已用独立 key 签名并公开 Release(48,244 B / v2),见
 [`evidence/2026-11-22-watch-release.md`](evidence/2026-11-22-watch-release.md)。
+2026-11-22 手表自更新:下载/校验真机已验;`PackageInstaller` 会话返回
+`STATUS_FAILURE`,`ACTION_VIEW` 安装界面未验;0.1.4 为 pre-release,见
+[`evidence/2026-11-22-watch-update.md`](evidence/2026-11-22-watch-update.md)。
 
 ### 3.4 明确不做(不是测试债务)
 
