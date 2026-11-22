@@ -39,7 +39,7 @@ cd android
 > `JAVA_TOOL_OPTIONS="-DsocksProxyHost=127.0.0.1 -DsocksProxyPort=10808" ./gradlew assembleRelease`。
 > 也可以直接用本机 Gradle 8.11.1:`gradle assembleRelease`。
 
-产物:`android/app/build/outputs/apk/release/app-release.apk`(0.7.1:`1,050,176B`,versionCode 3)。
+产物:`android/app/build/outputs/apk/release/app-release.apk`(0.7.2:`1,050,272B`,versionCode 4;0.7.1 为 1,050,176B/versionCode 3)。
 
 ### release 签名
 

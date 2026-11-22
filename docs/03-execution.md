@@ -30,13 +30,13 @@
 |---|---|
 | Git | 本地 `200cc4e`(协议去重,未推送);`origin/master` = `89ad522`(CI 绿) |
 | 主机 | `host_test.sh` **11,210 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
-| 固件构建 | **1,100,416 B / 2,031,616 B 槽(54.1%)**;RAM **88,692 B / 327,680 B(27.1%)** |
+| 固件构建 | release `e0f155a`:**1,126,928 B / 2,031,616 B 槽(55.5%)**;RAM **90,260 B(27.5%)**;本机 dev 构建 1,100,416 B |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
-| 设备 | `/dev/ttyACM0`,已全量刷 **`build=f75173f` / `ui=d0824ba5` / `ota_slot=0`**;码库 21/64,heap≈34.7KB;自检 26/0/1,见 [容量上机](evidence/2026-11-22-capacity-64.md) |
+| 设备 | `/dev/ttyACM0`,已 OTA 发布固件 **`fw=0.7.2 / build=e0f155a / ui=d0824ba5 / ota_slot=0`**;码库 21/64;自检 26/0/1,见 [v0.7.2 发布](evidence/2026-11-22-release-0.7.2.md) |
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
 | 码库 | 13:46 为 **32/32**;16:52 按协议 `DEDUP` 后 **21/64**(11 条只是 osc 不同,已合并);`bad=0`(本轮未接收),见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
 | 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |
-| CI | `master` `479d6db` 全绿(run 45007429077:host+SAN / static / 7.1.3 固件);仍无 required checks |
+| CI | `master` `e0f155a` 全绿(run 45019153137);release run 45019159481;Pages run 45019153158;仍无 required checks |
 | Android | 本机无 JDK/SDK,APK 只能靠 CI;v0.7.1 Release 资产 1,050,176 B |
 
 关键证据:
@@ -45,6 +45,7 @@
 - [`evidence/2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md)
 - [`evidence/2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md)
 - [`evidence/2026-11-22-ble-codes-envelope.md`](evidence/2026-11-22-ble-codes-envelope.md)
+- [`evidence/2026-11-22-release-0.7.2.md`](evidence/2026-11-22-release-0.7.2.md)
 - [`evidence/2026-11-22-pages-cors.log`](evidence/2026-11-22-pages-cors.log)
 - [`evidence/2026-11-21-send-no-ack.md`](evidence/2026-11-21-send-no-ack.md)
 
@@ -59,7 +60,7 @@
 | **A3** ✅ | Agent(主机) | 新增 `.github/workflows/ci.yml`:push/PR 跑 host(含 `SAN=1`)+ `pio run -e esp32c3` + `gen_wiring --check` + `build_web --check` + `site_check` + `node --check` + `app_update_test` | **已首跑绿(`d447494`)**;仅剩「配置 required checks」这一仓库设置未做 |
 | **A4** | 用户(上机) | BLE `SEND`;错误 PIN 5 次/重连;`NAME/GROUP/SYM/EDIT` 后重启;OTA Web 浏览器上传 / 崩溃回滚 / AP 路径 | 每项一条 evidence;失败也写 |
 | **A5** | 用户(上机) | uConsole 真机;AP 模式外部浏览器;STA 运行中掉线;Android 15 edge-to-edge;旧固件 0.6.x + 新 APK | 按 `02-plan.md` §3.2 的通过标准 |
-| **A6** | Agent + 用户 | 用**当前发布 tag**(`v0.7.1`;若 0.7.2 有固件改动则 `v0.7.2`)重建/重烧;Release 附 `firmware.bin` + `SHA256SUMS.txt`(仅在发版时);写证据 | `build=` 不含 `dirty`;设备运行 tag 构建;Release 资产可核验 |
+| **A6** ✅ | Agent + 用户 | 用发布 tag `v0.7.2` 重建/OTA;Release 附 `firmware.bin` + `SHA256SUMS.txt` | **`build=e0f155a`(无 dirty);设备已 OTA 发布固件;Release 资产核验通过** |
 
 > 0.7.2 只有**固件改动**才 bump/发版;纯工具/CI/文档改动不重复打 tag。
 > 若没有固件改动,设备重烧 `v0.7.1` tag 构建即可满足“可追溯”要求。

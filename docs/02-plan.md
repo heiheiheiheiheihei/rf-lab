@@ -1,6 +1,6 @@
 # RF-Lab 测试债务与开发计划(2026-11-22)
 
-状态:**现行计划** · 基线 `HEAD c8e93d9` · 固件/APK `0.7.2` · 设备 `RF-Lab-1B59`
+状态:**现行计划** · 基线 `HEAD e0f155a`(tag `v0.7.2`)· 固件/APK `0.7.2` · 设备 `RF-Lab-1B59`
 单一所有者:**未完成测试登记 + 版本计划**。验收口径仍由 [`00-mvp.md`](00-mvp.md) §7 与
 [`01-ui.md`](01-ui.md) §8 定义;实测事实只写进 [`evidence/`](evidence/);本文件只回答
 「还差什么、谁做、怎么算过、先做哪个」。
@@ -57,11 +57,11 @@ UI 项必须写视口、浏览器与 console 结果。
 | Git | `dd71bf6` `master`;A2/A3 与上机证据未提交 | `git status` |
 | 主机测试 | 协议 76 + 码库 368 + 事件环 9,427 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,210**;+ `device_selftest` **18**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
 | Sanitizer | `SAN=1 ./tools/host_test.sh` 全过 | 本次复跑 |
-| 固件构建 | **1,100,416 B / 2,031,616 B(54.1%)**;RAM **88,692 B / 327,680 B(27.1%)** | `cd firmware && pio run -e esp32c3` |
+| 固件构建 | release `e0f155a`:**1,126,928 B / 2,031,616 B(55.5%)**;RAM **90,260 B / 327,680 B(27.5%)**;本机 dev 1,100,416 B | `cd firmware && pio run -e esp32c3` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,490 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
 | Android 本机构建 | **不可复现**:本机没有 JDK / Android SDK;只能依赖 CI 或补工具链 | `java`/`adb` 未找到 |
-| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,**`build=f75173f`**,`ui=d0824ba5`,STA `192.168.5.125`;码库 **21/64**,`heap free≈34.7KB` | [`2026-11-22-capacity-64.md`](evidence/2026-11-22-capacity-64.md) |
-| 设备自检 | `device_selftest --json`: **26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF);`stored=21/64`,SSE 200 | [`2026-11-22-capacity-64.md`](evidence/2026-11-22-capacity-64.md) |
+| 设备现状 | `/dev/ttyACM0`,**`fw=0.7.2 build=e0f155a`**(tag `v0.7.2`),`ui=d0824ba5`,STA `192.168.5.125`;码库 **21/64** | [`2026-11-22-release-0.7.2.md`](evidence/2026-11-22-release-0.7.2.md) |
+| 设备自检 | `device_selftest --json`: **26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF);`stored=21/64` | [`2026-11-22-release-0.7.2.md`](evidence/2026-11-22-release-0.7.2.md) |
 | 设备 UART 命令方向 | `MODE single` → `ACK 0xF2`,`acks` 0→1 | 同上 |
 | 未执行 | `SEND/LONG/STOP`(未发 RF)、BLE、OTA、uConsole、AP 浏览器 | — |
 
