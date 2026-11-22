@@ -88,7 +88,7 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     private String deviceAddress = "";
     private String fw = "";
     private String build = "";
-    private String appVersion = "0.1.2";
+    private String appVersion = "0.1.3";
     private String status = "READY";
     private int statusTone = WatchView.TONE_NEUTRAL;
     private String linkStatus = "IDLE";

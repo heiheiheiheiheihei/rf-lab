@@ -11,18 +11,22 @@ public class UpdateFeedTest {
     private static final String FEED = "["
             + "{\"tag_name\":\"v0.7.2\",\"draft\":false,\"prerelease\":false,\"assets\":["
             + "{\"name\":\"rf-lab-android.apk\",\"size\":1050176,"
+            + "\"url\":\"https://api.example.test/assets/phone\","
             + "\"browser_download_url\":\"https://example.test/phone.apk\"},"
             + "{\"name\":\"SHA256SUMS.txt\",\"size\":120,"
             + "\"browser_download_url\":\"https://example.test/phone-sums.txt\"}]},"
             + "{\"tag_name\":\"watch-v0.1.0\",\"draft\":false,\"prerelease\":false,\"assets\":["
             + "{\"name\":\"rf-lab-watch.apk\",\"size\":48244,"
+            + "\"url\":\"https://api.example.test/assets/w010\","
             + "\"browser_download_url\":\"https://example.test/w010.apk\"},"
             + "{\"name\":\"SHA256SUMS.txt\",\"size\":90,"
             + "\"browser_download_url\":\"https://example.test/w010-sums.txt\"}]},"
             + "{\"tag_name\":\"watch-v0.1.1\",\"draft\":false,\"prerelease\":false,\"assets\":["
             + "{\"name\":\"rf-lab-watch.apk\",\"size\":51000,"
+            + "\"url\":\"https://api.example.test/assets/w011\","
             + "\"browser_download_url\":\"https://example.test/w011.apk\"},"
             + "{\"name\":\"SHA256SUMS.txt\",\"size\":90,"
+            + "\"url\":\"https://api.example.test/assets/w011-sums\","
             + "\"browser_download_url\":\"https://example.test/w011-sums.txt\"}]},"
             + "{\"tag_name\":\"watch-v0.1.2\",\"draft\":true,\"prerelease\":false,\"assets\":["
             + "{\"name\":\"rf-lab-watch.apk\",\"size\":51000,"
@@ -41,8 +45,8 @@ public class UpdateFeedTest {
         assertNotNull(r);
         assertEquals("0.1.1", r.version);
         assertEquals("watch-v0.1.1", r.tag);
-        assertEquals("https://example.test/w011.apk", r.apkUrl);
-        assertEquals("https://example.test/w011-sums.txt", r.sumsUrl);
+        assertEquals("https://api.example.test/assets/w011", r.apkUrl);
+        assertEquals("https://api.example.test/assets/w011-sums", r.sumsUrl);
         assertEquals(51000, r.size);
     }
 
@@ -66,8 +70,10 @@ public class UpdateFeedTest {
     public void rejectsWatchReleaseWithoutSumsOrWithHugeAsset() throws Exception {
         String json = "[{\"tag_name\":\"watch-v0.2.0\",\"assets\":["
                 + "{\"name\":\"rf-lab-watch.apk\",\"size\":999999999,"
+                + "\"url\":\"https://api.example.test/assets/x\","
                 + "\"browser_download_url\":\"https://example.test/x.apk\"},"
                 + "{\"name\":\"SHA256SUMS.txt\",\"size\":90,"
+                + "\"url\":\"https://api.example.test/assets/x-sums\","
                 + "\"browser_download_url\":\"https://example.test/x.txt\"}]}]";
         assertNull(UpdateFeed.latest(json, "0.1.0"));
     }

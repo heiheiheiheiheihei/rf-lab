@@ -65,15 +65,18 @@ final class UpdateFeed {
                     continue;
                 }
                 String name = asset.optString("name", "");
-                String url = asset.optString("browser_download_url", "");
-                if (url.isEmpty()) {
+                // The API endpoint redirects to the release CDN; the
+                // github.com/.../download URL is unreachable through some
+                // phone relay proxies (verified on OW20W1).
+                String api = asset.optString("url", "");
+                if (api.isEmpty()) {
                     continue;
                 }
                 if (APK_ASSET.equals(name)) {
-                    apkUrl = url;
+                    apkUrl = api;
                     size = asset.optLong("size");
                 } else if (SUMS_ASSET.equals(name)) {
-                    sumsUrl = url;
+                    sumsUrl = api;
                 }
             }
             if (apkUrl == null || sumsUrl == null || size <= 0 || size > MAX_APK_BYTES) {

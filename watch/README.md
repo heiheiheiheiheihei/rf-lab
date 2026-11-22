@@ -203,6 +203,7 @@ cd watch && ../android/gradlew assembleRelease
 ```text
 UPDATE
   → GET api.github.com/repos/heiheiheiheiheihei/rf-lab/releases?per_page=30
+     (APK/SUMS 走同一个 API 的 asset 端点,Accept: application/octet-stream)
   → 只留 draft=false / prerelease=false / tag 匹配 watch-vX.Y.Z
      且同时带 rf-lab-watch.apk + SHA256SUMS.txt 的 Release,取最高版本
   → 下载 APK(≤20 MB)→ 大小、SHA-256、包名、versionCode/versionName
@@ -213,6 +214,7 @@ UPDATE
 | 项 | 约定 |
 |---|---|
 | 网络 | 仅 HTTPS;仓库与资产名写死,不接受服务端下发的下载地址 |
+| 下载路径 | 用 GitHub API asset 端点(302 到 release CDN)。实测经手机蓝牙代理时 `github.com` 的 TLS 握手会超时,`api.github.com` 正常 |
 | 触发 | 只由 SYSTEM → `UPDATE` 触发;无定时器、无开机自启 |
 | 版本门 | `versionCode` 和 `versionName` 都必须严格前进,同版本重装会被拒绝 |
 | 完整性 | 资产大小 + `SHA256SUMS.txt` 的 SHA-256;不一致立即失败 |

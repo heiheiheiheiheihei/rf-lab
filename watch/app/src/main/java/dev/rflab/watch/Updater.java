@@ -121,7 +121,7 @@ final class Updater {
                 if (got != release.size) {
                     throw new IOException("size " + got + " != " + release.size);
                 }
-                String expected = UpdateFeed.hashFor(fetchText(release.sumsUrl),
+                String expected = UpdateFeed.hashFor(fetchAssetText(release.sumsUrl),
                         UpdateFeed.APK_ASSET);
                 if (expected == null) {
                     throw new IOException("SHA256SUMS has no " + UpdateFeed.APK_ASSET);
@@ -200,7 +200,14 @@ final class Updater {
     // ---- network ------------------------------------------------------------
 
     private static String fetchText(String url) throws IOException {
-        HttpURLConnection c = open(url);
+        return readText(open(url, false));
+    }
+
+    private static String fetchAssetText(String url) throws IOException {
+        return readText(open(url, true));
+    }
+
+    private static String readText(HttpURLConnection c) throws IOException {
         try (InputStream in = c.getInputStream()) {
             return new String(readLimited(in, MAX_TEXT_BYTES), StandardCharsets.UTF_8);
         } finally {
@@ -209,7 +216,7 @@ final class Updater {
     }
 
     private static long downloadTo(String url, File dest, ProgressSink sink) throws IOException {
-        HttpURLConnection c = open(url);
+        HttpURLConnection c = open(url, true);
         try (InputStream in = c.getInputStream();
              OutputStream out = new FileOutputStream(dest)) {
             byte[] buf = new byte[16 * 1024];
@@ -237,7 +244,7 @@ final class Updater {
         }
     }
 
-    private static HttpURLConnection open(String url) throws IOException {
+    private static HttpURLConnection open(String url, boolean asset) throws IOException {
         URL u = new URL(url);
         if (!"https".equals(u.getProtocol())) {
             throw new IOException("https only");
@@ -247,7 +254,8 @@ final class Updater {
         c.setReadTimeout(20000);
         c.setInstanceFollowRedirects(true);
         c.setRequestProperty("User-Agent", "RF-Lab-Watch");
-        c.setRequestProperty("Accept", "application/vnd.github+json");
+        c.setRequestProperty("Accept", asset ? "application/octet-stream"
+                : "application/vnd.github+json");
         int code = c.getResponseCode();
         if (code != 200) {
             c.disconnect();
