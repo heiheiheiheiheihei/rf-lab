@@ -1,6 +1,24 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
 }
+
+// Watch has its own release key, independent from the phone APK:
+//   ~/.local/share/rf-lab/watch/rf-lab-watch-release.jks
+// Credentials live in watch/keystore.properties (gitignored) or the
+// RFLAB_WATCH_* environment variables (CI). Missing both = unsigned release.
+val watchKeyProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun watchSigningValue(prop: String, env: String): String? =
+    (watchKeyProps.getProperty(prop) ?: System.getenv(env))?.takeIf { it.isNotBlank() }
+
+val watchStoreFile = watchSigningValue("storeFile", "RFLAB_WATCH_KEYSTORE_PATH")
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.isFile }
 
 android {
     namespace = "dev.rflab.watch"
@@ -18,6 +36,17 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (watchStoreFile != null) {
+            create("release") {
+                storeFile = watchStoreFile
+                storePassword = watchSigningValue("storePassword", "RFLAB_WATCH_KEYSTORE_PASSWORD")
+                keyAlias = watchSigningValue("keyAlias", "RFLAB_WATCH_KEY_ALIAS")
+                keyPassword = watchSigningValue("keyPassword", "RFLAB_WATCH_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,6 +54,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (watchStoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

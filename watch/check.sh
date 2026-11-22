@@ -33,5 +33,16 @@ sha256sum "$APK"
 echo
 "$BT/aapt2" dump badging "$APK" \
   | grep -E "^(package:|minSdkVersion|targetSdkVersion|application-label|launchable-activity)" || true
+
+if [[ -f "$ROOT/watch/keystore.properties" ]]; then
+  "$ROOT/android/gradlew" -p "$ROOT/watch" assembleRelease --console=plain
+  RAPK="$ROOT/watch/app/build/outputs/apk/release/app-release.apk"
+  "$BT/apksigner" verify --verbose --print-certs "$RAPK" | grep -q "Verifies"
+  echo
+  echo "RELEASE OK (independent watch key)"
+  ls -l "$RAPK"
+  sha256sum "$RAPK"
+fi
+
 echo
 echo "HOST OK: protocol tests + APK build"

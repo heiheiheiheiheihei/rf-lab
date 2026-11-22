@@ -34,7 +34,7 @@ PRESETS = {
     "allin": (999, ["ys", "cc1101", "nrf", "si4463", "lr1121", "backplane", "antenna", "case", "dock"]),
 }
 REQUIRED_IDS = {
-    "hero", "budget", "modules", "terminal", "uplink", "status",
+    "hero", "budget", "modules", "terminal", "watch", "uplink", "status",
     "budgetRange", "total", "buildCode", "presetName", "sheetList",
     "demoPanel", "demoViewport", "demoFrame", "demoLearn", "demoReset",
     "demoOpen", "feedBody", "helpDialog", "helpBtn", "copyBom",

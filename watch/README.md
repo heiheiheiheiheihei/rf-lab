@@ -150,10 +150,38 @@ export ANDROID_HOME="$HOME/.local/opt/android-sdk"
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
 
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > watch/local.properties
-./watch/check.sh          # testDebugUnitTest + lintDebug + assembleDebug + aapt2 元数据
+./watch/check.sh          # test + lint + debug;有 watch/keystore.properties 时再验 release 签名
 ```
 
 产物:`watch/app/build/outputs/apk/debug/app-debug.apk`。
+
+### 8.1 Release 签名(独立 watch key)
+
+手表使用**独立于手机 APK**的 release key,不复用 `dev.rflab.terminal` 的密钥。
+密钥和口令只在仓库外:
+
+```text
+~/.local/share/rf-lab/watch/rf-lab-watch-release.jks
+~/.config/rf-lab/watch-keystore.env
+watch/keystore.properties   # gitignored, 600
+```
+
+```bash
+set -a; . "$HOME/.config/rf-lab/watch-keystore.env"; set +a
+cd watch && ../android/gradlew assembleRelease
+"$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs \
+  app/build/outputs/apk/release/app-release.apk
+```
+
+| 项 | 值 |
+|---|---|
+| alias | `rflab-watch`(RSA 4096,PKCS12,10000 天) |
+| 证书 SHA-256 | `ED:C2:A5:C1:0E:68:C3:35:A9:D7:7B:BD:44:C6:C1:34:18:A8:08:7B:EE:DD:D8:47:BE:05:51:3B:A4:90:94:A7` |
+| 签名方案 | APK Signature Scheme v2(Android 8.1 支持) |
+| 产物 | `watch/app/build/outputs/apk/release/app-release.apk` |
+
+**debug → release 不能覆盖安装**:签名不同,必须先 `adb uninstall dev.rflab.watch`,
+会清掉记住的 PIN/设备/选中码。首装 release 后重新配对即可。
 
 静态检查:
 
@@ -180,7 +208,7 @@ adb devices -l
 adb shell getprop ro.build.version.sdk
 adb shell wm size
 adb shell wm density
-adb install -r watch/app/build/outputs/apk/debug/app-debug.apk
+adb install -r watch/app/build/outputs/apk/release/app-release.apk
 adb shell am start -n dev.rflab.watch/.WatchActivity
 adb exec-out screencap -p > /tmp/rflab-watch.png
 ```
@@ -210,7 +238,7 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 
 | ID | 项 | 通过标准 | 状态 |
 |---|---|---|---|
-| WATCH-01 | 构建 | `assembleDebug` 成功;APK 可 `aapt2 dump badging` | ✅ 2026-11-22,103,784B,`dev.rflab.watch` 0.1.0/1,min 26/target 28;Lint 0 |
+| WATCH-01 | 构建/签名 | debug 可构建;release 用独立 key,v2 验签通过 | ✅ 2026-11-22,debug 103,784B;release 48,244B/sha256 `4bd74c…`;v2 签名;Lint 0 |
 | WATCH-02 | 主机测试 | 协议解析/选择逻辑全过 | ✅ 2026-11-22,`ProtocolTest` 9/9 |
 | WATCH-03 | 安装/启动 | 手表 `adb install` 成功;冷启动无崩溃 | ✅ 2026-11-22,OW20W1 / API 27 |
 | WATCH-04 | 屏幕适配 | 46mm/42mm 均无裁切;按钮命中正确 | ✅ 46mm 真机 402×476;◐ 42mm 仅模拟器 372×430 |
@@ -219,6 +247,7 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 
 构建/主机/模拟器证据:[`docs/evidence/2026-11-22-watch.md`](../docs/evidence/2026-11-22-watch.md)。
 46mm 真机证据与截图:[`docs/evidence/2026-11-22-watch-device.md`](../docs/evidence/2026-11-22-watch-device.md)。
+release 签名与安装证据:[`docs/evidence/2026-11-22-watch-release.md`](../docs/evidence/2026-11-22-watch-release.md)。
 
 **未验证**:断链长发自动重连 STOP、5 次错误 PIN 锁定、42mm 实机布局、外部接收器观察
 空口、长时间长发/息屏省电策略、32 条逐条发射。**设备 `ACK 0xF0` 不等于外部接收器

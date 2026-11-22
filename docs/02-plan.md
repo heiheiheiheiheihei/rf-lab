@@ -160,6 +160,8 @@ UI 项必须写视口、浏览器与 console 结果。
 [`evidence/2026-11-22-watch-device.md`](evidence/2026-11-22-watch-device.md)):
 WATCH-03/04/05 的 46mm 部分已关闭;WATCH-06 只关了错误 PIN 与退后台 STOP,
 断链长发自动 STOP 仍未复现;42mm 实机、5 次 PIN 锁定、外部接收器观察仍开放。
+Watch release 已用独立 key 签名并在 46mm 实机回归(48,244 B / v2),见
+[`evidence/2026-11-22-watch-release.md`](evidence/2026-11-22-watch-release.md)。
 
 ### 3.4 明确不做(不是测试债务)
 

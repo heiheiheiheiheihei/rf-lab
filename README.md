@@ -1,12 +1,12 @@
 # RF-LAB · 百元射频实验室
 
 **丰俭由人:¥100 的固定码侦察包 → ¥999 的全频段工作台。**
-一块 ESP32-C3,五个可换射频舱位;同一套战术终端跑在 **Web / Android / uConsole** 上,
-与官网共用一套视觉基线([`docs/01-ui.md` §5.1](docs/01-ui.md))。
+一块 ESP32-C3,五个可换射频舱位;同一套命令契约延伸到 **Web / Android / uConsole /
+OPPO Watch 2**,与官网共用一套视觉基线([`docs/01-ui.md` §5.1](docs/01-ui.md))。
 现役链路是 **YS-RF34DL 315/433 固定码**;CC1101 / NRF24L01 / SI4463 / LR1121、
 MQTT 与 Home Assistant 是路线图,不是现货能力。
 
-[**官网 / 配装台(线上)**](https://heiheiheiheiheihei.github.io/rf-lab/) · [**下载 Android APK**](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · [本地源](site/index.html) · [射频规格](docs/00-mvp.md) · [UI 规格](docs/01-ui.md) · [接线](hardware/README.md) · [官网维护说明](site/README.md)
+[**官网 / 配装台(线上)**](https://heiheiheiheiheihei.github.io/rf-lab/) · [**下载 Android APK**](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · [**OPPO Watch 2 客户端**](watch/README.md) · [本地源](site/index.html) · [射频规格](docs/00-mvp.md) · [UI 规格](docs/01-ui.md) · [接线](hardware/README.md) · [官网维护说明](site/README.md)
 
 ![RF-LAB 官网首屏](site/assets/preview.webp)
 
@@ -57,8 +57,23 @@ MQTT 与 Home Assistant 是路线图,不是现货能力。
 |---|---|---|
 | **Web** | LAN IP(STA)或 `http://192.168.4.1/`(AP 回退) | 板载 HTTP + SSE,手机/PC/uConsole 浏览器直接用 |
 | **Android** | BLE APK | 同一份单页 UI 跑在 WebView,原生 BLE 桥 |
+| **OPPO Watch 2** | 独立 BLE APK | 402×476 单屏;ARM → SEND;按住 HOLD → LONG,松手 STOP;46mm 真机已验证 |
 | **uConsole** | 键盘 TUI | `rflab-tui`,HTTP 优先、USB 串口回退,琥珀/橄榄战术风 |
 | **串口** | `tools/rf34dl.py` | 0.5.0 既有命令行,行为不变 |
+
+### 手腕上的发射键
+
+OPPO Watch 2 客户端把手机端的「选码 → ARM → SEND」压缩成一屏:码卡上下滑换码,
+`SEND` 单发,`HOLD` 按住 350ms 才发 `LONG`、松手立刻 `STOP`;断链/退后台先停。
+它只走 BLE,复用同一套 GATT/行协议,**不改固件、不改手机 APP**。
+
+![OPPO Watch 2 实机控制页](site/assets/watch-control.webp)
+
+- 46mm `OW20W1` / Android 8.1 (API 27) / 402×476 @320dpi 真机已验证:安装、扫描、
+  PIN、32 码、ARM/SEND、HOLD/LONG/STOP、错误 PIN、退后台 STOP、OLED TEST。
+- 独立 **release key** 签名(不与手机 APK 共用);debug → release 需卸载后重装。
+- **未验**:42mm 实机、断链长发自动 STOP、5 次 PIN 锁定、外部接收器空口观察。
+- 规格与安装:[`watch/README.md`](watch/README.md) · 证据:[`docs/evidence/2026-11-22-watch-device.md`](docs/evidence/2026-11-22-watch-device.md)
 
 **Wi-Fi 模式**:有凭据先 `STA-only` 接局域网(AP 关闭);15s 连不上自动打开 AP 回退;
 AP 下可以直接用,也可以重新配网或 `WIFI CLEAR`。AP 里配网成功会保持 AP,避免踢掉
@@ -68,14 +83,15 @@ AP 下可以直接用,也可以重新配网或 `WIFI CLEAR`。AP 里配网成功
 - **跨平台 UI 规格**:[`docs/01-ui.md`](docs/01-ui.md)
 - **接线**:[`hardware/README.md`](hardware/README.md)(模块 4 根线;引脚权威)
 - **固件**:[`firmware/README.md`](firmware/README.md)(ESP-IDF 5.5.5 / ESP32-C3)
-- **Android**:[`android/README.md`](android/README.md) · **uConsole**:[`uconsole/README.md`](uconsole/README.md)
+- **Android**:[`android/README.md`](android/README.md) · **uConsole**:[`uconsole/README.md`](uconsole/README.md) · **Watch**:[`watch/README.md`](watch/README.md)
 
 ## 官网 / 配装台
 
 线上:<https://heiheiheiheiheihei.github.io/rf-lab/>(GitHub Pages / GitHub Actions 发布 `site/`)。
 
 [`site/index.html`](site/index.html) 是静态单页:4 档预算、9 个模块勾选、实时配装单、
-**内嵌真实单页 UI 的交互终端 demo**、MQTT/HA 路线图。无站点构建、无外部字体、无 CDN、无外部/API 请求。
+**内嵌真实单页 UI 的交互终端 demo**、OPPO Watch 2 实机区、MQTT/HA 路线图。
+无站点构建、无外部字体、无 CDN、无外部/API 请求。
 
 §03 终端区直接跑 `web/` 的真实 UI(iframe):可以 ARM、SEND、LONG、STOP、ERASE,也可以用
 「模拟遥控器」学习一条新码;`site/assets/terminal-demo.js` 在 iframe 内接管
@@ -118,6 +134,11 @@ rflab-tui --url http://192.168.4.1   # 若已接 LAN,换成 INFO/OLED 的 LAN IP
 # 5) Android(已装 JDK/SDK/Gradle 时)
 python3 tools/build_web.py
 cd android && ./gradlew assembleDebug
+
+# 6) OPPO Watch 2(独立 release key,见 watch/README.md)
+set -a; . "$HOME/.config/rf-lab/watch-keystore.env"; set +a
+./watch/check.sh
+cd watch && ../android/gradlew assembleRelease
 # android/app/build/outputs/apk/debug/app-debug.apk
 ```
 

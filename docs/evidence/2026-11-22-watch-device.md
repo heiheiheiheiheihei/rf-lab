@@ -3,6 +3,8 @@
 > **结论:46mm OW20W1 上安装、启动、BLE 扫描/连接/AUTH、32 条码库、ARM→SEND、
 > HOLD→LONG→STOP、错误 PIN、退后台 STOP、OLED TEST 均通过。** 未接射频接收器,
 > 只证明设备回 `ACK 0xF0` / BLE 状态,不证明空口被外部接收器收到。
+> 之后的独立 release key 签名/重装见
+> [`2026-11-22-watch-release.md`](2026-11-22-watch-release.md)。
 
 ## Device
 

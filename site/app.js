@@ -85,7 +85,7 @@
 
   /* --------------------------------------------------------------- nav active */
   const navLinks = $$(".nav-links a");
-  const sections = ["budget", "modules", "terminal", "uplink", "status"]
+  const sections = ["budget", "modules", "terminal", "watch", "uplink", "status"]
     .map((id) => document.getElementById(id))
     .filter(Boolean);
   if ("IntersectionObserver" in window && navLinks.length) {
@@ -888,6 +888,7 @@
 
     if (key === "b") { event.preventDefault(); goTo("budget"); }
     else if (key === "t") { event.preventDefault(); goTo("terminal"); }
+    else if (key === "w") { event.preventDefault(); goTo("watch"); }
     else if (key === "u") { event.preventDefault(); goTo("uplink"); }
     else if (key === "r") {
       event.preventDefault();

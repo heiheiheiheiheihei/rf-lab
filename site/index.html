@@ -11,7 +11,7 @@
 <meta property="og:url" content="https://heiheiheiheiheihei.github.io/rf-lab/">
 <link rel="canonical" href="https://heiheiheiheiheihei.github.io/rf-lab/">
 <meta property="og:title" content="RF-LAB // 百元射频实验室">
-<meta property="og:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套可在页面内直接操作的战术终端。">
+<meta property="og:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，Web / Android / uConsole / OPPO Watch 2 同一套命令契约。">
 <meta property="og:image" content="https://heiheiheiheiheihei.github.io/rf-lab/assets/preview.jpg">
 <meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="RF-LAB 百元射频实验室官网首屏">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="RF-LAB // 百元射频实验室">
-<meta name="twitter:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，一套可在页面内直接操作的战术终端。">
+<meta name="twitter:description" content="¥100 到 ¥999，丰俭由人。一块 ESP32-C3，五个射频舱位，Web / Android / uConsole / OPPO Watch 2 同一套命令契约。">
 <meta name="twitter:image" content="https://heiheiheiheiheihei.github.io/rf-lab/assets/preview.jpg">
 <meta name="robots" content="index,follow">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070906'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23FFB000' stroke-width='2'/%3E%3Cpath d='M32 5v13M32 46v13M5 32h13M46 32h13' stroke='%23FFB000' stroke-width='2'/%3E%3Ccircle cx='32' cy='32' r='3.5' fill='%23FFB000'/%3E%3C/svg%3E">
@@ -44,8 +44,9 @@
     <a href="#budget"><b>01</b> 配装</a>
     <a href="#modules"><b>02</b> 模块</a>
     <a href="#terminal"><b>03</b> 终端</a>
-    <a href="#uplink"><b>04</b> 上行</a>
-    <a href="#status"><b>05</b> 状态</a>
+    <a href="#watch"><b>04</b> 手表</a>
+    <a href="#uplink"><b>05</b> 上行</a>
+    <a href="#status"><b>06</b> 状态</a>
   </nav>
   <div class="nav-meta">
     <span class="nav-live"><i class="dot ok"></i> SYS 0.7.1</span>
@@ -76,7 +77,7 @@
         <dl class="hero-specs reveal">
           <div><dt>BASE</dt><dd>ESP32-C3</dd></div>
           <div><dt>RF BAYS</dt><dd>1 + 4 <small>现役 + 路线图</small></dd></div>
-          <div><dt>SURFACES</dt><dd>WEB · APP · TUI</dd></div>
+          <div><dt>SURFACES</dt><dd>4 <small>WEB · APP · TUI · WATCH</small></dd></div>
           <div><dt>BUILD</dt><dd>¥100—999</dd></div>
         </dl>
       </div>
@@ -466,17 +467,18 @@
 
     <div class="terminal-grid">
       <div class="terminal-copy reveal">
-        <p class="kicker">ONE UI / THREE SURFACES / LIVE</p>
+        <p class="kicker">ONE CONTRACT / FOUR SURFACES / LIVE</p>
         <h3>点开就用，<br>先 ARM，再发射。</h3>
-        <p>Web 是设备内嵌的单页，HTTP + SSE 推状态；Android 是单 Activity + WebView + 原生 BLE 桥；uConsole 是同一套 HTTP 契约上的键盘 TUI，断网回退 USB 串口。下面跑的是这份真实 UI，网络层由本地模拟接管。</p>
+        <p>Web 是设备内嵌的单页，HTTP + SSE 推状态；Android 是单 Activity + WebView + 原生 BLE 桥；uConsole 是同一套 HTTP 契约上的键盘 TUI；Watch 是原生自绘的 BLE 客户端。下面跑的是 Web/Android/TUI 的真实 UI，网络层由本地模拟接管。</p>
         <ul class="tick-list">
           <li><b>WEB</b> 真实单页内嵌；ARM / SEND / LONG / STOP 可点</li>
           <li><b>APP</b> 同一份 UI 切到 390×844；WebView 布局</li>
           <li><b>TUI</b> 1280×720 三栏；同一套命令契约</li>
+          <li><b>WATCH</b> 402×476 单屏；同一套 BLE 行协议</li>
           <li><b>SIM</b> 本地模拟传输，零外部请求</li>
         </ul>
         <div class="terminal-stats">
-          <div><b><span data-count="3">3</span></b><span>界面</span></div>
+          <div><b><span data-count="4">4</span></b><span>界面</span></div>
           <div><b><span data-count="16.7" data-decimals="1">16.7</span><small>KB</small></b><span>gzip</span></div>
           <div><b><span data-count="0">0</span></b><span>外部请求</span></div>
           <div><b><span data-count="1362" data-sep="1">1,362</span></b><span>主机测试</span></div>
@@ -530,9 +532,56 @@
     </div>
   </section>
 
-  <section class="section uplink" id="uplink" aria-labelledby="uplinkTitle">
+
+  <section class="section watch" id="watch" aria-labelledby="watchTitle">
     <div class="section-head reveal">
       <span class="sec-no">04</span>
+      <div class="sec-title">
+        <p class="kicker">WRIST CLIENT // OPPO WATCH 2</p>
+        <h2 id="watchTitle">把发射键，<br>戴在手腕上。</h2>
+      </div>
+      <p class="sec-note">同一套 BLE 行协议，第四块屏。只做控制，不做码库编辑；46mm 实机已验证。</p>
+    </div>
+
+    <div class="watch-grid">
+      <div class="watch-copy reveal">
+        <p class="kicker">LINK → PIN → CONTROL / ONE-HAND</p>
+        <h3>一屏选码，<br>按住才是长发。</h3>
+        <p>手表不复制手机 UI：一条码卡、上下滑换码、点卡开码库；<code>SEND</code> 单发，<code>HOLD</code> 按住 350ms 才进入 <code>LONG</code>，松手立即 <code>STOP</code>。断链/退后台先停，ARM 只是防误触。</p>
+        <ul class="tick-list">
+          <li><b>SCAN</b> 只认 <code>RF-Lab-*</code>，PIN 自动提交</li>
+          <li><b>32 CODES</b> BLE 全量快照，断线重连自动 AUTH</li>
+          <li><b>HOLD</b> 按住发 LONG，松手/滑出/退后台 STOP</li>
+          <li><b>NO CLOUD</b> 无网络权限，无码库编辑/OTA</li>
+        </ul>
+        <div class="watch-specs">
+          <div><b>402×476</b><span>46mm AMOLED</span></div>
+          <div><b>API 27</b><span>ColorOS Watch</span></div>
+          <div><b>0.1.0</b><span>独立 release key</span></div>
+          <div><b>OW20W1</b><span>真机已验证</span></div>
+        </div>
+        <div class="watch-links">
+          <a class="btn btn-line btn-small" href="https://github.com/heiheiheiheiheihei/rf-lab/blob/master/watch/README.md" rel="noopener"><span>手表规格</span><b>README</b></a>
+          <a class="btn btn-line btn-small" href="https://github.com/heiheiheiheiheihei/rf-lab/tree/master/watch" rel="noopener"><span>源码</span><b>WATCH</b></a>
+        </div>
+        <p class="watch-fine">PIN 是应用层鉴权，BLE 链路不加密；42mm 仅模拟器验证。当前无公开 watch APK 下载。</p>
+      </div>
+
+      <div class="watch-stage reveal" aria-label="OPPO Watch 2 实机截图">
+        <figure class="watch-device main">
+          <img src="assets/watch-control.webp" width="402" height="476" alt="OPPO Watch 2 实机控制页：RF-Lab-1B59 ONLINE，CODE 01，SEND/HOLD，状态 OK TX #1 693ms" loading="lazy" decoding="async">
+        </figure>
+        <figure class="watch-device side">
+          <img src="assets/watch-hold.webp" width="402" height="476" alt="OPPO Watch 2 实机按住 HOLD：HOLDING #1，RELEASE STOP，SEND 显示 BUSY" loading="lazy" decoding="async">
+        </figure>
+        <div class="watch-caption"><span>REAL DEVICE / OW20W1</span><span>402×476 · 2026-11-22</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section uplink" id="uplink" aria-labelledby="uplinkTitle">
+    <div class="section-head reveal">
+      <span class="sec-no">05</span>
       <div class="sec-title">
         <p class="kicker">UPLINK // 无线上行</p>
         <h2 id="uplinkTitle">把遥控器，<br>接进你的自动化。</h2>
@@ -627,7 +676,7 @@ payload: "SEND 1"</code></pre>
 
   <section class="section status" id="status" aria-labelledby="statusTitle">
     <div class="section-head reveal">
-      <span class="sec-no">05</span>
+      <span class="sec-no">06</span>
       <div class="sec-title">
         <p class="kicker">STATUS BOARD // 作战状态</p>
         <h2 id="statusTitle">能跑的说能跑，<br>没跑的说没跑。</h2>
@@ -646,6 +695,7 @@ payload: "SEND 1"</code></pre>
         <div class="status-row"><span>真实 LAN / AP 回退</span><span class="st live">● 上机</span><span>192.168.5.117 · 15/15</span></div>
         <div class="status-row"><span>BLE 广播 / 码表</span><span class="st live">● 上机</span><span>真机连接 / AUTH / 码表 9 条</span></div>
         <div class="status-row"><span>Android APK</span><span class="st live">● 已发布</span><span>0.7.1 · release 签名 · 1.05 MB；真机安装/自更新 ✅</span></div>
+        <div class="status-row"><span>OPPO Watch 2</span><span class="st live">● 上机</span><span>OW20W1 · 0.1.0 · 独立 release key · 46mm</span></div>
         <div class="status-row"><span>UI 一键固件更新</span><span class="st none">○ 规划</span><span>0.7.3 · BOOT 确认 · Pages 源</span></div>
         <div class="status-row"><span>uConsole TUI</span><span class="st partial">◐ 主机通过</span><span>12 项 + PTY；真机未测</span></div>
         <div class="status-row"><span>MQTT / Home Assistant</span><span class="st none">○ 路线图</span><span>未实现</span></div>
@@ -690,9 +740,9 @@ payload: "SEND 1"</code></pre>
       <span class="footer-status"><i class="dot ok"></i> 0.7.1 / FIELD LAB / 2026</span>
     </div>
     <div class="footer-links">
-      <div><b>BUILD</b><a href="#budget">配装台</a><a href="#modules">模块阵列</a><a href="#terminal">战术终端</a></div>
-      <div><b>SECTIONS</b><a href="#modules">模块与频段</a><a href="#terminal">终端与 UI</a><a href="#status">状态与证据</a><a href="#uplink">MQTT 路线图</a></div>
-      <div><b>SOURCE</b><a href="https://github.com/heiheiheiheiheihei/rf-lab" rel="noopener">GitHub</a><a href="https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk" rel="noopener">下载 APK</a><a href="https://github.com/heiheiheiheiheihei/rf-lab/releases/latest" rel="noopener">Releases</a></div>
+      <div><b>BUILD</b><a href="#budget">配装台</a><a href="#modules">模块阵列</a><a href="#terminal">战术终端</a><a href="#watch">手表控制</a></div>
+      <div><b>SECTIONS</b><a href="#modules">模块与频段</a><a href="#terminal">终端与 UI</a><a href="#watch">手表控制</a><a href="#status">状态与证据</a><a href="#uplink">MQTT 路线图</a></div>
+      <div><b>SOURCE</b><a href="https://github.com/heiheiheiheiheihei/rf-lab" rel="noopener">GitHub</a><a href="https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk" rel="noopener">下载 APK</a><a href="https://github.com/heiheiheiheiheihei/rf-lab/tree/master/watch" rel="noopener">Watch 源码</a><a href="https://github.com/heiheiheiheiheihei/rf-lab/releases/latest" rel="noopener">Releases</a></div>
     </div>
   </div>
   <div class="footer-bottom">
@@ -708,6 +758,7 @@ payload: "SEND 1"</code></pre>
   <div class="key-grid">
     <div><kbd>B</kbd><span>跳到配装台</span></div>
     <div><kbd>T</kbd><span>跳到战术终端</span></div>
+    <div><kbd>W</kbd><span>跳到手表控制</span></div>
     <div><kbd>U</kbd><span>跳到 MQTT 路线图</span></div>
     <div><kbd>R</kbd><span>随机配装</span></div>
     <div><kbd>?</kbd><span>打开本帮助</span></div>

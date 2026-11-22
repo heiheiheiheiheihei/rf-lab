@@ -51,6 +51,7 @@ android/app/build/
 android/build/
 watch/.gradle/
 watch/local.properties
+watch/keystore.properties
 watch/app/build/
 
 # 签名材料

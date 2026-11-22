@@ -1,7 +1,8 @@
 # site/ — RF-LAB 官网 / 配装台
 
-**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **部署:** GitHub Pages / Actions(见文末)
+**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **手表:** [OPPO Watch 2 客户端源码](https://github.com/heiheiheiheiheihei/rf-lab/tree/master/watch) · **部署:** GitHub Pages / Actions(见文末)
 **2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机 BLE 连接/码表已验(2026-11-21);线上交互回归仍未验证。
+**2026-11-22 新增手表区:** 46mm OW20W1 真机截图、独立 release key / 0.1.0;本次推送后由 Pages 发布。
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
 无站点构建、无外部字体、无 CDN、无外部/API 请求;直接打开 `site/index.html` 就能看。
@@ -28,9 +29,10 @@ python3 -m http.server 8088 -d site
 | 01 配装台 | **硬件链路图**(CORE-C3 + YS-RF34DL,四线)、4 档预设、9 个可选模块、实时物料小计/余量/能力矩阵 | 勾选、预算滑杆、随机配装、削到预算内、复制配装单;点图打开 SVG 原图 |
 | 02 模块阵列 | 对数频段覆盖图、模块规格表、**主控/模块两张硬件细节卡**、三条设计判断 | 表格/频段条;点图打开 SVG 原图 |
 | 03 战术终端 | **内嵌真实单页 UI**(iframe,`assets/terminal.html`);WEB/APP/UCONSOLE 三视口 | 直接 ARM/SEND/LONG/STOP/ERASE;模拟遥控器/重置;事件流(标 SIM) |
-| 04 无线上行 | 本地 MQTT + Home Assistant Discovery 拓扑与 topic 草案 | 强制 `ROADMAP / 未实现` 标识 |
-| 05 作战状态 | 构建 / 主机 / 上机分开列;版本线 | 无 |
-| Footer | 安全边界、文档入口、来源(含 APK / Releases) | 键盘 `B/T/U/R/?` |
+| 04 手表控制 | OPPO Watch 2 实机截图(402×476)、LINK→PIN→CONTROL、HOLD/LONG/STOP | 静态截图 + 源码/规格链接;不提供未发布 APK |
+| 05 无线上行 | 本地 MQTT + Home Assistant Discovery 拓扑与 topic 草案 | 强制 `ROADMAP / 未实现` 标识 |
+| 06 作战状态 | 构建 / 主机 / 上机分开列;版本线 | 无 |
+| Footer | 安全边界、文档入口、来源(含 APK / Releases) | 键盘 `B/T/W/U/R/?` |
 
 ## APK 下载入口
 
@@ -40,9 +42,12 @@ python3 -m http.server 8088 -d site
 | 首屏 CTA 第三颗按钮 | 同上,标 `0.7.1 · ↓` |
 | 状态板 Android APK 行 | 文字标 `0.7.1 · release 签名 · 1.05 MB`;下载走导航/页脚 |
 | 页脚 SOURCE | 同上 + [Releases](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest) |
+| 手表 | 源码/规格链接 `watch/README.md`;**无公开 watch APK 下载** |
 
 用 `releases/latest/download/<固定文件名>` 而不是写死 tag:每次发版覆盖同名资产,官网按钮
 无需改动。APK 由 `.github/workflows/android-release.yml` 在 `v*` 标签上构建、验签后上传;
+**OPPO Watch 2 是独立 release key / 0.1.0 本地签名包,尚未进入 Release 流水线**,
+官网页只放真机截图、规格与源码,不伪造 watch 下载入口;
 **真机安装/自更新/BLE 已验(2026-11-22)**;页面状态板对应行已改为 `●`;uConsole 仍保持 `◐`。
 发射行在 2026-11-21 后改为 `◐ 待复测`(UART 命令方向已恢复,`SEND` 未复测);
 完整测试登记与 0.7.2 退出条件见 [`../docs/02-plan.md`](../docs/02-plan.md)。
@@ -98,7 +103,7 @@ python3 -m http.server 8088 -d site
 ## 现役 / 路线图边界(硬规则)
 
 - **现役**:YS-RF34DL 315/433 固定码学习/发射;Web HTTP+SSE;BLE 广播/真机码表;Android APK 0.7.1;
-  uConsole TUI 主机测试。上机证据在 `../docs/evidence/`。
+  OPPO Watch 2 0.1.0(46mm 真机);uConsole TUI 主机测试。上机证据在 `../docs/evidence/`。
 - **路线图**:CC1101 / NRF24L01 / SI4463 / LR1121、SPI 背板、MQTT bridge、
   Home Assistant Discovery。页面里必须保持“路线图 / 未实现 / 概念”标识。
 - 不要把“配装器可以选”写成“固件已支持”;不要把 MQTT/HA 的规划写成现有能力。
@@ -148,6 +153,7 @@ CHROME="$HOME/.cache/ms-playwright/chromium-1255/chrome-linux64/chrome"
 在终端内 ARM/SEND/LONG/STOP/ERASE、模拟遥控器/重置、`prefers-reduced-motion`、
 键盘 `B/T/U/R/?`、无 console error、无外部请求(iframe 的 `/api/*` 只走本地 shim)。
 硬件图另查:§01/§02 的 SVG 加载、点图开原图;设备 UI `HW` 打开、`ZOOM/FIT`、`H`/`ESC`。
+手表区查:桌面/390px 截图不溢出,两张 `assets/watch-*.webp` 有 alt;`W` 键跳到 `#watch`;
 页面与 iframe 都不发起外部网络请求。
 
 ## 发布说明
