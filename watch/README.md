@@ -229,6 +229,11 @@ UPDATE
 secure boot 或签名链,只保证“新包与已装包同证书”。手表必须能自己上网(通常连 Wi-Fi);
 没有网络时不会回退到手机代理。
 
+**2026-11-22 真机状态**:`PackageInstaller` 会话在 OW20W1 上直接返回
+`STATUS_FAILURE`,无安装界面;改用 `ACTION_VIEW` + 只读 `content://` provider 后,
+系统安装界面尚未完成验证(设备断开)。0.1.4 因此标记为 **pre-release**,官网仍指向
+0.1.0;重新接上手表后先验证安装界面,再决定是否转为稳定版。
+
 ## 9. ADB 上机步骤(设备接入后执行)
 
 手表侧准备(本机 `OW20W1` 已通过 ADB 连接;具体菜单路径以实机固件为准):
@@ -286,7 +291,7 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 | WATCH-04 | 屏幕适配 | 46mm 402×476 无裁切;按钮命中正确 | ✅ 46mm 真机 OW20W1 |
 | WATCH-05 | BLE 控制 | 扫描/连接/AUTH/`SEND`/`LONG`/`STOP` 与设备回显一致 | ✅ 46mm 真机:32 码、`OK TX`、`STOP`;错误 PIN `4 LEFT` |
 | WATCH-06 | 失败关闭 | 错误 PIN、退后台 STOP 均不发飞 | ✅ 错误 PIN `4 LEFT`;退后台 `STOP #1` |
-| WATCH-07 | APP 自更新 | 真机点 UPDATE:发现新版→下载→四项校验→系统确认→版本前进;取消/断网失败关闭 | ⏳ 0.1.4 构建/主机测试过;真机待验 |
+| WATCH-07 | APP 自更新 | 真机点 UPDATE:发现新版→下载→四项校验→系统确认→版本前进;取消/断网失败关闭 | ⏳ 0.1.4 下载/校验真机已验;系统安装界面未验(设备断开);0.1.4 为 pre-release |
 
 构建/主机/模拟器证据:[`docs/evidence/2026-11-22-watch.md`](../docs/evidence/2026-11-22-watch.md)。
 真机与 release 签名/公开包证据:[`docs/evidence/2026-11-22-watch-release.md`](../docs/evidence/2026-11-22-watch-release.md)。
