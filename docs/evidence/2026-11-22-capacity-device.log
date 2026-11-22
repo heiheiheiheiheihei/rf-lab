@@ -1,0 +1,112 @@
+# RF-Lab capacity 128 on-device (2026-11-22)
+
+$ INFO
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bf18
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x3030
+entry 0x403cbf10
+
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# codebook v2 corrupt; keeping it, codes unavailable this boot
+# stored 0 code(s)
+# build=8601815 ui=d0824ba5 ota_slot=0 pending_verify=0
+# ble init failed: ESP_ERR_NO_MEM (BLE unavailable)
+# web init failed: ESP_ERR_HTTPD_ALLOC_MEM
+# net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
+# ble name=RF-Lab-1B59 pin=8729 (serial PIN; also OLED 5s)
+# web: STA connecting; AP fallback opens after 15s if it fails
+# press a remote button to learn; HELP for commands
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bf18
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x3030
+entry 0x403cbf10
+
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# codebook v2 corrupt; keeping it, codes unavailable this boot
+# stored 0 code(s)
+# build=8601815 ui=d0824ba5 ota_slot=0 pending_verify=0
+# ble init failed: ESP_ERR_NO_MEM (BLE unavailable)
+# web init failed: ESP_ERR_HTTPD_ALLOC_MEM
+# net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
+# ble name=RF-Lab-1B59 pin=8729 (serial PIN; also OLED 5s)
+# web: STA connecting; AP fallback opens after 15s if it fails
+# press a remote button to learn; HELP for commands
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bf18
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x3030
+entry 0x403cbf10
+
+$ STATE
+
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# codebook v2 corrupt; keeping it, codes unavailable this boot
+# stored 0 code(s)
+# build=8601815 ui=d0824ba5 ota_slot=0 pending_verify=0
+# ble init failed: ESP_ERR_NO_MEM (BLE unavailable)
+# web init failed: ESP_ERR_HTTPD_ALLOC_MEM
+# net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
+# ble name=RF-Lab-1B59 pin=8729 (serial PIN; also OLED 5s)
+# web: STA connecting; AP fallback opens after 15s if it fails
+# press a remote button to learn; HELP for commands
+{"fw":"0.7.1","proto":1,"uptime_ms":245,"net":{"mode":"connecting","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":false,"sta_ssid":"Mark","sta_ip":"","rssi":0},"ble":{"on":1,"conn":0,"name":"RF-Lab-1B59","pin_set":1},"module":{"baud":9600,"rx_bytes":0,"frames":0,"acks":0,"dups":0,"bad":0,"stray":0,"resync":0},"store":{"count":0,"max":128,"ver":2},"oled":{"present":1,"on":1,"flush":1,"err":0,"last_us":8721,"max_us":8721},"ota":{"armed":0,"pct":0,"phase":"idle","slot":0,"next":-1,"pending":0},"tx":{"active":0,"kind":"idle","id":0,"ok":0,"ms":0},"last":{"kind":"boot","id":0,"band":"","code":"","ms":0}}
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bf18
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x3030
+entry 0x403cbf10
+
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# codebook v2 corrupt; keeping it, codes unavailable this boot
+# stored 0 code(s)
+# build=8601815 ui=d0824ba5 ota_slot=0 pending_verify=0
+# ble init failed: ESP_ERR_NO_MEM (BLE unavailable)
+# web init failed: ESP_ERR_HTTPD_ALLOC_MEM
+# net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
+# ble name=RF-Lab-1B59 pin=8729 (serial PIN; also OLED 5s)
+# web: STA connecting; AP fallback opens after 15s if it fails
+# press a remote button to learn; HELP for commands
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bf18
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x3030
+entry 0x403cbf10

@@ -143,7 +143,7 @@ cd watch && ../android/gradlew assembleRelease
 # android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-主机单测:`./tools/host_test.sh`(协议 76 + 码库 620 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12)。
+主机单测:`./tools/host_test.sh`(协议 76 + 码库 624 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12)。
 APP 自更新逻辑主机测试:`./tools/app_update_test.sh`(版本比较 + `SHA256SUMS` 查表,36 checks)。
 Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15 项)。
 
@@ -152,7 +152,7 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 项 | 状态 |
 |---|---|
 | 构建(ESP32-C3,0.7.1) | ✅ 主机;Flash 1,098,608B / 2,031,616B OTA 槽;RAM 73,540B(2026-11-21,码库 v2) |
-| 主机单测(协议 76 + 码库 620 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
+| 主机单测(协议 76 + 码库 624 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
 | 上机:学码 / 存码 / 改波特率 | ✅ 2026-11-15(0.5.0 证据) |
 | 上机:发射 `SEND/LONG/STOP` | ⚠️ 2026-11-15 有 `F0/FE/FF`;2026-11-21 模块命令方向 0 应答;2026-11-22 `MODE` 已回 `F2`,但 **`SEND` 未复测** |
 | 上机:Web HTTP/SSE/命令 | ✅ 2026-11-15,设备内 `WEBTEST` hello/state/events 200 + POST 202 |

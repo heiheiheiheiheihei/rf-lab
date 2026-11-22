@@ -356,7 +356,7 @@ codebook_err_t codebook_deserialize(codebook_t *cb, const uint8_t *blob, size_t 
     if (!cb || !blob) {
         return CODEBOOK_ERR_ARG;
     }
-    if (len != sizeof(codebook_blob_t)) {
+    if (len < 4 || len > sizeof(codebook_blob_t)) {
         return CODEBOOK_ERR_BLOB;
     }
     const codebook_blob_t *b = (const codebook_blob_t *)blob;
@@ -367,6 +367,11 @@ codebook_err_t codebook_deserialize(codebook_t *cb, const uint8_t *blob, size_t 
         return CODEBOOK_ERR_VERSION;
     }
     if (b->count > CODEBOOK_MAX) {
+        return CODEBOOK_ERR_BLOB;
+    }
+    /* 0.7.2 前 blob 按 32 条固定长(1,828B);容量改 128 后必须继续读旧长度,
+     * 否则升级即“corrupt”,码库在本机看起来全丢。 */
+    if (len < 4 + (size_t)b->count * sizeof(codebook_rec_t)) {
         return CODEBOOK_ERR_BLOB;
     }
 

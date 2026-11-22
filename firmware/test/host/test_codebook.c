@@ -177,13 +177,25 @@ static void test_blob_roundtrip(void)
     CHECK(strcmp(codebook_get(&out, 1)->sym, "🚪") == 0);
     CHECK((codebook_get(&out, 2)->flags & CODEBOOK_FLAG_MANUAL) != 0);
 
+    /* 旧 32 条长度的 v2 blob(1,828B)必须还能读:容量升级不能吃掉码库。 */
+    {
+        uint8_t old_blob[4 + 32 * sizeof(codebook_rec_t)];
+        memcpy(old_blob, blob, sizeof(old_blob));
+        old_blob[3] = 2; /* count */
+        CHECK(codebook_deserialize(&out, old_blob, sizeof(old_blob)) == CODEBOOK_OK);
+        CHECK(out.count == 2);
+        CHECK(memcmp(codebook_get(&out, 1)->code, CODE_A, 4) == 0);
+    }
+
     blob[2] = 99;
     CHECK(codebook_deserialize(&out, blob, n) == CODEBOOK_ERR_VERSION);
     blob[2] = CODEBOOK_VERSION;
     blob[0] = 'X';
     CHECK(codebook_deserialize(&out, blob, n) == CODEBOOK_ERR_BLOB);
     blob[0] = CODEBOOK_MAGIC0;
-    CHECK(codebook_deserialize(&out, blob, n - 1) == CODEBOOK_ERR_BLOB);
+    /* 允许旧/短长度,但必须装得下 header + count 条记录。 */
+    CHECK(codebook_deserialize(&out, blob, 4 + 2 * sizeof(codebook_rec_t) - 1) == CODEBOOK_ERR_BLOB);
+    CHECK(codebook_deserialize(&out, blob, 3) == CODEBOOK_ERR_BLOB);
 }
 
 static void test_v1_migration(void)

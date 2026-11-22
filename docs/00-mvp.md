@@ -213,7 +213,7 @@ FD F3 03 55 55 03 3C DF  FD F3 03 55 55 03 4B DF
 | # | 验收 | 通过标准 | 状态 |
 |---|---|---|---|
 | AC-1 | 构建 | `pio run -e esp32c3` 成功 | ✅ 主机 |
-| AC-2 | 主机单测 | `tools/host_test.sh` 全过:协议 76 + 码库 620 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12 | ✅ 主机 |
+| AC-2 | 主机单测 | `tools/host_test.sh` 全过:协议 76 + 码库 624 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12 | ✅ 主机 |
 | AC-3 | 上电自检 | 串口出现 `# RF-Lab fw=0.7.1`、端口状态与 `# oled …: ok` | ✅ 2026-11-21(0.7.1 构建) |
 | AC-4 | 学码 | 按原遥控器 → `LEARN id=N band=315M code=…` | ✅ 3 个键;另有 2 条 433M 未解释(§11.2) |
 | AC-5 | 掉电保持 | 复位/断电再上电,`LIST` 仍有该码 | ✅ 跨重烧复位;真断电(拔 USB)未单独做 |
@@ -270,7 +270,7 @@ AC-6 的「原接收器动作」由**更硬的证据**替代:**学习型遥控�
 | 上机记录(2026-11-15 0.4.0,逐条命令与观察) | [`evidence/2026-11-15-bringup.md`](evidence/2026-11-15-bringup.md) |
 | **OLED + 长发/停止修正**(2026-11-15 0.5.0) | [`evidence/2026-11-15-oled.md`](evidence/2026-11-15-oled.md) |
 | **跨平台 UI**(2026-11-15 0.6.0) | [`evidence/2026-11-15-ui.md`](evidence/2026-11-15-ui.md) |
-| 主机单测 | `tools/host_test.sh`(协议 76 + 码库 620 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) |
+| 主机单测 | `tools/host_test.sh`(协议 76 + 码库 624 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) |
 | 构建 | `cd firmware && pio run -e esp32c3` |
 
 ## 10. 与旧版的关系
