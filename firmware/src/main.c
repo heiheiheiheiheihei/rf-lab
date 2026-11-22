@@ -406,6 +406,23 @@ void app_copy_state(char *out, size_t cap)
     xSemaphoreGive(s_snap_lock);
 }
 
+const char *app_lock_codes(void)
+{
+    if (!s_snap_lock) {
+        return NULL;
+    }
+    ensure_snapshots();
+    xSemaphoreTake(s_snap_lock, portMAX_DELAY);
+    return s_codes_json;
+}
+
+void app_unlock_codes(void)
+{
+    if (s_snap_lock) {
+        xSemaphoreGive(s_snap_lock);
+    }
+}
+
 void app_copy_codes(char *out, size_t cap)
 {
     if (!out || cap == 0) {

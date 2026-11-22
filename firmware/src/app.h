@@ -30,6 +30,10 @@ int app_submit_cmd(const char *line, app_src_t src);
  * 调用方应传 APP_*_MAX。截断只会在异常情况下发生。 */
 void app_copy_state(char *out, size_t cap);
 void app_copy_codes(char *out, size_t cap);
+/* SSE 大快照:返回 s_codes_json 的只读指针,必须成对调用 lock/unlock
+ * (期间不要做长阻塞);用于避免再复制一份 12KB。 */
+const char *app_lock_codes(void);
+void app_unlock_codes(void);
 uint32_t app_state_seq(void);
 uint32_t app_codes_seq(void);
 

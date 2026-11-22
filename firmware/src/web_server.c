@@ -343,7 +343,6 @@ static bool sse_send(httpd_req_t *req, const char *event, const char *data)
 typedef struct {
     char state[APP_STATE_JSON_MAX];
     char line[APP_STATE_JSON_MAX + 96];
-    char codes[APP_CODES_JSON_MAX + 128];
     char ev[LINK_LINE_MAX];
 } sse_ctx_t;
 
@@ -410,18 +409,24 @@ static void sse_task(void *arg)
         }
 
         if (app_codes_seq() != cd_seq) {
-            /* 原地拼信封,少一份 12KB 的 ctx->line;低内存时 SSE calloc 才不会 OOM。 */
-            app_copy_codes(ctx->codes, APP_CODES_JSON_MAX);
-            size_t clen = strlen(ctx->codes);
-            int h = snprintf(ctx->line, sizeof(ctx->line),
-                             "{\"t\":\"codes\",\"seq\":%lu,\"items\":",
-                             (unsigned long)app_codes_seq());
-            if (h <= 0 || (size_t)h + clen >= sizeof(ctx->codes)) {
+            /* 直接流式发送 main 的只读快照,ctx 里不再放 12KB 副本:
+             * 低内存时 SSE calloc 才不会 OOM。 */
+            const char *codes = app_lock_codes();
+            if (!codes) {
                 goto done;
             }
-            memmove(ctx->codes + h, ctx->codes, clen + 1);
-            memcpy(ctx->codes, ctx->line, (size_t)h);
-            if (!sse_send(req, "codes", ctx->codes)) {
+            char hdr[96];
+            int h = snprintf(hdr, sizeof(hdr),
+                             "{\"t\":\"codes\",\"seq\":%lu,\"items\":",
+                             (unsigned long)app_codes_seq());
+            bool ok = h > 0 &&
+                      httpd_resp_send_chunk(req, "event: codes\ndata: ",
+                                            HTTPD_RESP_USE_STRLEN) == ESP_OK &&
+                      httpd_resp_send_chunk(req, hdr, (size_t)h) == ESP_OK &&
+                      httpd_resp_send_chunk(req, codes, HTTPD_RESP_USE_STRLEN) == ESP_OK &&
+                      httpd_resp_send_chunk(req, "}\n\n", 3) == ESP_OK;
+            app_unlock_codes();
+            if (!ok) {
                 goto done;
             }
             cd_seq = app_codes_seq();
