@@ -17,6 +17,9 @@ sdkconfig.esp32*
 *.elf
 *.map
 
+# 固件发布物(CI 从最新 Release 注入 site/firmware/,不提交)
+site/firmware/
+
 # 依赖
 node_modules/
 /dist/

@@ -47,6 +47,8 @@ rflab-tui --port /dev/ttyACM0          # USB 串口回退
 
 ## 未验证
 
+> 完整登记、优先级与 0.7.2 退出条件见 [`../docs/02-plan.md`](../docs/02-plan.md) §3。
+
 TUI 的解析/键位有主机单测(`tools/test_tui.py`),**uConsole 实机 1280×720 的
 字体/中文宽度/`Ctrl+Alt+R` 绑定尚未在真机上验收**。首次上机请先 `--mock` 看布局,
 再连设备;如果 `labwc` 的 `lxterminal` 不在 PATH,把 `labwc-keybind.xml` 里的命令

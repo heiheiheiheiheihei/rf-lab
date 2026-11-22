@@ -131,29 +131,35 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 |---|---|
 | 构建(ESP32-C3,0.7.1) | ✅ 主机;Flash 1,098,608B / 2,031,616B OTA 槽;RAM 73,540B(2026-11-21,码库 v2) |
 | 主机单测(协议 76 + 码库 218 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) | ✅ 主机 |
-| 上机:学码 / 存码 / 发射 / 改波特率 | ✅ 2026-11-15(0.5.0 证据仍有效) |
+| 上机:学码 / 存码 / 改波特率 | ✅ 2026-11-15(0.5.0 证据) |
+| 上机:发射 `SEND/LONG/STOP` | ⚠️ 2026-11-15 有 `F0/FE/FF`;2026-11-21 模块命令方向 0 应答;2026-11-22 `MODE` 已回 `F2`,但 **`SEND` 未复测** |
 | 上机:Web HTTP/SSE/命令 | ✅ 2026-11-15,设备内 `WEBTEST` hello/state/events 200 + POST 202 |
 | 上机:Wi-Fi STA 接 LAN | ✅ **真实** `SSID-A` → `192.168.5.117`;主机 ping/HTTP/SSE/POST 全通;STA 模式基础自检 18/18 |
 | 上机:Wi-Fi AP 回退 | ✅ 15/15:有凭据 STA-only 启动(AP 关)→15s 超时 AP 回退 |
 | 上机:真实浏览器 | ✅ Chromium 打开 `http://192.168.5.117/`,200,`NET LAN`,无 console error |
 | 上机:重启 AP 关闭 | ✅ `mode=sta ap_on=0`,LAN 仍可访问 |
 | 上机:AP 内配网 / CLEAR | ✅ 设备内;WebTest 经 AP 200,`WIFI CLEAR` 回 AP |
-| 上机:BLE 广播 | ✅ `INFO` `adv=yes`;✅ **真机 BLE 连接/鉴权/命令回显/码表 9 条/状态栏刷新**(2026-11-21);⏳ nRF 逐帧抓包未做 |
-| Android APK | ✅ **0.7.1 已发** [Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1);CI 1,050,176B/versionCode 3/release 签名 v2;✅ 真机安装/自更新(2026-11-22);0.7.1 APK 的 BLE 码库写入 ✅ |
+| 上机:BLE 广播 | ✅ `INFO` `adv=yes`;✅ **真机 BLE 连接/鉴权/命令回显/码表 9 条/状态栏刷新**(2026-11-21);⏳ BLE `SEND`、nRF 逐帧抓包未做 |
+| Android APK | ✅ **0.7.1 已发** [Release](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1);CI 1,050,176B/versionCode 3/release 签名 v2;✅ 真机安装/自更新(2026-11-22);0.7.1 APK 的 BLE 码库写入 ✅;⏳ BLE `SEND` |
 | APP 自更新(2026-11-21) | ✅ 查 Release + 一键更新/忽略此版本 + SHA-256/签名自检 + 系统安装器;主机 36 checks + 真实 Release 资产校验;✅ v0.7.0/v0.7.1 已发布;✅ **真机弹窗/下载/系统安装器/覆盖安装**(2026-11-22) |
 | BLE 下行分帧(0.7.1) | ✅ 构建 + 主机 9418 checks;✅ **手机 BLE 端到端**(0 条 JSON 警告、命令回显、状态栏/码表刷新);⏳ nRF 逐帧 `0A` 未抓包;证据 [`2026-11-21-ble-framing.md`](docs/evidence/2026-11-21-ble-framing.md) |
 | 码库 v2(0.7.1) | ✅ 真机 9 条码 OTA 迁移(`LIST` 逐字节一致)、UTF-8 名称/分组/符号、手工新建、编辑 band/code、删除、重启保留;✅ Web 1440/390 + APK 0.7.1 发布;✅ **BLE NAME/GROUP/SYM/EDIT 写入**(2026-11-22);证据 [`2026-11-21-codebook.md`](docs/evidence/2026-11-21-codebook.md) · [`2026-11-22-app-ble.md`](docs/evidence/2026-11-22-app-ble.md) |
 | uConsole TUI | ✅ 主机解析/键位/PTY 布局;⏳ 真机未测 |
 | Web UI refresh(2026-11-16) | ✅ 构建 + mock 布局;gzip 15,503B;⏳ 新皮肤未上机 |
-| Web/固件 UI 视觉统一(2026-11-21) | ✅ 构建 + 主机 + mock 布局(1440/1280/390);gzip 16,745B;固件 1,069,052B;⏳ **新皮肤未上机** |
+| Web/固件 UI 视觉统一(2026-11-21) | ✅ 构建 + 主机 + mock 布局(1440/1280/390);gzip 16,745B;固件 1,069,052B;⏳ 全量皮肤/硬件模态待回归(0.7.1 码库页已真机截图) |
 | 上机:双槽 OTA(2026-11-21) | ✅ A→B→A→final 三次 OTA(ui 62111123);错 token 401、坏镜像拒绝、中途断流仍运行旧槽;NVS 9 条码/Wi-Fi 保留;Web `U` 面板构建;⏳ **浏览器上传未回归** |
+| UI 一键固件更新(0.7.3 规划) | ○ **未实现**;已定 **BOOT 确认 + GitHub Pages 固件源 + 独立 0.7.3 发版**;浏览器查 manifest → 下载/设备 SHA-256/上传;APP/BLE 不支持;见 [`docs/01-ui.md`](docs/01-ui.md) §3.4.1 |
 | 官网 / 配装台(静态 + 交互 demo) | ✅ 2026-11-21 主机 Chromium 1440×1250 / 390×844,无 console error;`site_check.py` 通过;iframe 零 `/api`、零外部请求 |
 | 官网交互式终端(2026-11-21) | ✅ 本地 Chromium:ARM/SEND/LONG/STOP/LEARN/RESET + 三视口;21/21 + 移动 12/12;iframe 零 `/api`、零外部请求;**✅ Pages 已部署**(资源 200);⏳ 线上交互未回归 |
 | 官网线上(GitHub Pages) | ✅ 2026-11-21 已部署交互 demo;<https://heiheiheiheiheihei.github.io/rf-lab/>;`terminal.html` / `terminal-demo.js` 均 200 |
 | 官网 APK 下载入口 | ✅ 导航 / 首屏 / 页脚指向 `releases/latest/download/rf-lab-android.apk`;⏳ 真机下载安装未测 |
 | 路线图:MQTT / HA / 多模块 | ○ **未实现**,接口草案见官网 §04 |
 | 上机:距离 / 长发时接收器是否真持续 | ⏳ 未测,见规格 §7 |
-| 上机证据 | [`2026-11-22-app-ble.md`](docs/evidence/2026-11-22-app-ble.md) · [`2026-11-21-codebook-release.md`](docs/evidence/2026-11-21-codebook-release.md) · [`2026-11-21-codebook.md`](docs/evidence/2026-11-21-codebook.md) · [`2026-11-21-app-update.md`](docs/evidence/2026-11-21-app-update.md) · [`2026-11-21-ota.md`](docs/evidence/2026-11-21-ota.md) · [`2026-11-21-android-release.md`](docs/evidence/2026-11-21-android-release.md) · [`2026-11-15-bringup.md`](docs/evidence/2026-11-15-bringup.md) · [`2026-11-15-oled.md`](docs/evidence/2026-11-15-oled.md) · [`2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md) |
+| 上机证据 | [`2026-11-22-device-audit.md`](docs/evidence/2026-11-22-device-audit.md) · [`2026-11-22-app-ble.md`](docs/evidence/2026-11-22-app-ble.md) · [`2026-11-21-codebook-release.md`](docs/evidence/2026-11-21-codebook-release.md) · [`2026-11-21-codebook.md`](docs/evidence/2026-11-21-codebook.md) · [`2026-11-21-app-update.md`](docs/evidence/2026-11-21-app-update.md) · [`2026-11-21-ota.md`](docs/evidence/2026-11-21-ota.md) · [`2026-11-21-android-release.md`](docs/evidence/2026-11-21-android-release.md) · [`2026-11-15-bringup.md`](docs/evidence/2026-11-15-bringup.md) · [`2026-11-15-oled.md`](docs/evidence/2026-11-15-oled.md) · [`2026-11-15-ui.md`](docs/evidence/2026-11-15-ui.md) · [`2026-11-15-wifi.md`](docs/evidence/2026-11-15-wifi.md) · [`2026-11-15-wifi-lan.md`](docs/evidence/2026-11-15-wifi-lan.md) |
+
+> ⚠️ **当前待复测(2026-11-22)**:设备 `build=511afca+dirty`(非 `v0.7.1` tag),码库 13 条
+> (含 4 条 433M 幻码);UART `MODE` 已回 `F2`,但空口 `SEND` 未复测。
+> 完整测试登记、优先级与 0.7.2 退出条件见 [`docs/02-plan.md`](docs/02-plan.md)。
 
 ## 范围
 
@@ -181,12 +187,16 @@ Wi-Fi 回退上机自检:`python3 tools/wifi_selftest.py --port /dev/ttyACM0`(15
 | 版本 | 目标 | 状态 |
 |---|---|---|
 | 0.7.1 | 码库 v2:名称/符号/单分组/原始参数编辑/手工建码 | ✅ 实现 + 真机验证 + **已发版** |
-| 0.8.0 | 模块抽象层 + SPI 背板;CC1101 / NRF24L01 / SI4463 / LR1121 | ○ 设计目标 |
+| 0.7.2 | 验证闭合:测试工具/CI、空口/BLE/OTA 失败路径、发布可追溯 | ○ 计划,见 [`docs/02-plan.md`](docs/02-plan.md) |
+| 0.7.3 | UI 一键固件更新:查 Pages manifest、BOOT 确认、下载/校验/上传 | ○ 规划,见 [`docs/01-ui.md`](docs/01-ui.md) §3.4.1 |
+| 0.8.0 | 模块抽象层 + SPI 背板;CC1101 首发,NRF24/SI4463/LR1121 分批(0.8.x) | ○ 设计目标 |
 | 0.9.0 | 本地 MQTT bridge + Home Assistant Discovery | ○ 设计目标 |
 | 1.0 | 多模块外壳 / 小批量 | ○ 设计目标 |
 
 > 官网 §04 的 MQTT / HA 拓扑与 topic 是**接口草案**,不是可售能力。
 > 现在只有 HTTP/SSE + BLE/串口;不要提前写“支持 Home Assistant”。
+> **测试债务、优先级、0.7.2/0.8.0 退出条件与执行顺序见 [`docs/02-plan.md`](docs/02-plan.md);
+> 新会话交接见 [`docs/03-execution.md`](docs/03-execution.md)。**
 
 ## UI 截图
 

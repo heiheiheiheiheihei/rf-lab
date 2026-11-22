@@ -1,0 +1,11 @@
+# 2026-11-22 CORS check: GitHub Pages vs Release asset
+# 目的:决定 UI 一键更新由浏览器从哪拉固件
+
+$ curl -sSI https://heiheiheiheiheihei.github.io/rf-lab/ | grep -i '^access-control-allow-origin'
+access-control-allow-origin: *
+
+$ curl -sSI https://heiheiheiheiheihei.github.io/rf-lab/assets/terminal-demo.js | grep -i '^access-control-allow-origin'
+access-control-allow-origin: *
+
+$ ALL_PROXY=socks5h://127.0.0.1:10808 curl -sSI -L https://github.com/heiheiheiheiheihei/rf-lab/releases/download/v0.7.1/SHA256SUMS.txt | grep -i '^access-control-allow-origin'
+(none)

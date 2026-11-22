@@ -134,6 +134,9 @@ BLE 参数(与固件一致):
 
 ## 已验证 / 未验证
 
+> 完整登记、优先级与 0.7.2 退出条件见 [`../docs/02-plan.md`](../docs/02-plan.md) §3;
+> 本表只保留 Android 视角。
+
 | 项 | 状态 |
 |---|---|
 | `assembleRelease` + 签名 | ✅ 2026-11-21(0.7.1),1,050,176B,versionCode 3,release 密钥 v2 签名,`apksigner verify` 通过;0.7.0 为 1,027,080B |

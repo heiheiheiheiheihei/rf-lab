@@ -44,6 +44,10 @@ python3 -m http.server 8088 -d site
 用 `releases/latest/download/<固定文件名>` 而不是写死 tag:每次发版覆盖同名资产,官网按钮
 无需改动。APK 由 `.github/workflows/android-release.yml` 在 `v*` 标签上构建、验签后上传;
 **真机安装/自更新/BLE 已验(2026-11-22)**;页面状态板对应行已改为 `●`;uConsole 仍保持 `◐`。
+发射行在 2026-11-21 后改为 `◐ 待复测`(UART 命令方向已恢复,`SEND` 未复测);
+完整测试登记与 0.7.2 退出条件见 [`../docs/02-plan.md`](../docs/02-plan.md)。
+`0.7.3` 的 UI 一键固件更新仍是规划,状态板标 `○ 规划`;已定 **BOOT 确认 + GitHub Pages
+固件源 + 独立 0.7.3 发版**,契约见 [`../docs/01-ui.md`](../docs/01-ui.md) §3.4.1。
 
 ## 预算与配装
 

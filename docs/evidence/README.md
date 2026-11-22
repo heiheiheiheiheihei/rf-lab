@@ -16,9 +16,11 @@
 | [`2026-11-21-wiring-diagram.md`](2026-11-21-wiring-diagram.md) | `gen_wiring` + `build_web` + `site_check` + `host_test` + 本地 Chromium/CDP 1440×900 / 390×844 | 表驱动抽象接线图(宽/竖/两张引脚图);代码头/文档表/SVG 同源;零外部请求;新资源**未上机** |
 | [`2026-11-21-ota.md`](2026-11-21-ota.md) | 串口 `OTA` + `tools/ota.py`/curl 真机;A→B→A→final;401/500/断流 | 4MB 单 app 迁到 `otadata+双1.94MB槽`;三次 Wi-Fi OTA;错 token/坏镜像/断流不换槽;NVS 9 条码保留;**崩溃回滚未实测** |
 | [`2026-11-21-send-no-ack.md`](2026-11-21-send-no-ack.md) | 真机串口(115200)+ `MON`/`INFO`/`RECOVER` 逐条命令 | `SEND` 全 WARN 的根因:模块命令方向 0 应答、`acks=0`;排除 433M/超时窗口/波特率;**GPIO3→RXD 待量** |
+| [`2026-11-22-device-audit.md`](2026-11-22-device-audit.md) | 只读 `INFO`/`LIST`/`STATE` + 非射频 `MODE single`;未发 RF | 当前设备 UART 命令方向已回 `F2`(`acks` 0→1);但空口 `SEND` 未复测;设备是 `511afca+dirty`,码库 13 条(含 4 条 433M 幻码) |
+| [`2026-11-22-pages-cors.log`](2026-11-22-pages-cors.log) | `curl -I` 对比 GitHub Pages 与 Release 资产的 CORS 头 | Pages 返回 `access-control-allow-origin: *`;Release 资产**没有** ACAO → 浏览器一键更新只能从 Pages 拉固件 |
 | [`2026-11-15-ui-serial.log`](2026-11-15-ui-serial.log) | `tools/device_selftest.py --tx` 串口全文 | 18 项上机检查的原始输出 |
 | [`ui-desktop-1440.png`](ui-desktop-1440.png) 等 | Playwright + mock API | 0.6.0 旧皮肤桌面/uConsole/手机布局;不是设备截图 |
-| [`ui-2026-11-16-desktop.png`](ui-2026-11-16-desktop.png) 等 | [`tools/ui_mock_server.py`](../tools/ui_mock_server.py) + Chromium | 2026-11-16 品牌/频谱带布局;不是设备截图;新皮肤未上机 |
+| [`ui-2026-11-16-desktop.png`](ui-2026-11-16-desktop.png) 等 | [`tools/ui_mock_server.py`](../../tools/ui_mock_server.py) + Chromium | 2026-11-16 品牌/频谱带布局;不是设备截图;新皮肤未上机 |
 | [`ui-2026-11-16b-desktop.png`](ui-2026-11-16b-desktop.png) 等 | 同上,字标改为英文连字符 `RF-LAB` | 历史展示用图;仍是 mock,新皮肤未上机 |
 | [`ui-2026-11-21-desktop.png`](ui-2026-11-21-desktop.png) 等 | 同上 + CDP 固定视口 1440×900 / 1280×720 / 390×844 | 设备端 mock 对照图;官网 §03 已改用交互 demo;新皮肤未上机 |
 | [`site-demo-2026-11-21-desktop.png`](site-demo-2026-11-21-desktop.png) 等 | 官网页面 + CDP:1440×1250 / 390×844 / 独立 demo 1440×900 | 官网终端区真实 UI + 本地模拟;不是设备截图 |
