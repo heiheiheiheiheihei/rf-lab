@@ -61,6 +61,8 @@ public class UpdateFeedTest {
         String hex = "739afa68e675bbca0f4452d66389eaa7d33babb46842d0d4f94886ca55d6ba1d";
         assertEquals(hex, UpdateFeed.hashFor(hex + "  rf-lab-watch.apk\n", "rf-lab-watch.apk"));
         assertEquals(hex, UpdateFeed.hashFor(hex + " *rf-lab-watch.apk\n", "rf-lab-watch.apk"));
+        assertEquals(hex, UpdateFeed.hashFor(hex + "  ./rf-lab-watch.apk\n",
+                "rf-lab-watch.apk"));
         assertNull(UpdateFeed.hashFor(hex + "  other.apk\n", "rf-lab-watch.apk"));
         assertNull(UpdateFeed.hashFor("not-a-hash  rf-lab-watch.apk\n", "rf-lab-watch.apk"));
         assertNull(UpdateFeed.hashFor("", "rf-lab-watch.apk"));

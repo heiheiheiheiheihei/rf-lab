@@ -109,6 +109,11 @@ final class UpdateFeed {
             if (name.startsWith("*")) {
                 name = name.substring(1);
             }
+            // sha256sum ./*.apk writes "./name"; the release pipeline now
+            // writes "name", accept both.
+            while (name.startsWith("./")) {
+                name = name.substring(2);
+            }
             if (apkName.equals(name)) {
                 return hex.toLowerCase(Locale.US);
             }
