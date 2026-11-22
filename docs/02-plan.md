@@ -147,8 +147,8 @@ UI 项必须写视口、浏览器与 console 结果。
 | CI-04 | Release 固件资产 | Release 只有 APK | 附 `firmware.bin` + sha256 + `build=`;与 tag 一致 | A |
 
 > **CI-01/CI-02 进展(2026-11-22)**:`.github/workflows/ci.yml` 已在 `master` 绿
-> ([run 44998608006](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/44998608006),
-> 提交 `d447494`):host(含 `SAN=1`)、static、`pio run -e esp32c3` 三个 job 全过。
+> ([run 45007429077](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45007429077),
+> 提交 `479d6db`):host(含 `SAN=1`)、static、`pio run -e esp32c3` 三个 job 全过。
 > **「失败阻断合并」尚未生效**:`master` 无 branch protection/required checks。
 > 见 [`evidence/2026-11-22-ci-gate.md`](evidence/2026-11-22-ci-gate.md)。
 

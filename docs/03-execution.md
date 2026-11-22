@@ -36,7 +36,7 @@
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
 | 码库 | 13:46 为 **32/32**;16:52 按协议 `DEDUP` 后 **21/64**(11 条只是 osc 不同,已合并);`bad=0`(本轮未接收),见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
 | 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |
-| CI | `200cc4e` 已在临时分支 `ci/codebook-protocol` 跑绿(run 45004831052,含 7.1.3 固件构建);**master 未推送**;仍无 required checks |
+| CI | `master` `479d6db` 全绿(run 45007429077:host+SAN / static / 7.1.3 固件);仍无 required checks |
 | Android | 本机无 JDK/SDK,APK 只能靠 CI;v0.7.1 Release 资产 1,050,176 B |
 
 关键证据:
