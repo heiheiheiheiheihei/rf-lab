@@ -29,7 +29,7 @@
 | 项 | 状态 |
 |---|---|
 | Git | 本地 `200cc4e`(协议去重,未推送);`origin/master` = `89ad522`(CI 绿) |
-| 主机 | `host_test.sh` **11,201 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
+| 主机 | `host_test.sh` **11,210 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
 | 固件构建 | **1,099,650 B / 2,031,616 B 槽(54.1%)**;RAM **88,692 B / 327,680 B(27.1%)** |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
 | 设备 | `/dev/ttyACM0`,已全量刷 **`build=c8e93d9` / `ui=d0824ba5` / `ota_slot=0`**;码库 21/64,heap≈34.7KB;自检 26/0/1,见 [容量上机](evidence/2026-11-22-capacity-64.md) |
@@ -108,7 +108,7 @@
 ## 5. 验收命令与证据
 
 ```bash
-./tools/host_test.sh                 # 协议 76 + 码库 368 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh                 # 协议 76 + 码库 368 + 事件环 9427 + OTA 41 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh           # ASan/UBSan
 ./tools/app_update_test.sh           # 36 checks
 python3 tools/gen_wiring.py --check

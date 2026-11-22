@@ -183,6 +183,33 @@ static void test_frame(void)
     CHECK(link_frame_fill("a", 1, 20, 0, NULL, sizeof(small)) == 0);
 }
 
+static void test_codes_envelope(void)
+{
+    char buf[128];
+    const char *json = "[{\"id\":1}]";
+    size_t jlen = strlen(json);
+    memcpy(buf, json, jlen);
+
+    size_t n = link_codes_wrap(buf, sizeof(buf), 0, jlen, 7);
+    const char *want = "{\"t\":\"codes\",\"seq\":7,\"items\":[{\"id\":1}]}";
+    CHECK(n == strlen(want));
+    CHECK(strcmp(buf, want) == 0);
+    CHECK(buf[n] == 0);
+
+    /* 头长度由同一个函数给出,BLE/SSE 不允许各自手写。 */
+    char hdr[48];
+    CHECK(link_codes_header(hdr, sizeof(hdr), 7) == strlen("{\"t\":\"codes\",\"seq\":7,\"items\":"));
+    CHECK(strcmp(hdr, "{\"t\":\"codes\",\"seq\":7,\"items\":") == 0);
+
+    /* 容量不足时必须失败,不能返回半截 JSON。 */
+    char small[24];
+    memcpy(small, "[1]", 4);
+    CHECK(link_codes_wrap(small, sizeof(small), 0, 3, 1) == 0);
+    CHECK(link_codes_wrap(NULL, 10, 0, 3, 1) == 0);
+    CHECK(link_codes_wrap(buf, sizeof(buf), 0, 0, 1) == 0);
+    CHECK(link_codes_header(NULL, 10, 1) == 0);
+}
+
 int main(void)
 {
     test_basic();
@@ -190,6 +217,7 @@ int main(void)
     test_wrap_and_cursors();
     test_escape();
     test_frame();
+    test_codes_envelope();
 
     printf("%d checks, %d failure(s)\n", g_checks, g_fails);
     return g_fails == 0 ? 0 : 1;

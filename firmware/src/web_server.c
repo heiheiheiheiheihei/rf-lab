@@ -415,14 +415,12 @@ static void sse_task(void *arg)
             if (!codes) {
                 goto done;
             }
-            char hdr[96];
-            int h = snprintf(hdr, sizeof(hdr),
-                             "{\"t\":\"codes\",\"seq\":%lu,\"items\":",
-                             (unsigned long)app_codes_seq());
+            char hdr[48];
+            size_t h = link_codes_header(hdr, sizeof(hdr), app_codes_seq());
             bool ok = h > 0 &&
                       httpd_resp_send_chunk(req, "event: codes\ndata: ",
                                             HTTPD_RESP_USE_STRLEN) == ESP_OK &&
-                      httpd_resp_send_chunk(req, hdr, (size_t)h) == ESP_OK &&
+                      httpd_resp_send_chunk(req, hdr, h) == ESP_OK &&
                       httpd_resp_send_chunk(req, codes, HTTPD_RESP_USE_STRLEN) == ESP_OK &&
                       httpd_resp_send_chunk(req, "}\n\n", 3) == ESP_OK;
             app_unlock_codes();

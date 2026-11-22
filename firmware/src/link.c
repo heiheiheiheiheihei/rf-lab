@@ -190,3 +190,33 @@ size_t link_frame_fill(const char *json, size_t len, size_t chunk, size_t offset
     }
     return n;
 }
+
+size_t link_codes_header(char *out, size_t cap, uint32_t seq)
+{
+    if (!out || cap == 0) {
+        return 0;
+    }
+    int n = snprintf(out, cap, "{\"t\":\"codes\",\"seq\":%lu,\"items\":",
+                     (unsigned long)seq);
+    if (n <= 0 || (size_t)n >= cap) {
+        return 0;
+    }
+    return (size_t)n;
+}
+
+size_t link_codes_wrap(char *buf, size_t cap, size_t json_off, size_t json_len, uint32_t seq)
+{
+    char hdr[48];
+    size_t h = link_codes_header(hdr, sizeof(hdr), seq);
+    if (!buf || h == 0 || json_len == 0) {
+        return 0;
+    }
+    if (json_off + json_len > cap || h + json_len + 2 > cap) {
+        return 0;
+    }
+    memmove(buf + h, buf + json_off, json_len);
+    memcpy(buf, hdr, h);
+    buf[h + json_len] = '}';
+    buf[h + json_len + 1] = 0;
+    return h + json_len + 1;
+}

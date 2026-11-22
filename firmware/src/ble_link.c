@@ -445,20 +445,14 @@ static void tx_task(void *param)
                 }
 
                 if (app_codes_seq() != cd_seq) {
-                    /* 直接在 s_codes 里拼信封,避免再开一份 12KB 的 s_line:
-                     * 低内存时 SSE/HTTP 会因堆不足而 503。 */
+                    /* 信封由 link_codes_wrap() 生成(带结尾 '}'),避免手写漏括号;
+                     * 原地包装,不再开第二份 12KB 缓冲。 */
                     app_copy_codes(s_codes, APP_CODES_JSON_MAX);
                     size_t clen = strlen(s_codes);
-                    char hdr[96];
-                    int h = snprintf(hdr, sizeof(hdr),
-                                     "{\"t\":\"codes\",\"seq\":%lu,\"items\":",
-                                     (unsigned long)app_codes_seq());
-                    if (h > 0 && (size_t)h + clen < sizeof(s_codes)) {
-                        memmove(s_codes + h, s_codes, clen + 1);
-                        memcpy(s_codes, hdr, (size_t)h);
-                        if (notify_message(s_codes, (size_t)h + clen)) {
-                            cd_seq = app_codes_seq();
-                        }
+                    size_t n = link_codes_wrap(s_codes, sizeof(s_codes), 0, clen,
+                                               app_codes_seq());
+                    if (n > 0 && notify_message(s_codes, n)) {
+                        cd_seq = app_codes_seq();
                     }
                 }
             }

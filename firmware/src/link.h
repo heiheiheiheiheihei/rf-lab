@@ -50,4 +50,15 @@ size_t link_json_escape(const char *src, char *dst, size_t cap);
 size_t link_frame_fill(const char *json, size_t len, size_t chunk, size_t offset,
                        uint8_t *out, size_t cap);
 
+/*
+ * codes 快照信封(SSE/BLE 共用):
+ *   {"t":"codes","seq":N,"items":<json>}
+ * link_codes_header() 只写头,返回头长度;link_codes_wrap() 把 buf+json_off 的
+ * JSON 前移,补上头和结尾 '}',返回总长度(不含 NUL)。两者都返回 0 表示失败。
+ * 客户端按整行 JSON 解析,少一个 '}' 就会整块不显示 —— 2026-11-22 的
+ * APP 码库空白就是这里漏了闭合括号,所以信封由纯函数生成并进主机测试。
+ */
+size_t link_codes_header(char *out, size_t cap, uint32_t seq);
+size_t link_codes_wrap(char *buf, size_t cap, size_t json_off, size_t json_len, uint32_t seq);
+
 #endif /* RFLAB_LINK_H */
