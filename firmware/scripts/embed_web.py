@@ -16,6 +16,28 @@ root = project.parent
 script = root / "tools" / "build_web.py"
 wiring = root / "tools" / "gen_wiring.py"
 
+def git(*args: str) -> str:
+    try:
+        return subprocess.check_output(
+            ["git", *args], cwd=str(root), text=True, stderr=subprocess.DEVNULL
+        ).strip()
+    except Exception:
+        return ""
+
+
+# Build fingerprint = commit + SOURCE dirtiness, evaluated before build_web.py
+# rewrites generated assets. CI's gzip output can differ from the committed
+# firmware/src/web/index.html.gz (zlib version), which used to make a clean tag
+# build report "+dirty"; generated files are excluded from the check anyway.
+sha = git("rev-parse", "--short=7", "HEAD") or "nogit"
+dirty = git("status", "--porcelain", "--",
+            "web/index.html", "web/app.css", "web/app.js",
+            "firmware/src",
+            ":(exclude)firmware/src/web/index.html.gz",
+            ":(exclude)firmware/src/web/web_ui_gz.S",
+            "tools/build_web.py")
+build_id = sha + ("+dirty" if dirty else "")
+
 # Fail the build if the JSON wiring source, main.c and generated header drift.
 subprocess.check_call([sys.executable, str(wiring), "--check"], cwd=str(root))
 
@@ -39,19 +61,6 @@ asm.write_text(
 )
 print(f"[web] embedded asm -> {asm}")
 
-
-def git(*args: str) -> str:
-    try:
-        return subprocess.check_output(
-            ["git", *args], cwd=str(root), text=True, stderr=subprocess.DEVNULL
-        ).strip()
-    except Exception:
-        return ""
-
-
-sha = git("rev-parse", "--short=7", "HEAD") or "nogit"
-dirty = git("status", "--porcelain", "--", "web", "firmware/src", "tools/build_web.py")
-build_id = sha + ("+dirty" if dirty else "")
 
 page = (root / "web" / "dist" / "index.html").read_text(encoding="utf-8")
 m = re.search(r'name="rflab-ui" content="([0-9a-f]{8})"', page)
