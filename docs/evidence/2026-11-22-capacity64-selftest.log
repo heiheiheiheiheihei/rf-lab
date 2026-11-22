@@ -230,3 +230,235 @@ OK webtest 200 http://192.168.5.125/api/state -> {"fw":"0.7.1","proto":1,"uptime
 OK webtest 503 http://192.168.5.125/api/events -> oom
 OK webtest POST 202 /api/cmd -> DISP TEST 1
 OK disp=test 1s (DISP ON to leave test)
+
+# RF-Lab on-device self-test (tools/device_selftest.py)
+# 2026-11-22 17:18:54 +0800 port=/dev/ttyACM0 baud=115200 tx=0 repeat=1
+
+$ RESET
+OK reset
+ESP-ROM:esp32c3-api1-20210207
+Build:Feb  7 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xe (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4038bf18
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fcd5820,len:0x1588
+load:0x403cbf10,len:0xc3c
+load:0x403ce710,len:0x3030
+entry 0x403cbf10
+
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
+# stored 21 code(s)
+# build=85cdeff ui=d0824ba5 ota_slot=0 pending_verify=0
+# net mode=connecting ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1 sta=- sta_ip=
+# ble name=RF-Lab-1B59 pin=8729 (serial PIN; also OLED 5s)
+# web: STA connecting; AP fallback opens after 15s if it fails
+# press a remote button to learn; HELP for commands
+
+$ INFO
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# build=85cdeff ui=d0824ba5
+# ota slot=0 next=-1 state=idle pct=0 pending=0
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=1 err=0 last_us=8718 max_us=8718
+# net mode=connecting ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=- sta_ip= rssi=0
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+# codebook ver=2 count=21/64 migrated=no
+# heap free=34836 min=33052
+OK stored=21/64 rx_bytes=0 frames=0 acks=0 dups=0 bad=0 stray=0 resync=0
+# net LAN OK 192.168.5.125
+
+$ INFO
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# build=85cdeff ui=d0824ba5
+# ota slot=0 next=-1 state=idle pct=0 pending=0
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=2 err=0 last_us=8723 max_us=8723
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=Mark sta_ip=192.168.5.125 rssi=-32
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+# codebook ver=2 count=21/64 migrated=no
+# heap free=34724 min=27680
+OK stored=21/64 rx_bytes=0 frames=0 acks=0 dups=0 bad=0 stray=0 resync=0
+
+$ LIST
+ 1  315M 5555033C
+ 2  433M 5555034B
+ 3  433M 1555304B
+ 4  433M B6A56252
+ 5  433M 85D7384B
+ 6  433M 8556304A
+ 7  433M 8556344A
+ 8  433M 8556384A
+ 9  433M 8F76304A
+10  433M 855E304A
+11  433M 2F0B0E4A
+12  433M 52BB184A
+13  433M 7477304A
+14  433M E50D9A63
+15  433M 8F7E744A
+16  433M 7FE6624A
+17  433M ADB9514A
+18  433M 15550C46
+19  433M D0C70146
+20  433M 6BB04146
+21  433M 6BB04846
+
+$ LIST LONG
+ 1  315M 5555033C osc=0x3C  name="-" group="-" sym="-"
+ 2  433M 5555034B osc=0x4B  name="-" group="-" sym="-"
+ 3  433M 1555304B osc=0x4B  name="-" group="-" sym="-"
+ 4  433M B6A56252 osc=0x52  name="-" group="-" sym="-"
+ 5  433M 85D7384B osc=0x4B  name="-" group="-" sym="-"
+ 6  433M 8556304A osc=0x4A  name="-" group="-" sym="-"
+ 7  433M 8556344A osc=0x4A  name="-" group="-" sym="-"
+ 8  433M 8556384A osc=0x4A  name="-" group="-" sym="-"
+ 9  433M 8F76304A osc=0x4A  name="-" group="-" sym="-"
+10  433M 855E304A osc=0x4A  name="-" group="-" sym="-"
+11  433M 2F0B0E4A osc=0x4A  name="-" group="-" sym="-"
+12  433M 52BB184A osc=0x4A  name="-" group="-" sym="-"
+13  433M 7477304A osc=0x4A  name="-" group="-" sym="-"
+14  433M E50D9A63 osc=0x63  name="-" group="-" sym="-"
+15  433M 8F7E744A osc=0x4A  name="-" group="-" sym="-"
+16  433M 7FE6624A osc=0x4A  name="-" group="-" sym="-"
+17  433M ADB9514A osc=0x4A  name="-" group="-" sym="-"
+18  433M 15550C46 osc=0x46  name="-" group="-" sym="-"
+19  433M D0C70146 osc=0x46  name="-" group="-" sym="-"
+20  433M 6BB04146 osc=0x46  name="-" group="-" sym="-"
+21  433M 6BB04846 osc=0x46  name="-" group="-" sym="-"
+
+$ HELP
+commands (115200 8N1):
+  HELP                  this list
+  INFO                  fw / module baud / counters
+  LIST                  stored codes: id band code
+  LIST LONG             id band code name group sym flags
+  SEND <id>             transmit once (frame dur=03)
+  LONG <id>             start continuous transmit (dur=FE)
+  STOP <id>             stop continuous transmit (dur=FF)
+  ERASE <id|all>        delete one code / all codes (ids shift)
+  DEDUP                 merge records with same band+addr+button (osc differs)
+  NEW <band> <hex> [name]  add a manual code (315/433, 8 hex)
+  NAME <id> [text]      set/clear UTF-8 name (max 24 bytes)
+  SYM <id> [text]       set/clear symbol (max 8 bytes)
+  GROUP <id> [text]     set/clear single group (max 16 bytes)
+  EDIT <id> band|code <v>  edit raw band / 4-byte payload
+  MODE single|continuous  module decode output mode
+  BAUD <n>              module baud 4800/9600/57600/115200
+  RECOVER               scan module baud and force it back to 9600
+  RAW <hex>             send raw bytes to module (debug)
+  MON ON|OFF            hex-dump every module byte (debug)
+  ECHO ON|OFF           print decoded frames (default ON)
+  DISP ON|OFF|TEST [s]|SHOW  OLED panel / test pattern / ASCII dump
+  WIFI [status]|[ssid pass]|CLEAR  join an AP / forget STA (AP fallback)
+  BLE [on|off]          BLE advertising / status
+  PIN                   show BLE 4-digit PIN (serial only)
+  OTA | OTA OFF         arm firmware upload (token on serial/OLED, 10 min)
+  STATE                 print JSON state snapshot
+  WEBTEST               self-check HTTP /api/hello + /api/events
+  RESET                 restart ESP32
+
+code = addr2 addr1 button osc (8 hex); osc 0x30..0xF0 (default 0x60)
+identity = band + addr2 + addr1 + button; osc is NOT part of identity
+
+learn: press a remote button; firmware prints LEARN id=... automatically
+note: SEND gets F0 after ~0.85s; LONG gets 0xFE heartbeat; STOP gets 0xFF (measured)
+
+$ STATE
+{"fw":"0.7.1","proto":1,"uptime_ms":9050,"net":{"mode":"sta","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":true,"sta_ssid":"Mark","sta_ip":"192.168.5.125","rssi":-30},"ble":{"on":1,"conn":0,"name":"RF-Lab-1B59","pin_set":1},"module":{"baud":9600,"rx_bytes":0,"frames":0,"acks":0,"dups":0,"bad":0,"stray":0,"resync":0},"store":{"count":21,"max":64,"ver":2},"oled":{"present":1,"on":1,"flush":2,"err":0,"last_us":8723,"max_us":8723},"ota":{"armed":0,"pct":0,"phase":"idle","slot":0,"next":-1,"pending":0},"tx":{"active":0,"kind":"idle","id":0,"ok":0,"ms":0},"last":{"kind":"boot","id":0,"band":"","code":"","ms":0}}
+
+$ DISP
+OK disp=on present=yes test=off flush=3 err=0
+
+$ DISP TEST 1
+OK disp=test 1s (DISP ON to leave test)
+
+$ DISP ON
+OK disp=on
+
+$ DISP SHOW
+# fb 72x40 '#'=on (screen content, not read back from glass)
+####..#####.......#...........#............###........#####.........#...
+#...#.#...........#...........#...........#...#...........#........##...
+#...#.#...........#......##...#.##........#..##...........#.........#...
+####..####..#####.#........#..##..#.......#.#.#..........#..........#...
+#.#...#...........#......###..#...#.......##..#.........#...........#...
+#..#..#...........#.....#..#..##..#.......#...#...##...#......##....#...
+#...#.#...........#####..####.#.##.........###....##..#.......##...###..
+........................................................................
+####..#####...#...####..#...#........###....#...........###....#........
+#...#.#......#.#..#...#.#...#.......#...#..##.......#..#......##........
+#...#.#.....#...#.#...#..#.#............#...#......#..#......#.#........
+####..####..#...#.#...#...#..........###....#.....#...####..#..#........
+#.#...#.....#####.#...#...#.........#.......#....#....#...#.#####.......
+#..#..#.....#...#.#...#...#.........#.......#...#.....#...#....#........
+#...#.#####.#...#.####....#.........#####..###.........###.....#........
+........................................................................
+..###.####..####...###.....#...###.....#....###.........................
+.#....#...#.#...#.#...#...##..#...#...##...#............................
+#.....#...#.#...#.#..##..#.#..#...#..#.#..#.............................
+####..####..####..#.#.#.#..#...###..#..#..####..........................
+#...#.#...#.#...#.##..#.#####.#...#.#####.#...#.........................
+#...#.#...#.#...#.#...#....#..#...#....#..#...#.........................
+.###..####..####...###.....#...###.....#...###..........................
+........................................................................
+...#..#####.#####.#...#.........#.......#........###....#...............
+..##......#.....#.##.##.................#.......#...#..##...............
+.#.#.....#.....#..#.#.#........##....##.#.#####.....#...#...............
+#..#....##....##..#.#.#.........#...#..##........###....#...............
+#####.....#.....#.#.#.#.........#...#...#.#####.#.......#...............
+...#..#...#.#...#.#...#.........#...#..##.......#.......#...............
+...#...###...###..#...#........###...##.#.......#####..###..............
+........................................................................
+#####..###..........#....###.........###...###..........................
+#.....#...#........#.#..#...#.......#...#.#...#.........................
+#.....#..##.......#...#.#..##.......#.....#..##.........................
+####..#.#.#.......#...#.#.#.#........###..#.#.#.........................
+#.....##..#.......#####.##..#...........#.##..#.........................
+#.....#...#.......#...#.#...#.......#...#.#...#.........................
+#......###........#...#..###.........###...###..........................
+........................................................................
+OK fb 72x40
+
+$ BLE OFF
+OK ble=off (advertising stopped, current link dropped)
+
+$ INFO
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# build=85cdeff ui=d0824ba5
+# ota slot=0 next=-1 state=idle pct=0 pending=0
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=6 err=0 last_us=8955 max_us=8955
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=Mark sta_ip=192.168.5.125 rssi=-30
+# ble on=off adv=no conn=no name=RF-Lab-1B59 pin=set
+# codebook ver=2 count=21/64 migrated=no
+# heap free=34732 min=27588
+OK stored=21/64 rx_bytes=0 frames=0 acks=0 dups=0 bad=0 stray=0 resync=0
+
+$ BLE ON
+OK ble=on
+
+$ INFO
+# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# build=85cdeff ui=d0824ba5
+# ota slot=0 next=-1 state=idle pct=0 pending=0
+# module UART1 9600 8N1 TX=GPIO3 RX=GPIO4
+# console uart0:on usb:on 115200 8N1
+# oled 72x40 @0x3C i2c400000 sda=5 scl=6 present=yes on=yes flush=6 err=0 last_us=8955 max_us=8955
+# net mode=sta ap_on=0 has_creds=1 ap=RF-Lab-1B59 ap_ip=192.168.4.1 clients=0 sta=Mark sta_ip=192.168.5.125 rssi=-30
+# ble on=on adv=yes conn=no name=RF-Lab-1B59 pin=set
+# codebook ver=2 count=21/64 migrated=no
+# heap free=34724 min=27588
+OK stored=21/64 rx_bytes=0 frames=0 acks=0 dups=0 bad=0 stray=0 resync=0
+
+$ WEBTEST
+OK webtest 200 http://192.168.5.125/api/hello -> {"fw":"0.7.1","build":"85cdeff","ui":"d0824ba5","proto":1,"codebook":2,"name":"RF-Lab-1B59","ap_ssid":"RF-Lab-1B59","ip":"192.168.5.125","auth":1}
+OK webtest 200 http://192.168.5.125/api/state -> {"fw":"0.7.1","proto":1,"uptime_ms":18651,"net":{"mode":"sta","ap_on":0,"has_creds":1,"ap_ssid":"RF-Lab-1B59","ap_ip":"192.168.4.1","sta_connected":true,"sta_ssid":"Mark","sta_ip":"192.168.5.125","rssi":-30},"ble":{"on"
+OK webtest 503 http://192.168.5.125/api/events -> oom
+OK webtest POST 202 /api/cmd -> DISP TEST 1
+OK disp=test 1s (DISP ON to leave test)
