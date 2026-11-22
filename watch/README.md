@@ -16,7 +16,8 @@
 | 传输 | BLE GATT,与手机 APP / Web 相同的 Service/RX/TX 和 `\n` 行协议 |
 | 主要页面 | LINK(扫描/连接)→ PIN(4 位数字键盘)→ CONTROL(单码卡片 + SEND/HOLD) |
 | 次级页面 | CODEBOOK 列表浮层、SYSTEM 菜单、PIN 键盘 |
-| 不做的 | 码库编辑/新建/删除、Wi-Fi 配网、固件 OTA、APP 自更新、后台常驻、通知、云账户 |
+| 自更新 | SYSTEM → UPDATE 手动触发;GitHub Release → SHA-256/包名/版本/签名校验 → 系统安装器确认 |
+| 不做的 | 码库编辑/新建/删除、Wi-Fi 配网、固件 OTA、后台自更新、静默安装、通知、云账户 |
 
 **为什么是“单码卡片”而不是码库表格**:手表可用宽度约 180–200dp,一张表放不下
 band/code/name/动作四类信息;横向滑动和长按都难发现。单码卡片 + 上下滑动换码 +
@@ -59,7 +60,7 @@ CONTROL(200×232dp)                 LINK
 
 | 区域 | 行为 |
 |---|---|
-| `≡` | 打开 SYSTEM 菜单(重连/OLED 测试/刷新/忘记/关于) |
+| `≡` | 打开 SYSTEM 菜单:2×2 网格(RECONNECT / OLED 10s / REFRESH / UPDATE)+ 整行 FORGET |
 | `SAFE / ARMED` | 点击切换;ARM 只在本次连接有效,断线/退出即复位 |
 | 码卡 | 上/下滑换码(循环);点击打开 CODEBOOK 列表 |
 | `SEND` | 单次发射;SAFE 时只提示先 ARM,不发命令 |
@@ -77,6 +78,7 @@ CONTROL(200×232dp)                 LINK
 | 单次发射 | 点 `SAFE` → 点 `SEND` | 2 |
 | 长发 | 按住 `HOLD` 350ms,松开即停 | 1 次按住 |
 | 停止异常长发 | 重连后自动发 `STOP`;或点红色 `STOP` | 1 |
+| 更新 APP | SYSTEM → `UPDATE` → 下载/校验 → 系统确认安装 | 2 + 系统确认 |
 
 ### 3.3 PIN 键盘
 
@@ -194,6 +196,37 @@ cd watch && ../android/gradlew assembleRelease
   watch/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+### 8.2 APP 自更新(0.1.2 起)
+
+更新是**手动**的:SYSTEM → `UPDATE`,没有后台轮询,也不会静默安装。
+
+```text
+UPDATE
+  → GET api.github.com/repos/heiheiheiheiheihei/rf-lab/releases?per_page=30
+  → 只留 draft=false / prerelease=false / tag 匹配 watch-vX.Y.Z
+     且同时带 rf-lab-watch.apk + SHA256SUMS.txt 的 Release,取最高版本
+  → 下载 APK(≤20 MB)→ 大小、SHA-256、包名、versionCode/versionName
+  → 签名证书必须与已装 APP 一致
+  → PackageInstaller(MODE_FULL_INSTALL)→ 系统确认框 → 安装
+```
+
+| 项 | 约定 |
+|---|---|
+| 网络 | 仅 HTTPS;仓库与资产名写死,不接受服务端下发的下载地址 |
+| 触发 | 只由 SYSTEM → `UPDATE` 触发;无定时器、无开机自启 |
+| 版本门 | `versionCode` 和 `versionName` 都必须严格前进,同版本重装会被拒绝 |
+| 完整性 | 资产大小 + `SHA256SUMS.txt` 的 SHA-256;不一致立即失败 |
+| 签名 | 证书 SHA-256 必须与已装包一致;系统安装器还会再验一次 |
+| 安装 | `PackageInstaller` 系统确认;首次需允许“安装未知应用”(API 26+) |
+| 失败 | 状态行短码:`NO NET` / `RATE LIMIT` / `BAD HASH` / `BAD SIGN` / `NOT NEWER` / `BAD APK` / `INSTALL FAILED`;详情 `adb logcat -s RF-Lab.Watch.Update` |
+
+**未授权安装来源**时 APK 仍会下载并校验,APP 打开系统“安装未知应用”页,状态行提示
+`ALLOW INSTALL SOURCE`;授权后回到 APP 再点一次 `UPDATE`。
+
+**边界**:自更新只替换手表 APK,不更新设备固件,也不改变 BLE PIN/码库;它没有
+secure boot 或签名链,只保证“新包与已装包同证书”。手表必须能自己上网(通常连 Wi-Fi);
+没有网络时不会回退到手机代理。
+
 ## 9. ADB 上机步骤(设备接入后执行)
 
 手表侧准备(本机 `OW20W1` 已通过 ADB 连接;具体菜单路径以实机固件为准):
@@ -251,6 +284,7 @@ adb shell am start -n dev.rflab.watch/.WatchActivity --ez demo true --ez demo_tx
 | WATCH-04 | 屏幕适配 | 46mm 402×476 无裁切;按钮命中正确 | ✅ 46mm 真机 OW20W1 |
 | WATCH-05 | BLE 控制 | 扫描/连接/AUTH/`SEND`/`LONG`/`STOP` 与设备回显一致 | ✅ 46mm 真机:32 码、`OK TX`、`STOP`;错误 PIN `4 LEFT` |
 | WATCH-06 | 失败关闭 | 错误 PIN、退后台 STOP 均不发飞 | ✅ 错误 PIN `4 LEFT`;退后台 `STOP #1` |
+| WATCH-07 | APP 自更新 | 真机点 UPDATE:发现新版→下载→四项校验→系统确认→版本前进;取消/断网失败关闭 | ⏳ 0.1.2 构建/主机测试过;真机待验 |
 
 构建/主机/模拟器证据:[`docs/evidence/2026-11-22-watch.md`](../docs/evidence/2026-11-22-watch.md)。
 真机与 release 签名/公开包证据:[`docs/evidence/2026-11-22-watch-release.md`](../docs/evidence/2026-11-22-watch-release.md)。

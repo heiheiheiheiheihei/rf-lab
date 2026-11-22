@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Self-update only: the app checks GitHub Releases over HTTPS and hands
+         the verified APK to the system installer. No other network use. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- API 31+. The watch itself is API 27, but the same APK stays installable
          on newer Wear OS / ColorOS builds. -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"

@@ -32,8 +32,8 @@ android {
         // targetSdk stays at 28: the watch ROM is API 27, and we do not want
         // Android 12+ nearby-device/foreground-service behavior on a phone build.
         targetSdk = 28
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 3
+        versionName = "0.1.2"
     }
 
     signingConfigs {

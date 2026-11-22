@@ -35,6 +35,7 @@ public final class WatchView extends View {
     public static final int MENU_OLED = 1;
     public static final int MENU_REFRESH = 2;
     public static final int MENU_FORGET = 3;
+    public static final int MENU_UPDATE = 4;
 
     public static final int TONE_NEUTRAL = 0;
     public static final int TONE_OK = 1;
@@ -106,6 +107,8 @@ public final class WatchView extends View {
 
         int statusTone();
 
+        String updateLine();
+
         boolean menuOpen();
 
         boolean listOpen();
@@ -170,7 +173,9 @@ public final class WatchView extends View {
     private final RectF listCloseHit = new RectF();
     private final RectF listPanel = new RectF();
     private final RectF menuPanel = new RectF();
-    private final RectF[] menuRows = {new RectF(), new RectF(), new RectF(), new RectF()};
+    private final RectF[] menuRows = {
+            new RectF(), new RectF(), new RectF(), new RectF(), new RectF()
+    };
     private final RectF[] pinKeys = new RectF[12];
 
     private float linkListTop;
@@ -367,7 +372,7 @@ public final class WatchView extends View {
     private void drawLink(Canvas c) {
         float pad = dp(8);
         float top = dp(6);
-        drawHeader(c, false, false, "W/" + host.appVersion());
+        drawHeader(c, true, false, "W/" + host.appVersion());
 
         text(c, "LINK RF-LAB", pad, top + dp(38), 16, C_BONE, sansBold, Paint.Align.LEFT);
         text(c, "BLE · 4-DIGIT PIN", pad, top + dp(50), 8, C_DIM, mono, Paint.Align.LEFT);
@@ -737,37 +742,52 @@ public final class WatchView extends View {
         text(c, "RF-LAB", menuPanel.right - dp(9), menuPanel.top + dp(17), 8,
                 C_DIM, mono, Paint.Align.RIGHT);
 
-        float rowTop = menuPanel.top + dp(24);
-        float footerH = dp(24);
+        // 2×2 grid + a full-width FORGET row: five actions without shrinking
+        // every target below ~45dp on a 402×476 screen.
+        float rowTop = menuPanel.top + dp(22);
+        float footerH = dp(22);
         float rowSpace = Math.max(0, menuPanel.bottom - footerH - rowTop);
-        float rh = Math.min(dp(34), rowSpace / 4f);
+        float rh = rowSpace / 3f;
+        float gap = dp(2);
+        float mid = menuPanel.centerX();
+        menuRows[0].set(menuPanel.left + dp(4), rowTop, mid - gap, rowTop + rh - gap);
+        menuRows[1].set(mid + gap, rowTop, menuPanel.right - dp(4), rowTop + rh - gap);
+        menuRows[2].set(menuPanel.left + dp(4), rowTop + rh,
+                mid - gap, rowTop + 2 * rh - gap);
+        menuRows[3].set(mid + gap, rowTop + rh,
+                menuPanel.right - dp(4), rowTop + 2 * rh - gap);
+        menuRows[4].set(menuPanel.left + dp(4), rowTop + 2 * rh,
+                menuPanel.right - dp(4), rowTop + 3 * rh - gap);
+
+        String update = host.updateLine();
         String[] labels = {
                 host.connected() ? "DISCONNECT" : "RECONNECT",
-                "OLED TEST 10s",
-                "REFRESH CODES",
+                "OLED 10s",
+                "REFRESH",
+                update == null || update.isEmpty() ? "UPDATE" : update,
                 host.forgotPending() ? "CONFIRM FORGET" : "FORGET DEVICE + PIN"
         };
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < labels.length; i++) {
             RectF r = menuRows[i];
-            r.set(menuPanel.left + dp(4), rowTop + i * rh,
-                    menuPanel.right - dp(4), rowTop + (i + 1) * rh - dp(2));
             boolean active = pressed == PRESS_MENU_ROW && pressedMenuRow == i;
-            boolean danger = i == 3;
-            boolean enabled = i == 0 || host.connected();
+            boolean danger = i == 4;
+            boolean enabled = i < 3 ? host.connected() : true;
             drawPanel(c, r, active ? C_PANEL_HI : C_PANEL,
                     danger && host.forgotPending() ? C_RED : C_LINE, false);
             int color = danger ? (host.forgotPending() ? C_RED : C_KHAKI)
                     : (enabled ? C_BONE : C_DIM);
-            text(c, labels[i], r.left + dp(8), baseline(r, 10), 10, color, sans,
-                    Paint.Align.LEFT);
-            text(c, i == 3 ? "2×" : "›", r.right - dp(8), baseline(r, 9), 9,
-                    C_DIM, mono, Paint.Align.RIGHT);
+            text(c, fit(labels[i], sans, r.width() - dp(14), 10), r.left + dp(7),
+                    baseline(r, 10), 10, color, sans, Paint.Align.LEFT);
+            if (i == 4) {
+                text(c, host.forgotPending() ? "2×" : "›", r.right - dp(8),
+                        baseline(r, 9), 9, C_DIM, mono, Paint.Align.RIGHT);
+            }
         }
 
         float fy = menuPanel.bottom - dp(9);
         text(c, "APP " + host.appVersion() + " · FW " + host.fw(),
                 menuPanel.left + dp(9), fy, 7, C_DIM, mono, Paint.Align.LEFT);
-        text(c, "BLE ONLY", menuPanel.right - dp(9), fy, 7, C_DIM, mono,
+        text(c, "BLE + UPD", menuPanel.right - dp(9), fy, 7, C_DIM, mono,
                 Paint.Align.RIGHT);
     }
 
@@ -1018,7 +1038,7 @@ public final class WatchView extends View {
             pressed = PRESS_NONE;
             pressedMenuRow = -1;
             if (row >= 0 && menuRows[row].contains(x, y)) {
-                host.onMenuAction(row);
+                host.onMenuAction(menuAction(row));
             } else if (!menuPanel.contains(x, y)) {
                 host.onCloseMenu();
             }
@@ -1048,7 +1068,10 @@ public final class WatchView extends View {
 
         switch (host.screen()) {
             case SCREEN_LINK:
-                if (pressed == PRESS_SCAN && hit(scanBtn, x, y)) {
+                if (pressed == PRESS_MENU && hit(menuHit, x, y)) {
+                    haptic();
+                    host.onMenu();
+                } else if (pressed == PRESS_SCAN && hit(scanBtn, x, y)) {
                     haptic();
                     host.onScan();
                 } else if (pressed == PRESS_SAVED && hit(savedBtn, x, y)) {
@@ -1119,6 +1142,22 @@ public final class WatchView extends View {
                 pressed = PRESS_NONE;
                 invalidate();
                 return true;
+        }
+    }
+
+    /** Grid position → action id; the two orders diverged when UPDATE was added. */
+    private static int menuAction(int row) {
+        switch (row) {
+            case 0:
+                return MENU_LINK;
+            case 1:
+                return MENU_OLED;
+            case 2:
+                return MENU_REFRESH;
+            case 3:
+                return MENU_UPDATE;
+            default:
+                return MENU_FORGET;
         }
     }
 

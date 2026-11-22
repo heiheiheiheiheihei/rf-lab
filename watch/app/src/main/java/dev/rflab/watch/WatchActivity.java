@@ -1,9 +1,13 @@
 package dev.rflab.watch;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.net.Uri;
@@ -13,11 +17,13 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,6 +49,7 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     private WatchView view;
     private BleClient ble;
     private Prefs prefs;
+    private Updater updater;
 
     private int screen = WatchView.SCREEN_LINK;
     private boolean connected;
@@ -65,6 +72,8 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     private boolean demo;
     private boolean destroyed;
     private boolean pinAborted;
+    private boolean updateBusy;
+    private String updatePhase = "";
 
     private int selectedId = -1;
     private String txKind = "";
@@ -79,7 +88,7 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     private String deviceAddress = "";
     private String fw = "";
     private String build = "";
-    private String appVersion = "0.1.0";
+    private String appVersion = "0.1.2";
     private String status = "READY";
     private int statusTone = WatchView.TONE_NEUTRAL;
     private String linkStatus = "IDLE";
@@ -96,9 +105,11 @@ public final class WatchActivity extends Activity implements WatchView.Host {
         keepAwakeAndFullscreen();
         prefs = new Prefs(this);
         readAppVersion();
+        updater = new Updater();
 
         view = new WatchView(this, this);
         setContentView(view);
+        registerInstallReceiver();
 
         boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
         demo = debuggable && getIntent() != null && getIntent().getBooleanExtra("demo", false);
@@ -1076,6 +1087,12 @@ public final class WatchActivity extends Activity implements WatchView.Host {
                     setStatus("NOT LINKED", WatchView.TONE_WARN);
                 }
                 break;
+            case WatchView.MENU_UPDATE:
+                // Keep the panel open: the row label carries check/download
+                // progress, and it is the only feedback on the LINK screen.
+                menuOpen = !demo;
+                startUpdate();
+                break;
             case WatchView.MENU_FORGET:
                 long now = SystemClock.uptimeMillis();
                 if (!forgotPending || now - forgetAt > FORGET_CONFIRM_MS) {
@@ -1096,6 +1113,157 @@ public final class WatchActivity extends Activity implements WatchView.Host {
                 break;
         }
         view.invalidate();
+    }
+
+    // ---------------- self update ----------------
+
+    /**
+     * Manual only: the SYSTEM menu starts a check, download and verification.
+     * Nothing runs in the background and the final install always needs the
+     * system confirmation dialog.
+     */
+    private void startUpdate() {
+        if (demo) {
+            setStatus("DEMO · NO UPDATE", WatchView.TONE_NEUTRAL);
+            return;
+        }
+        if (updateBusy) {
+            setStatus("UPDATE BUSY", WatchView.TONE_WARN);
+            return;
+        }
+        if (txActiveInternal()) {
+            setStatus("STOP LONG FIRST", WatchView.TONE_WARN);
+            return;
+        }
+        updateBusy = true;
+        updatePhase = "CHECK…";
+        setStatus("CHECKING UPDATE…", WatchView.TONE_NEUTRAL);
+        updater.check(appVersion, (release, error) -> {
+            if (destroyed) {
+                return;
+            }
+            if (error != null) {
+                updateBusy = false;
+                updatePhase = "FAIL · " + error;
+                setStatus("UPD FAIL · " + error, WatchView.TONE_ERROR);
+                return;
+            }
+            if (release == null) {
+                updateBusy = false;
+                updatePhase = "UP TO DATE";
+                setStatus("UP TO DATE · " + appVersion, WatchView.TONE_OK);
+                return;
+            }
+            updatePhase = release.version + " · 0%";
+            setStatus("UPDATE " + release.version + " · 0%", WatchView.TONE_WARN);
+            updater.download(this, release, (done, total) -> {
+                if (destroyed) {
+                    return;
+                }
+                int pct = total <= 0 ? 0 : (int) (done * 100 / total);
+                updatePhase = release.version + " · " + pct + "%";
+                setStatus("UPDATE " + release.version + " · " + pct + "%",
+                        WatchView.TONE_WARN);
+            }, new Updater.DownloadCallback() {
+                @Override
+                public void onReady(File apk) {
+                    if (destroyed) {
+                        return;
+                    }
+                    if (txActiveInternal()) {
+                        updateBusy = false;
+                        updatePhase = "STOP LONG FIRST";
+                        setStatus("STOP LONG FIRST", WatchView.TONE_WARN);
+                        return;
+                    }
+                    updatePhase = "INSTALL…";
+                    setStatus("VERIFIED · INSTALL…", WatchView.TONE_WARN);
+                    beginInstall(apk);
+                }
+
+                @Override
+                public void onFailed(String err) {
+                    if (destroyed) {
+                        return;
+                    }
+                    updateBusy = false;
+                    updatePhase = "FAIL · " + err;
+                    setStatus("UPD FAIL · " + err, WatchView.TONE_ERROR);
+                }
+            });
+        });
+    }
+
+    private void beginInstall(File apk) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !getPackageManager().canRequestPackageInstalls()) {
+            updateBusy = false;
+            updatePhase = "ALLOW SOURCE";
+            setStatus("ALLOW INSTALL SOURCE", WatchView.TONE_WARN);
+            openInstallSettings();
+            return;
+        }
+        updater.install(this, apk, new Updater.InstallCallback() {
+            @Override
+            public void onCommitted() {
+                if (destroyed) {
+                    return;
+                }
+                updatePhase = "CONFIRM…";
+                setStatus("CONFIRM INSTALL IN SYSTEM", WatchView.TONE_WARN);
+            }
+
+            @Override
+            public void onFailed(String err) {
+                if (destroyed) {
+                    return;
+                }
+                updateBusy = false;
+                updatePhase = "FAIL · " + err;
+                setStatus("INSTALL · " + err, WatchView.TONE_ERROR);
+            }
+        });
+    }
+
+    private void openInstallSettings() {
+        try {
+            Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getPackageName()));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (RuntimeException e) {
+            openAppSettings();
+        }
+    }
+
+    private final BroadcastReceiver installReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS,
+                    PackageInstaller.STATUS_FAILURE);
+            String message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
+            updateBusy = false;
+            if (status == PackageInstaller.STATUS_SUCCESS) {
+                updatePhase = "UPDATED";
+                setStatus("UPDATED · REOPEN", WatchView.TONE_OK);
+            } else if (status == PackageInstaller.STATUS_FAILURE_ABORTED) {
+                updatePhase = "CANCELLED";
+                setStatus("UPDATE CANCELLED", WatchView.TONE_WARN);
+            } else {
+                updatePhase = "INSTALL FAILED";
+                Log.w("RF-Lab.Watch", "install failed: " + status + " " + message);
+                setStatus("INSTALL FAILED", WatchView.TONE_ERROR);
+            }
+        }
+    };
+
+    private void registerInstallReceiver() {
+        IntentFilter filter = new IntentFilter(Updater.ACTION_INSTALL_RESULT);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(installReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(installReceiver, filter);
+        }
     }
 
     private void doForget() {
@@ -1126,6 +1294,9 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     public void onCloseMenu() {
         menuOpen = false;
         forgotPending = false;
+        if (!updateBusy) {
+            updatePhase = "";
+        }
         view.invalidate();
     }
 
@@ -1289,6 +1460,11 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     }
 
     @Override
+    public String updateLine() {
+        return updatePhase;
+    }
+
+    @Override
     public boolean menuOpen() {
         return menuOpen;
     }
@@ -1437,6 +1613,11 @@ public final class WatchActivity extends Activity implements WatchView.Host {
     protected void onDestroy() {
         destroyed = true;
         main.removeCallbacksAndMessages(null);
+        try {
+            unregisterReceiver(installReceiver);
+        } catch (RuntimeException ignored) {
+            // Not registered (demo/early exit) or already torn down.
+        }
         if (ble != null) {
             if (connected && (holdSent || txActive)) {
                 int id = holdSent ? holdId : txId;
