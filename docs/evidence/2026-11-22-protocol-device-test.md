@@ -66,5 +66,8 @@ OK stored=21/32 rx_bytes=0 frames=0 acks=0 dups=0 bad=0 stray=0 resync=0
 2. **越界帧实时过滤**:没有在接收路径制造噪声/坏帧,`bad` 计数与 1 秒限速日志未实测。
 3. **带名称的 DEDUP**:现有 32 条 name/group/sym 全是 `-`;合并时保留「最早一条」的
    元数据,这一路径没有用真实命名数据验证。
-4. **CI / 发版**:本提交是否推送、是否走 0.7.2 由用户决定;CI 的 7.1.3 构建未在此提交上跑过。
+4. **CI / 发版**:本提交在临时分支 `ci/codebook-protocol` 上跑过 CI:
+   [run 45004831052](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45004831052)
+   `host(含 SAN)` / `static` / `firmware build (esp32c3 7.1.3)` 全绿。
+   **master 尚未推送**;是否走 0.7.2 由用户决定。
 5. **设备与 tag**:设备跑 master 提交 `200cc4e`,不是 tag;REL-01 仍未关闭。
