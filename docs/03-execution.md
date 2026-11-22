@@ -30,9 +30,9 @@
 |---|---|
 | Git | 本地 `200cc4e`(协议去重,未推送);`origin/master` = `89ad522`(CI 绿) |
 | 主机 | `host_test.sh` **11,210 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
-| 固件构建 | **1,099,650 B / 2,031,616 B 槽(54.1%)**;RAM **88,692 B / 327,680 B(27.1%)** |
+| 固件构建 | **1,100,416 B / 2,031,616 B 槽(54.1%)**;RAM **88,692 B / 327,680 B(27.1%)** |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
-| 设备 | `/dev/ttyACM0`,已全量刷 **`build=c8e93d9` / `ui=d0824ba5` / `ota_slot=0`**;码库 21/64,heap≈34.7KB;自检 26/0/1,见 [容量上机](evidence/2026-11-22-capacity-64.md) |
+| 设备 | `/dev/ttyACM0`,已全量刷 **`build=f75173f` / `ui=d0824ba5` / `ota_slot=0`**;码库 21/64,heap≈34.7KB;自检 26/0/1,见 [容量上机](evidence/2026-11-22-capacity-64.md) |
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
 | 码库 | 13:46 为 **32/32**;16:52 按协议 `DEDUP` 后 **21/64**(11 条只是 osc 不同,已合并);`bad=0`(本轮未接收),见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
 | 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |
@@ -44,6 +44,7 @@
 - [`evidence/2026-11-22-device-audit.md`](evidence/2026-11-22-device-audit.md)
 - [`evidence/2026-11-22-firmware-flash.md`](evidence/2026-11-22-firmware-flash.md)
 - [`evidence/2026-11-22-device-selftest.md`](evidence/2026-11-22-device-selftest.md)
+- [`evidence/2026-11-22-ble-codes-envelope.md`](evidence/2026-11-22-ble-codes-envelope.md)
 - [`evidence/2026-11-22-pages-cors.log`](evidence/2026-11-22-pages-cors.log)
 - [`evidence/2026-11-21-send-no-ack.md`](evidence/2026-11-21-send-no-ack.md)
 

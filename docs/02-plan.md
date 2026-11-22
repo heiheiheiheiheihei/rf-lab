@@ -57,10 +57,10 @@ UI 项必须写视口、浏览器与 console 结果。
 | Git | `dd71bf6` `master`;A2/A3 与上机证据未提交 | `git status` |
 | 主机测试 | 协议 76 + 码库 368 + 事件环 9,427 + OTA 41 + OLED/UI 1,286 + TUI 12 = **11,210**;+ `device_selftest` **18**;APP 自更新 **36** | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
 | Sanitizer | `SAN=1 ./tools/host_test.sh` 全过 | 本次复跑 |
-| 固件构建 | **1,099,650 B / 2,031,616 B(54.1%)**;RAM **88,692 B / 327,680 B(27.1%)** | `cd firmware && pio run -e esp32c3` |
+| 固件构建 | **1,100,416 B / 2,031,616 B(54.1%)**;RAM **88,692 B / 327,680 B(27.1%)** | `cd firmware && pio run -e esp32c3` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,490 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
 | Android 本机构建 | **不可复现**:本机没有 JDK / Android SDK;只能依赖 CI 或补工具链 | `java`/`adb` 未找到 |
-| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,**`build=c8e93d9`**,`ui=d0824ba5`,STA `192.168.5.125`;码库 **21/64**,`heap free≈34.7KB` | [`2026-11-22-capacity-64.md`](evidence/2026-11-22-capacity-64.md) |
+| 设备现状 | `/dev/ttyACM0`,fw 0.7.1,**`build=f75173f`**,`ui=d0824ba5`,STA `192.168.5.125`;码库 **21/64**,`heap free≈34.7KB` | [`2026-11-22-capacity-64.md`](evidence/2026-11-22-capacity-64.md) |
 | 设备自检 | `device_selftest --json`: **26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF);`stored=21/64`,SSE 200 | [`2026-11-22-capacity-64.md`](evidence/2026-11-22-capacity-64.md) |
 | 设备 UART 命令方向 | `MODE single` → `ACK 0xF2`,`acks` 0→1 | 同上 |
 | 未执行 | `SEND/LONG/STOP`(未发 RF)、BLE、OTA、uConsole、AP 浏览器 | — |
@@ -110,6 +110,7 @@ UI 项必须写视口、浏览器与 console 结果。
 | BLE-01 | BLE `SEND` | 已验连接/AUTH/`DISP TEST`/码表,未验 ARM→SEND | 手机 BLE 发 `SEND 1`,回显 `OK ... (0xF0)`,UI `tx` 事件刷新 | U |
 | BLE-02 | 错误 PIN / 断线重连 | 未验错误 PIN 5 次锁定与重连 | 连续 5 次错误断开;正确 PIN 可重连;暂停广播按 `01-ui.md` §4 现状记录(当前实现是断开后重新广播,10s 暂停窗口未单独做) | U |
 | BLE-03 | BLE 写入重启持久化 | 11-22 只确认写入与 UI 同步 | `NAME/GROUP/SYM/EDIT` 后重启,`LIST`/`/api/codes` 仍保留 | U |
+| BLE-04 | BLE codes 快照完整性 | 2026-11-22 APP 码库空白(信封漏 `}` 已修);64 条大快照未验 | 手机 BLE 收到完整 `{"t":"codes","items":[...]}`;21/64 条都能显示;重连后仍刷新 | U |
 | APP-01 | Android 15 edge-to-edge | 需要真机 | 状态栏/导航栏不遮内容;三视口无横向溢出 | U |
 | APP-02 | 旧固件 0.6.x + 新 APK | 代码路径有,未真机组合 | 编辑入口禁用并提示;`LIST/SEND` 仍可用 | U |
 | APP-03 | 自更新失败路径 | 真机只验成功路径 | 坏 SHA-256 / 签名不符 / 未允许安装 / 取消,均失败关闭且不装 | U |
