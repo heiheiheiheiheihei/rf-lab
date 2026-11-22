@@ -1080,6 +1080,8 @@ static void cmd_info(void)
         ble_link_advertising() ? "yes" : "no", ble_link_connected() ? "yes" : "no", s_dev_name);
     out("# codebook ver=%d count=%d/%d migrated=%s\n", CODEBOOK_VERSION,
         s_codebook.count, CODEBOOK_MAX, s_store_migrated ? "yes" : "no");
+    out("# heap free=%lu min=%lu\n", (unsigned long)esp_get_free_heap_size(),
+        (unsigned long)esp_get_minimum_free_heap_size());
     out("OK stored=%d/%d rx_bytes=%lu frames=%lu acks=%lu dups=%lu bad=%lu stray=%lu resync=%lu\n",
         s_codebook.count, MAX_CODES, (unsigned long)s_rx_bytes, (unsigned long)s_frames,
         (unsigned long)s_acks, (unsigned long)s_dups, (unsigned long)s_bad_frames,

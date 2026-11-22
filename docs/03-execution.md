@@ -29,12 +29,12 @@
 | 项 | 状态 |
 |---|---|
 | Git | 本地 `200cc4e`(协议去重,未推送);`origin/master` = `89ad522`(CI 绿) |
-| 主机 | `host_test.sh` **11,457 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
+| 主机 | `host_test.sh` **11,329 checks** + TUI **12** + selftest **18**;`app_update_test.sh` **36 checks**;全过,`SAN=1` 也过 |
 | 固件构建 | **1,098,608 B / 2,031,616 B 槽(54.1%)**;RAM **73,540 B / 327,680 B(22.4%)** |
 | 官网 | `site_check.py` **SITE OK**;1 条 WARN:`terminal.html` 127,490 B > 120KB |
 | 设备 | `/dev/ttyACM0`,已全量刷 **`build=200cc4e` / `ui=85a1a9b4` / `ota_slot=0`**(协议去重固件;master 提交,不是 tag);自检 26/0/1,见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
 | 设备 UART | `MODE single` 已回 `ACK 0xF2`,`acks` 0→1;**当前模块输出模式可能已是 single** |
-| 码库 | 13:46 为 **32/32**;16:52 按协议 `DEDUP` 后 **21/128**(11 条只是 osc 不同,已合并);`bad=0`(本轮未接收),见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
+| 码库 | 13:46 为 **32/32**;16:52 按协议 `DEDUP` 后 **21/96**(11 条只是 osc 不同,已合并);`bad=0`(本轮未接收),见 [协议上机](evidence/2026-11-22-protocol-device-test.md) |
 | 空口发射 | **未复测**:最近一次上机(13:46 自检)未加 `--tx`,没有发 `SEND/LONG/STOP` |
 | CI | `200cc4e` 已在临时分支 `ci/codebook-protocol` 跑绿(run 45004831052,含 7.1.3 固件构建);**master 未推送**;仍无 required checks |
 | Android | 本机无 JDK/SDK,APK 只能靠 CI;v0.7.1 Release 资产 1,050,176 B |
@@ -108,7 +108,7 @@
 ## 5. 验收命令与证据
 
 ```bash
-./tools/host_test.sh                 # 协议 76 + 码库 624 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh                 # 协议 76 + 码库 496 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh           # ASan/UBSan
 ./tools/app_update_test.sh           # 36 checks
 python3 tools/gen_wiring.py --check
