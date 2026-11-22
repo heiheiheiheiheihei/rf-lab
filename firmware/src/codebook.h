@@ -17,10 +17,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* 96 条 × 57B = 5.5KB blob;NVS 分区固定 24KB(0x6000),留 GC 余量。
- * 128 条时 JSON 缓冲 ×3 把静态 RAM 推到 150KB,BLE/HTTP 启动即 ESP_ERR_NO_MEM;
- * 96 条 + 20KB JSON 是当前缓冲结构下的实际上限。 */
-#define CODEBOOK_MAX 96
+/* 64 条 × 57B = 3.7KB blob;NVS 分区固定 24KB(0x6000)。
+ * 容量不是越大越好:96/128 条时 JSON 缓冲 ×3 把静态 RAM 推到 131/150KB,
+ * 设备上分别出现启动复位 / BLE+HTTP 分配失败。64 条 + 12KB JSON 留足堆。 */
+#define CODEBOOK_MAX 64
 /* 协议字段(code[0..3]):地址2 / 地址1 / 按键 / 震荡参数。
  * 身份 = band + 前 3 字节;震荡参数不参与去重,只影响发射脉冲。 */
 #define CODEBOOK_ID_LEN 3

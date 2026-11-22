@@ -199,7 +199,7 @@ FD F3 03 55 55 03 3C DF  FD F3 03 55 55 03 4B DF
 
 规则:
 
-- **学码是自动的**:模块一直处于接收态,按遥控器即输出帧;固件把新码入库(NVS,最多 96 条)并打印 `LEARN id=N …`。同码 600ms 内只算一次(实测一次按键会连出多帧)。
+- **学码是自动的**:模块一直处于接收态,按遥控器即输出帧;固件把新码入库(NVS,最多 64 条)并打印 `LEARN id=N …`。同码 600ms 内只算一次(实测一次按键会连出多帧)。
 - **码库 v2(0.7.1)**:每条码增加 name/group/sym,存 NVS `codes2`;旧 v1 `codes` 保留作迁移/回滚兜底。名称/分组/符号按 UTF-8 字节上限校验,超长/非法 UTF-8 拒绝,不静默截断;串口只能输 ASCII,Web/BLE 可输中文。`NAME/SYM/GROUP` 空参数即清除。`NEW` 与 `EDIT` 拒绝重复 `band+code`,长发进行中拒绝改 band/code;NVS 写失败回滚并打印 `ERR`,不报假 OK。
 - **启动时不给模块发任何配置命令**:模块行为未公开,少发一条就少一个假证据源;`MODE`/`BAUD` 只在用户显式要求时发。
 - **等应答**:`SEND` 等 `F0` 最多 1500ms(实测 0.85s);`LONG` 等首个 `0xFE`;`STOP` 等 `0xFF`。收到打印 `OK …`,没收到才打印 `WARN … no 0xNN`(不静默)。
@@ -213,7 +213,7 @@ FD F3 03 55 55 03 3C DF  FD F3 03 55 55 03 4B DF
 | # | 验收 | 通过标准 | 状态 |
 |---|---|---|---|
 | AC-1 | 构建 | `pio run -e esp32c3` 成功 | ✅ 主机 |
-| AC-2 | 主机单测 | `tools/host_test.sh` 全过:协议 76 + 码库 496 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12 | ✅ 主机 |
+| AC-2 | 主机单测 | `tools/host_test.sh` 全过:协议 76 + 码库 368 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12 | ✅ 主机 |
 | AC-3 | 上电自检 | 串口出现 `# RF-Lab fw=0.7.1`、端口状态与 `# oled …: ok` | ✅ 2026-11-21(0.7.1 构建) |
 | AC-4 | 学码 | 按原遥控器 → `LEARN id=N band=315M code=…` | ✅ 3 个键;另有 2 条 433M 未解释(§11.2) |
 | AC-5 | 掉电保持 | 复位/断电再上电,`LIST` 仍有该码 | ✅ 跨重烧复位;真断电(拔 USB)未单独做 |
@@ -270,7 +270,7 @@ AC-6 的「原接收器动作」由**更硬的证据**替代:**学习型遥控�
 | 上机记录(2026-11-15 0.4.0,逐条命令与观察) | [`evidence/2026-11-15-bringup.md`](evidence/2026-11-15-bringup.md) |
 | **OLED + 长发/停止修正**(2026-11-15 0.5.0) | [`evidence/2026-11-15-oled.md`](evidence/2026-11-15-oled.md) |
 | **跨平台 UI**(2026-11-15 0.6.0) | [`evidence/2026-11-15-ui.md`](evidence/2026-11-15-ui.md) |
-| 主机单测 | `tools/host_test.sh`(协议 76 + 码库 496 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) |
+| 主机单测 | `tools/host_test.sh`(协议 76 + 码库 368 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12) |
 | 构建 | `cd firmware && pio run -e esp32c3` |
 
 ## 10. 与旧版的关系
@@ -381,7 +381,7 @@ Web 的 ARM 只是防误触,不是硬门控。
 | `sym` | 8B UTF-8 | 约 2 个 emoji;空 = 无 |
 | `flags` | bit0 manual / bit1 edited | 手工建码 / 建码后改过 band 或 code |
 
-单条 57B,**96 条 blob ≈5.5KB**;NVS 分区 24KB(留 GC 与 Wi-Fi/BLE key 余量)。v2 写 **`codes2`**(magic `R3`,ver 2),
+单条 57B,**64 条 blob ≈3.7KB**;NVS 分区 24KB(留 GC 与 Wi-Fi/BLE key 余量)。v2 写 **`codes2`**(magic `R3`,ver 2),
 v1 `codes` 原样保留;启动优先读 v2,缺失才迁移 v1,写后读回校验。
 
 **关键判断**:

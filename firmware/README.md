@@ -57,7 +57,7 @@ pio run -e esp32c3
 ## 主机单测(不接硬件)
 
 ```bash
-./tools/host_test.sh        # 协议 76 + 码库 496 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh        # 协议 76 + 码库 368 + 事件环 9418 + OTA 41 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh  # 加 ASan/UBSan
 ```
 
@@ -231,7 +231,7 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 ## 已知缺口
 
 1. 波特率改错要手动 `RECOVER`(尽力而为,不是原子操作)。
-2. 存储上限 96 条;满了只打印 `store full`,不淘汰旧码。
+2. 存储上限 64 条;满了只打印 `store full`,不淘汰旧码。
 3. 协议本身无校验和;UART 位错靠 `INFO` 的 `stray`/`resync` 计数暴露。
 4. 无发射硬门控(旧方案 `RF_KILL` 随三模块方案一起取消)。
 5. 控制台用 USB CDC:端口打开后**第一次写入前读不到历史输出**(驱动缓冲不主动刷新),主机工具需先写一个空行。
