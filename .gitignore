@@ -57,3 +57,7 @@ watch/app/build/
 # 签名材料
 *.jks
 *.keystore
+
+# KiCad 本地状态(工程文件本身入库;锁/用户偏好不入库)
+hardware/pcb/*.kicad_prl
+hardware/pcb/~*.lck

@@ -1,0 +1,27 @@
+ERC 报告 (2026-11-23T22:44:50+0800, UTF8 编码)
+Report includes: 错误, 警告, 排除
+
+***** 图纸 /
+[lib_symbol_issues]: 当前配置不包含符号库 'rf-lab'
+    ; warning
+    @(110.49 mm, 64.77 mm): 符号 J1 [Conn_01x08]
+[lib_symbol_issues]: 当前配置不包含符号库 'rf-lab'
+    ; warning
+    @(110.49 mm, 124.46 mm): 符号 J2 [Conn_01x07]
+[lib_symbol_issues]: 当前配置不包含符号库 'rf-lab'
+    ; warning
+    @(149.86 mm, 209.55 mm): 符号 J3 [Conn_01x04]
+[lib_symbol_issues]: 当前配置不包含符号库 'rf-lab'
+    ; warning
+    @(149.86 mm, 254.00 mm): 符号 C1 [C]
+[lib_symbol_issues]: 当前配置不包含符号库 'rf-lab'
+    ; warning
+    @(299.72 mm, 69.85 mm): 符号 J5 [Conn_01x16]
+[lib_symbol_issues]: 当前配置不包含符号库 'rf-lab'
+    ; warning
+    @(185.42 mm, 254.00 mm): 符号 C2 [C]
+[lib_symbol_issues]: 当前配置不包含符号库 'rf-lab'
+    ; warning
+    @(250.19 mm, 209.55 mm): 符号 J4 [Conn_01x04]
+
+ ** ERC 信息: 7 个错误 0 个警告 7

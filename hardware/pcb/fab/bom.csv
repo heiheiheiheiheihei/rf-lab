@@ -1,0 +1,10 @@
+Comment,Designator,Footprint,Qty,Note
+2.54mm 1x8 female socket,J1,Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical,1,C3 carrier row A
+2.54mm 1x7 female socket,J2,Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical,1,C3 carrier row B
+2.54mm 1x4 female socket,J3,Connector_PinSocket_2.54mm:PinSocket_1x04_P2.54mm_Vertical,1,YS-RF34DL socket
+2.54mm 1x4 male header,J4,Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical,1,spare module header
+2.54mm 1x16 male header,J5,Connector_PinHeader_2.54mm:PinHeader_1x16_P2.54mm_Vertical,1,GPIO breakout
+10uF 16V X5R 0805,C1,Capacitor_SMD:C_0805_2012Metric,1,3V3 bulk (optional)
+100nF 50V X7R 0805,C2,Capacitor_SMD:C_0805_2012Metric,1,3V3 decoupling (optional)
+M2.5 screw + nut/standoff,H1 H2 H3 H4,,4,2.7mm NPTH
+Antenna zip-tie point,ANT1 ANT2,,2,2.1mm NPTH
