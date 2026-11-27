@@ -1,8 +1,8 @@
-# RF-Lab 执行交接(2026-11-24)
+# RF-Lab 执行交接(2026-11-27)
 
 > **用途**:另起会话时先读这一页,再按链接读规格。
 > **状态、测试债务、版本计划只以 [`02-plan.md`](02-plan.md) 为准**;本页只留锁定决策、当前队列、启动提示和禁止事项。
-> 仓库 `/home/myf/DSH/Dev/rf-lab` · `master be22aeb` + 0.8.0 M1a 工作区(未提交)· 对外固件/APK **0.7.2**
+> 仓库 `/home/myf/DSH/Dev/rf-lab` · `master c7ae2a3`(已推送)· 对外固件/APK **0.7.2**
 
 ## 0. 一句话
 
@@ -40,7 +40,7 @@
 | 1 | 冷启动 + 焊点/电压 + `SEND/LONG/STOP` ×10 + 接收器观察 | U | ≥9/10 回 `F0`;`LONG` 持续、`STOP` 停止;记录失败曲线 |
 | 2 | BLE `SEND`、错误 PIN、`NAME/GROUP/SYM/EDIT` 重启持久化 | U | 回显 `OK ... (0xF0)`;5 次错误断开;重启后码库保留 |
 | 3 | OTA 浏览器上传/崩溃回滚/AP;uConsole;AP 浏览器;STA 掉线 | U | 每项一条 evidence;失败也写 |
-| 4 | required checks + README/site/AGENTS 版本一致 | A | CI 失败阻断合并;文档无旧版本号 |
+| 4 | CI-03 文档一致性脚本(required checks 已于 11-27 配置) | A | 版本/体积/条数/链接过期时失败 |
 | 5 | 0.7.3 M1(arm/status/BOOT/SHA-256/IP 绑定) | A+U | 0.7.2 gate 关闭后 |
 | 6 | 0.8.0 M1b 接收解析迁入 backend;M2 背板 rev A | A+U | M1b 无;M2 需背板/ADR-002 |
 
@@ -51,7 +51,7 @@
 ```text
 仓库:/home/myf/DSH/Dev/rf-lab
 先按顺序读:AGENTS.md → docs/02-plan.md → docs/03-execution.md → docs/01-ui.md §3.4.1。
-当前 master be22aeb + 0.8.0 M1a 工作区(未提交),对外固件/APK 0.7.2。
+当前 master c7ae2a3(已推送),对外固件/APK 0.7.2。
 设备已 OTA 到 build=e0f155a,但空口 SEND 未复测;RF-01/RF-02 仍是 P0。
 现在只做 0.7.2 的验证收尾,不开始 0.7.3/0.8.0 的新能力。
 发 RF 前先确认用户在场;不要改 docs/evidence 的旧值。

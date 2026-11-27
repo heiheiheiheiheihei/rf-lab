@@ -43,6 +43,7 @@
 | [`2026-11-22-app-ble.md`](2026-11-22-app-ble.md) | 0.7.1 APK 安装/自更新、BLE `NAME/GROUP/SYM/EDIT` 写入 |
 | [`2026-11-22-release-0.7.2.md`](2026-11-22-release-0.7.2.md) | v0.7.2 Release 资产、设备 OTA、`build=e0f155a` |
 | [`2026-11-24-m1a-radio-hal.md`](2026-11-24-m1a-radio-hal.md) | radio HAL M1a 主机/构建通过;**真机未测** |
+| [`2026-11-27-ci-required-checks.md`](2026-11-27-ci-required-checks.md) | master 推送后 CI 三检绿;required checks 配置;M1a 干净构建尺寸纠偏 |
 
 本表不追求完整;新增证据按 `YYYY-MM-DD-<topic>.md` 命名,关键结论补一行即可。
 

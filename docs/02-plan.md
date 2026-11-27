@@ -1,6 +1,6 @@
-# RF-Lab 测试债务与开发计划(2026-11-24)
+# RF-Lab 测试债务与开发计划(2026-11-27)
 
-状态:**现行计划** · 基线 `master be22aeb` + 0.8.0 M1a 工作区(未提交)· 对外固件/APK `0.7.2` · 设备 `RF-Lab-1B59`
+状态:**现行计划** · 基线 `master c7ae2a3`(已推送)· 0.8.0 M1a 已提交 `f55126f` · 对外固件/APK `0.7.2` · 设备 `RF-Lab-1B59`
 单一所有者:**未完成测试登记 + 版本计划**。验收口径仍由 [`00-mvp.md`](00-mvp.md) §7 与
 [`01-ui.md`](01-ui.md) §8 定义;实测事实只写进 [`evidence/`](evidence/);本文件只回答
 「还差什么、谁做、怎么算过、先做哪个」。
@@ -13,8 +13,10 @@
    `fw=0.7.2 build=e0f155a`,码库 21/64;详见
    [`evidence/2026-11-22-release-0.7.2.md`](evidence/2026-11-22-release-0.7.2.md)。
 
-2. **自动化基线已绿,但 merge 仍不守门。**
-   主机 C 测试 **11,312**(含 `SAN=1`)+ TUI 12、APP 36 checks、固件构建、站点检查都有,`ci.yml` 在 `master` 绿;但 `master` 没有 required checks,失败不会阻断合并。
+2. **自动化基线已绿,merge 已配 required checks。**
+   主机 C 测试 **11,312**(含 `SAN=1`)+ TUI 12、APP 36 checks、固件构建、站点检查都有,`ci.yml` 在 `master` 绿;`master` 的 host/static/firmware 三项 required checks 已于 2026-11-27 配置并核验,
+   PR 合并会被阻断;**直接 push 仍可绕过**(按约束 13 保留发版流程)。见
+   [`evidence/2026-11-27-ci-required-checks.md`](evidence/2026-11-27-ci-required-checks.md)。
 
 3. **上机缺口集中在 4 类:**
    ① 射频空口(`SEND/LONG/STOP`、距离、幻码);
@@ -46,10 +48,11 @@ UI 项必须写视口、浏览器与 console 结果。
 
 | 项 | 结果 | 证据 |
 |---|---|---|
-| Git | `master be22aeb`;0.8.0 M1a 在工作区未提交 | `git status` |
+| Git | `master c7ae2a3`(已推送);0.8.0 M1a 提交 `f55126f` | `git status` / `git log` |
 | 主机测试 | 协议 76 + 码库 368 + 事件环 9,427 + OTA 41 + radio 114 + OLED/UI 1,286 = **11,312**;另有 TUI 12、`device_selftest` 18;APP 自更新 36 | `./tools/host_test.sh` / `./tools/app_update_test.sh` |
-| Sanitizer | `SAN=1 ./tools/host_test.sh` 全过 | 2026-11-24 已验 |
-| 固件构建 | v0.7.2 tag:1,126,928 B / 2,031,616 B(55.5%),RAM 27.5%;工作区 M1a:1,154,240 B(56.8%),RAM 27.5% | `cd firmware && pio run -e esp32c3` |
+| Sanitizer | `SAN=1 ./tools/host_test.sh` 全过(CI 每次跑) | 2026-11-27 CI run |
+| 固件构建 | v0.7.2 tag:1,126,928 B / 2,031,616 B(55.5%),RAM 27.5%;master M1a 干净构建:1,128,400 B(55.5%),RAM 90,308 B(27.6%);本地旧 `sdkconfig` 会多 ~26 KB | `cd firmware && pio run -e esp32c3` / CI |
+| 合并守门 | `master` required checks:host / static / firmware;`strict=true`、`enforce_admins=false`、未要求 PR | `gh api .../branches/master/protection` |
 | 官网静态验收 | `SITE OK`;1 条 WARN:`terminal.html` **127,587 B** > 120,000 B 告警线 | `python3 tools/site_check.py` |
 | 设备现状 | `/dev/ttyACM0`,**`fw=0.7.2 build=e0f155a`**,`ui=d0824ba5`,STA `192.168.5.125`;码库 **21/64** | [`2026-11-22-release-0.7.2.md`](evidence/2026-11-22-release-0.7.2.md) |
 | 设备自检 | `device_selftest --json`:**26 pass / 0 fail / 1 skip**(skip = 未加 `--tx`,未发 RF) | 同上 |
@@ -128,15 +131,16 @@ UI 项必须写视口、浏览器与 console 结果。
 | ID | 待验证 | 当前缺口 | 通过标准 | 执行 |
 |---|---|---|---|---|
 | CI-03 | 文档一致性 | README/site/AGENTS 有旧版本号、旧测试计数 | 脚本校验版本/体积/条数/链接;过期值失败 | A |
-| CI-05 | required checks | push/PR 已跑 host/SAN/firmware/site,但 `master` 无 branch protection | 配 required checks,失败阻断合并 | A |
 
-> CI 已绿(host 含 `SAN=1`、static、`pio run -e esp32c3`),见
-> [`evidence/2026-11-22-ci-gate.md`](evidence/2026-11-22-ci-gate.md);唯一缺口是 required checks。
+> CI 已绿(host 含 `SAN=1`、static、`pio run -e esp32c3`);`master` required checks 已于 2026-11-27
+> 配置并核验,**CI-05 关闭**。见 [`evidence/2026-11-27-ci-required-checks.md`](evidence/2026-11-27-ci-required-checks.md)。
+> 剩余缺口是 CI-03:版本/体积/条数仍靠人看。
 
 ### 3.3 P2 — 覆盖率与硬化
 
 | ID | 项 | 说明 | 执行 |
 |---|---|---|---|
+| CFG-01 | 本地 `sdkconfig` 漂移 | `sdkconfig.esp32c3` 是生成物;旧副本开 newlib + protocomm 安全层,构建比干净 CI 多 ~26 KB(1,154,240 vs 1,128,400) | 构建前删生成物;CI 记录尺寸;文档只用干净构建值 | A |
 | COV-01 | BLE 分帧纯 C 单测 | 把按 `\n` 重组/分片逻辑从 NimBLE 回调里抽出,主机测 `MTU-3` 分片、半包、粘包 | A |
 | COV-02 | `web_server` / `net` / OTA 流主机测试 | 目前只测 `rf34dl/codebook/link/ota_ticket/ui`;路由、状态机、上传流没有主机测试 | A |
 | COV-03 | 64 条满库真机 | 主机覆盖 64 条最大载荷;真机 JSON/BLE 快照未压满 | U |
@@ -162,9 +166,10 @@ UI 项必须写视口、浏览器与 console 结果。
    11-15 的 `F0` 是真的,但 11-21 模块命令方向失效也是真的;11-22 只证明 UART 恢复。
    **在 `SEND` 复测前,对外只能说「历史证据存在,当前待复测」。**
 
-2. **P1:CI 绿但 merge 不守门。**
-   主机 11k checks 只在人记得跑、或 PR 跑过之后靠自觉;`master` 没有 required checks,
-   失败不会阻断合并。配置 required checks 比再写 1k 个断言更优先。
+2. **P2:required checks 只守 PR,不守直接 push。**
+   `master` 已配 host/static/firmware 三项 required checks(2026-11-27),PR 合并会被阻断;
+   但按约束 13 仍允许直接 push 发版,所以 direct push 不走 gate。要更强的门就开
+   「Require a pull request」——那会改发版流程,单独拍板。
 
 3. **P1:模块故障可能是硬件/供电,不要用软件重试掩盖。**
    11-21 的现象是「整段 0 字节」,不是「迟到」;`ACK_WAIT_MS` 加大没有用。
@@ -188,14 +193,14 @@ UI 项必须写视口、浏览器与 console 结果。
 |---|---|---|---|
 | 射频 | 冷启动;焊点/电压;`SEND/LONG/STOP` ×10;接收器观察;距离 | U | 新 evidence + 失败次数表 |
 | 端到端 | BLE `SEND`/错误 PIN/持久化;OTA 浏览器/回滚/AP;uConsole;AP 浏览器 | U | 每项一条 evidence |
-| 文档/仓库 | README/site/AGENTS 版本一致;required checks | A | CI/文档更新 |
+| 文档/仓库 | README/site/AGENTS 版本一致;CI-03 脚本 | A | CI/文档更新 |
 
 **0.7.2 退出条件(gate):**
 
 - RF-01/RF-02 关闭,或有用户签字的「明确不做」理由;
 - P1 中 BLE/OTA/WEB/UC 的阻塞项关闭;其余列为已知限制;
 - 设备运行 `build=` 不含 `dirty` 的 tag 构建(已满足);
-- CI 在 master 上绿(已满足);required checks 已配置(待);
+- CI 在 master 上绿(已满足);required checks 已配置并核验(2026-11-27);
 - README/site/AGENTS 的版本、条数、体积与证据一致;
 - 24h 静态无新增 433M 幻码(或已有明确告警/过滤)。
 
@@ -292,10 +297,11 @@ Pages `/firmware/manifest.json` 与 `.bin` 均 200 且 CORS `*`;设备运行 tag
 
 **进展(2026-11-24)**
 
-- **M1a 完成(仅主机/构建)**:新增 `radio.c`(能力位/状态/错误)+ `radio_ys.c`(组帧/F0/FE/FF),
+- **M1a 完成(仅主机/构建,提交 `f55126f`)**:新增 `radio.c`(能力位/状态/错误)+ `radio_ys.c`(组帧/F0/FE/FF),
   `SEND/LONG/STOP` 已改走 HAL;帧与旧 `rf34dl_build_tx` 逐字节一致(单测直接对比)。
-  主机 **11,312 checks**(新增 radio 114);固件 **1,154,240 B / 2,031,616 B(56.8%)**、
-  RAM **90,140 B(27.5%)**。证据:[`evidence/2026-11-24-m1a-radio-hal.md`](evidence/2026-11-24-m1a-radio-hal.md)。
+  主机 **11,312 checks**(新增 radio 114);干净构建 **1,128,400 B / 2,031,616 B(55.5%)**、
+  RAM **90,308 B(27.6%)**(2026-11-27 CI;11-24 本地 `1,154,240 B` 来自未清理的 `sdkconfig`,
+  以干净构建为准)。证据:[`evidence/2026-11-24-m1a-radio-hal.md`](evidence/2026-11-24-m1a-radio-hal.md)。
   **真机未复测**——空口行为仍以本文件 §3.1 的 RF-01/RF-02 为准。
 - **M1b 未做**:`rf34dl_parser_t` 仍在 `main.c`,YS 能力位暂只有 `FIXED_TX|LONG`;
   迁完才置 `FIXED_RX` 并启用 `learn_poll`。
@@ -368,7 +374,7 @@ M1a 已落地;M2/M3 的驱动代码等背板与 0.7.2 gate。外部参考只做*
 | 1 | 冷启动 + 焊点/电压 + `SEND/LONG/STOP` ×10 + 接收器观察 | U | 自有接收器/学习遥控器 |
 | 2 | BLE `SEND`、错误 PIN、写入重启持久化 | U | 手机 + 设备 |
 | 3 | OTA 浏览器上传/崩溃回滚/AP;uConsole;AP 浏览器;STA 掉线 | U | OTA 镜像/token、路由器 |
-| 4 | required checks + README/site/AGENTS 版本一致性 | A | 无 |
+| 4 | CI-03 文档一致性脚本(required checks 已于 11-27 配置) | A | 无 |
 | 5 | 关闭 0.7.2 gate 后,再开 0.7.3 M1 后端(arm/BOOT/SHA-256) | A+U | 1–4 |
 | 6 | 0.8.0 M1b 接收解析迁入 backend;M2 背板 rev A | A+U | M1b 无;M2 需背板 rev A |
 
