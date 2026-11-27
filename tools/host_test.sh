@@ -43,6 +43,15 @@ echo "== ota_ticket:token 格式 / 过期 / 错误次数 / 一次性"
     -o "$TMP/test_ota_ticket"
 "$TMP/test_ota_ticket"
 
+echo "== radio:能力位/状态 + YS 组帧/应答(与 rf34dl 同源)"
+"$CC" "${CFLAGS[@]}" \
+    "$ROOT/firmware/src/radio.c" \
+    "$ROOT/firmware/src/radio_ys.c" \
+    "$ROOT/firmware/src/rf34dl.c" \
+    "$ROOT/firmware/test/host/test_radio.c" \
+    -o "$TMP/test_radio"
+"$TMP/test_radio"
+
 echo "== wiring:JSON -> 代码头 / 表 / SVG 一致性"
 python3 "$ROOT/tools/gen_wiring.py" --check
 

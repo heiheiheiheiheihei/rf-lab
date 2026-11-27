@@ -1,8 +1,8 @@
 # 固件(ESP32-C3 / ESP-IDF 5.5.5)
 
-**状态**:0.7.1 · 可构建 · 协议/码库/OLED/事件环/TUI/OTA 门票有主机单测 · **2026-11-21 已上机**
-(见文末「上机结果」)。0.7.1 在 0.6.0 的 Wi-Fi APSTA + HTTP/SSE + NimBLE 基础上加入码库 v2;
-0.6.0 同日加入**双槽 OTA**(Web 上传 + 回滚 + 串口 token);规格见
+**状态**:对外 **0.7.2** · 可构建 · 协议/码库/OLED/事件环/TUI/OTA/radio 有主机单测 · **2026-11-22 已上机**
+(见文末「上机结果」)。工作区有 0.8.0 M1a(radio HAL,未上机)。0.7.2 在 0.7.1 码库 v2 上加入
+协议去重/容量 64;0.6.0 加入**双槽 OTA**(Web 上传 + 回滚 + 串口 token);规格见
 [`../docs/01-ui.md`](../docs/01-ui.md) §3.4,射频行为仍以 [`../docs/00-mvp.md`](../docs/00-mvp.md) 为准。
 
 目标板:ESP32-C3 0.42" OLED(4MB Flash,原生 USB)。板载 SSD1306 72×40 由本版驱动,
@@ -13,6 +13,8 @@
 | 文件 | 职责 |
 |---|---|
 | [`src/rf34dl.h`](src/rf34dl.h) / [`src/rf34dl.c`](src/rf34dl.c) | **纯协议层**:8 字节帧组帧/解帧、`F0/F1/F2/F3/FE/FF` 应答识别。不依赖 ESP-IDF |
+| [`src/radio.h`](src/radio.h) / [`src/radio.c`](src/radio.c) | **radio HAL 门面**:能力位、状态机、错误码;`SEND/LONG/STOP` 的唯一入口 |
+| [`src/radio_ys.h`](src/radio_ys.h) / [`src/radio_ys.c`](src/radio_ys.c) | YS-RF34DL backend:组帧与 `F0/FE/FF` 应答,输出与旧 `rf34dl_build_tx` 逐字节一致 |
 | [`src/wiring_config.h`](src/wiring_config.h) | **生成物**:引脚/波特率宏,来自 `hardware/wiring.json`;勿手改 |
 | [`src/oled_panel.h`](src/oled_panel.h) | 72×40 面板参数(列偏移 28、MUX/COM/IREF、初始化序列),几何的唯一数据源 |
 | [`src/oled_gfx.h`](src/oled_gfx.h) / [`src/oled_gfx.c`](src/oled_gfx.c) | **纯帧缓冲**:360B 页式显存、画点/线/框、5×7 ASCII、ASCII dump |
@@ -29,6 +31,7 @@
 | [`src/main.c`](src/main.c) | 控制台、NVS、模块 UART1、命令队列、快照、网络初始化、OLED 调度 |
 | [`test/host/test_rf34dl.c`](test/host/test_rf34dl.c) | 协议单测:真实抓包回归、重同步、ACK(含 FE/FF)、fuzz |
 | [`test/host/test_ui.c`](test/host/test_ui.c) | 帧缓冲/字库/状态页/面板几何单测 |
+| [`test/host/test_radio.c`](test/host/test_radio.c) | radio HAL 能力位/状态/BUSY、YS 帧金样本、超时与取消 |
 
 ## 构建
 
@@ -57,7 +60,7 @@ pio run -e esp32c3
 ## 主机单测(不接硬件)
 
 ```bash
-./tools/host_test.sh        # 协议 76 + 码库 368 + 事件环 9427 + OTA 41 + OLED/UI 1286 + TUI 12
+./tools/host_test.sh        # 协议 76 + 码库 368 + 事件环 9427 + OTA 41 + radio 114 + OLED/UI 1286 + TUI 12
 SAN=1 ./tools/host_test.sh  # 加 ASan/UBSan
 ```
 
@@ -157,7 +160,7 @@ UI 的 ARM 是防误触,不是硬门控;BLE PIN 是应用层,不是链路加密�
 ## 一次完整流程
 
 ```text
-# RF-Lab fw=0.7.1 (ESP32-C3 + YS-RF34DL)
+# RF-Lab fw=0.7.2 (ESP32-C3 + YS-RF34DL)
 # oled 72x40 @0x3C i2c400000 sda=GPIO5 scl=GPIO6: ok
 # net mode=ap ap=RF-Lab-1B59 pass=rflab1234 ap_ip=192.168.4.1
 # ble name=RF-Lab-1B59 pin=**** (serial PIN; also OLED 5s)
@@ -169,9 +172,9 @@ OK long id=4 … (0xFE, 170ms)                     ← LONG 4;心跳 ~25Hz
 OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 ```
 
-## 上机结果(2026-11-15)
+## 上机结果(2026-11-15 ~ 2026-11-22)
 
-### 0.7.1 码库 v2
+### 0.7.1/0.7.2 码库 v2
 
 | 项 | 结果 |
 |---|---|
@@ -219,21 +222,23 @@ OK stop id=4 … (0xFF, 23ms)                      ← STOP 4
 2. 距离:室内 15–50m 未测。
 3. 真断电(拔 USB)后的保持;目前只验证了跨重烧复位。
 4. 无屏(0x3C 不应答)的实机降级路径:屏焊死,未拆;代码路径与主机渲染有,未上机。
-5. 两条 `433M` 学码记录(与 315M 码值相同)未解释,见 `evidence/2026-11-15-oled.md` §5;
-   2026-11-22 设备上已增至 4 条同族幻码(`00000093/94/95/53`)。
+5. 433M 幻码:2026-11-22 巡检曾出现 4 条同族 `00000093/94/95/53`,已按越界帧过滤并
+   `DEDUP`;24h 静态复测未做。
 6. 教学期间一次 `stray` 累积 72 字节,未复现(与长发 `0xFE/0xFF` 不是同一现象)。
 7. 外部浏览器经 AP:本机无 Wi-Fi 适配器,只做了设备内 HTTP/SSE 自测。
 8. BLE `SEND` 未验;连接/鉴权/码表已验(2026-11-21)。
-9. uConsole 真机 1280×720 未验收;Android 真机安装/自更新已验(2026-11-22)。
-10. STA 接 LAN:✅ 2026-11-15 已用 `SSID-A` 验证(192.168.5.117);见 `evidence/2026-11-15-wifi-lan.md`。
-11. STA 运行中掉线回退:代码路径已实现,但没有路由器控制权来触发。
+9. uConsole 真机 1280×720 未验收。
+10. STA 运行中掉线回退:代码路径已实现,但没有路由器控制权来触发。
+
+已验、不在此列:STA 接 LAN(`SSID-A`→192.168.5.117)、Android 真机安装/自更新、
+BLE 连接/鉴权/码表。
 
 ## 已知缺口
 
 1. 波特率改错要手动 `RECOVER`(尽力而为,不是原子操作)。
 2. 存储上限 64 条;满了只打印 `store full`,不淘汰旧码。
 3. 协议本身无校验和;UART 位错靠 `INFO` 的 `stray`/`resync` 计数暴露。
-4. 无发射硬门控(旧方案 `RF_KILL` 随三模块方案一起取消)。
+4. 无发射硬门控:模块常带电,固件发出的每帧都是真发射;没有物理 `RF_KILL`。
 5. 控制台用 USB CDC:端口打开后**第一次写入前读不到历史输出**(驱动缓冲不主动刷新),主机工具需先写一个空行。
 6. OLED 只有 5×7 ASCII / 12×5 字符,无中文、无按键交互;写屏同步阻塞 ~8.6ms。
 7. BLE 无链路加密,4 位 PIN 只挡随手连接;AP 密码是固件宏,换密码要重编。

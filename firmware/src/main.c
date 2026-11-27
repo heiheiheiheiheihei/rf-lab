@@ -49,6 +49,8 @@
 #include "oled_panel.h"
 #include "ota.h"
 #include "rf34dl.h"
+#include "radio.h"
+#include "radio_ys.h"
 #include "ui.h"
 #include "web_server.h"
 #include "wiring_config.h"
@@ -93,6 +95,12 @@ static uint8_t s_nvs_blob[CODEBOOK_BLOB_MAX];
 static uint8_t s_nvs_verify[CODEBOOK_BLOB_MAX];
 
 static rf34dl_parser_t s_parser;
+static radio_t s_radio;
+static radio_ys_t s_ys;
+
+/* UART 细节由 main 注入;radio 层不直接依赖 ESP-IDF(见 ADR-001)。 */
+static size_t module_write(const uint8_t *d, size_t n);
+static uint8_t wait_ack(uint8_t want, int ms);
 
 static uint32_t s_rx_bytes = 0;
 static uint32_t s_frames = 0;
@@ -968,6 +976,46 @@ static uint8_t wait_ack(uint8_t want, int ms)
     return s_ack_last;
 }
 
+/* ---------------- 射频门面 ---------------- */
+
+static size_t ys_io_write(void *ctx, const uint8_t *d, size_t n)
+{
+    (void)ctx;
+    return module_write(d, n);
+}
+
+static uint8_t ys_io_wait_ack(void *ctx, uint8_t want, int ms)
+{
+    (void)ctx;
+    return wait_ack(want, ms);
+}
+
+static int64_t ys_io_now(void *ctx)
+{
+    (void)ctx;
+    return now_ms();
+}
+
+static void radio_setup(void)
+{
+    radio_ys_io_t io = {
+        .ctx = NULL,
+        .write = ys_io_write,
+        .wait_ack = ys_io_wait_ack,
+        .now_ms = ys_io_now,
+    };
+
+    if (!radio_ys_bind(&s_ys, &io, ACK_WAIT_MS)) {
+        out("# radio: ys bind failed; SEND/LONG/STOP unavailable\n");
+        return;
+    }
+    radio_bind(&s_radio, radio_ys_ops(), &s_ys);
+    radio_err_t e = radio_init(&s_radio);
+    if (e != RADIO_OK) {
+        out("# radio: ys init failed (%s)\n", radio_err_name(e));
+    }
+}
+
 /* ---------------- 命令 ---------------- */
 
 static int hex_val(char c)
@@ -1410,7 +1458,6 @@ static void cmd_edit(const char *args)
 static void do_tx(const char *args, uint8_t dur, const char *what)
 {
     int id = atoi(args);
-    uint8_t f[RF34DL_FRAME_LEN];
     char hex[9];
 
     if (id < 1 || id > s_codebook.count) {
@@ -1420,7 +1467,7 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
 
     const codebook_rec_t *c = codebook_get(&s_codebook, id);
     hex4(c->code, hex);
-    if (rf34dl_build_tx(f, c->band, dur, c->code) != RF34DL_FRAME_LEN) {
+    if (!rf34dl_band_ok(c->band)) {
         out("ERR build failed\n");
         return;
     }
@@ -1442,10 +1489,18 @@ static void do_tx(const char *args, uint8_t dur, const char *what)
     uint8_t need = (dur == RF34DL_DUR_LONG)   ? RF34DL_ACK_LONG_ON
                    : (dur == RF34DL_DUR_STOP) ? RF34DL_ACK_STOPPED
                                               : RF34DL_ACK_TX_OK;
-    int64_t t0 = now_ms();
-    module_write(f, RF34DL_FRAME_LEN);
-    uint8_t a = wait_ack(need, ACK_WAIT_MS);
-    unsigned dt = (unsigned)(now_ms() - t0);
+    radio_fixed_t rf = {.band = c->band};
+    memcpy(rf.code, c->code, sizeof(rf.code));
+    radio_tx_result_t res = {0};
+    if (dur == RF34DL_DUR_LONG) {
+        (void)radio_long_start(&s_radio, &rf, &res);
+    } else if (dur == RF34DL_DUR_STOP) {
+        (void)radio_long_stop(&s_radio, &rf, &res);
+    } else {
+        (void)radio_send(&s_radio, &rf, &res);
+    }
+    uint8_t a = res.ack;
+    unsigned dt = res.elapsed_ms;
 
     if (a == need) {
         out("OK %s id=%d band=%s code=%s (0x%02X, %ums)\n", what, id,
@@ -2209,6 +2264,7 @@ void app_main(void)
 {
     init_console();
     init_module();
+    radio_setup();
 
     esp_err_t oe = oled_init(PIN_OLED_SDA, PIN_OLED_SCL, OLED_I2C_HZ);
     s_oled_ok = (oe == ESP_OK);
