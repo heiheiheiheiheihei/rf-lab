@@ -12,12 +12,15 @@
 | 改 WiFi STA/AP 回退、配网 | `docs/01-ui.md` §3.1、`docs/evidence/2026-11-15-wifi.md` |
 | 改 OTA / 分区 / 回滚 | `docs/01-ui.md` §3.4、`firmware/README.md`、`firmware/partitions.csv` |
 | 改 UI 一键固件更新 / 固件发布到 Pages | `docs/01-ui.md` §3.4.1、`docs/02-plan.md` §5.2、`.github/workflows/pages.yml` |
-| 看当前状态、上机证据、未验证项 | `README.md`、`docs/02-plan.md`、`docs/evidence/2026-11-22-device-audit.md` |
+| 看当前状态、上机证据、未验证项 | `README.md`、`docs/02-plan.md` §2、`docs/evidence/2026-11-22-release-0.7.2.md` |
 | 排期、版本计划、发布门槛、测试债务 | `docs/02-plan.md` |
+| 0.8.0/0.9.0 调研、外部实现复用、`.sub`/CC1101 参考 | `docs/04-ref-mynova.md` |
+| 射频抽象 / CC1101 接口 / 码库与 RAW 存储决策 | `docs/adr/ADR-001-radio-hal.md`、`docs/adr/ADR-003-codebook-raw.md` |
 | CI 守门 / 回归门槛 | `.github/workflows/ci.yml`、`docs/02-plan.md` §3.2 |
 | 新会话接手、执行顺序、交接 | `docs/03-execution.md` |
 | 看/改官网、配装器、价格与文案 | `site/README.md`、`site/index.html`、`site/app.js` |
 | 接线、引脚、上电检查 | `hardware/wiring.json`、`hardware/README.md` |
+| 改 PCB 底板 / 打样 / 嘉立创下单 | `hardware/pcb/README.md` |
 | 固件构建、烧录、排障 | `firmware/README.md` |
 | Android APK 构建/权限/BLE 桥/自更新 | `android/README.md` |
 | OPPO Watch 2 客户端(UI/BLE/ADB 上机) | `watch/README.md`、`docs/01-ui.md` §7.1 |
@@ -46,12 +49,12 @@
    `tools/build_web.py` 生成 `web/dist/index.html`、固件 gzip、Android assets,
    以及 `site/assets/terminal.html`(官网交互 demo);改 UI 后先跑
    `python3 tools/build_web.py`,再构建固件/APK。
-9. **app 分区余量**:镜像已 ~1.09MB/1.94MB 槽;新增依赖先看 Flash/RAM 报告,不要把槽用满。
+9. **app 分区余量**:镜像已 ~1.13MB/1.94MB 槽;新增依赖先看 Flash/RAM 报告,不要把槽用满。
 10. **官网不越权 / 视觉同源**:`site/` 是静态宣传/规划页;CC1101/NRF24L01/SI4463/LR1121、MQTT/HA
     必须保持“路线图/未实现”标识,不得写成现役能力。官网同时是 UI 视觉基线(`site/style.css`
     的 token 与组件语法):`web/`/固件页只复制视觉、不复制脚本/依赖,细则见 `docs/01-ui.md` §5.1。
     改官网版式不动 `web/` 与固件;设备 UI 变了才重生成 `site/assets/terminal.html`(官网交互 demo)。
-11. **OTA 边界**:`POST /api/ota` 默认关闭;0.7.1 只有串口 `OTA` armed 后才接受,
+11. **OTA 边界**:`POST /api/ota` 默认关闭;0.7.x 只有串口 `OTA` armed 后才接受,
     0.7.3 规划允许「BOOT 物理确认后的 HTTP arm」(约束 15);token 是应用层门,
     不是签名/加密,没有 secure boot。**设备 OTA 只更新设备,不更新 APK**。APK 自更新是独立的
     客户端路径(0.7.0 起,`android/.../Updater.java`):只读 GitHub Release,过 SHA-256/包名/
@@ -71,14 +74,13 @@
 14. **计划单一源**:未完成测试、优先级、版本计划只维护在 `docs/02-plan.md`;
     组件 README 只留摘要并链接。新增测试项先登记在那里,再改代码/文档。
 15. **一键更新边界**:UI 一键固件更新必须先有物理确认(BOOT 按住 2s)才能 arm;
-    0.7.3 固定用 BOOT,不把 OLED code 当备选;浏览器只从 GitHub Pages 拉 manifest/固件,
-    设备必须校验 SHA-256;HTTP/BLE 不能单独 arm,SHA-256 不是签名、没有 secure boot。
-    规划见 `docs/01-ui.md` §3.4.1。
+    浏览器只从 GitHub Pages 拉 manifest/固件,设备必须校验 SHA-256;
+    HTTP/BLE 不能单独 arm,SHA-256 不是签名、没有 secure boot。规划见 `docs/01-ui.md` §3.4.1。
 
 ## 验证命令
 
 ```bash
-./tools/host_test.sh                 # 协议 76 + 码库 368 + 事件环 9427 + OTA 41 + OLED/UI 1286 + TUI 12 + selftest 18
+./tools/host_test.sh                 # 协议 76 + 码库 368 + 事件环 9427 + OTA 41 + radio 114 + OLED/UI 1286 + TUI 12 + selftest 18
 SAN=1 ./tools/host_test.sh           # 同上 + ASan/UBSan
 node --check web/app.js
 python3 tools/gen_wiring.py --check   # JSON -> 代码头/表/SVG

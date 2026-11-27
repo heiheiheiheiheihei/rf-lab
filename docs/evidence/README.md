@@ -33,6 +33,19 @@
 
 前两条来自**旧硬件方案**(ESP32-S3 + 同一块模块)。硬件换了,但模块与抓包内容不变,所以证据继续有效。
 
+## 近期关键证据(2026-11-22 起)
+
+| 文件 | 支撑的结论 |
+|---|---|
+| [`2026-11-22-firmware-flash.md`](2026-11-22-firmware-flash.md) | 用 `flash.sh` 重烧双 OTA 布局;设备码库/Wi-Fi 保留 |
+| [`2026-11-22-device-selftest.md`](2026-11-22-device-selftest.md) | 自检版本无关化;26 pass / 0 fail / 1 skip(未发 RF) |
+| [`2026-11-22-codebook-protocol.md`](2026-11-22-codebook-protocol.md) | 码库身份去重、越界帧、容量 64 的真机结果 |
+| [`2026-11-22-app-ble.md`](2026-11-22-app-ble.md) | 0.7.1 APK 安装/自更新、BLE `NAME/GROUP/SYM/EDIT` 写入 |
+| [`2026-11-22-release-0.7.2.md`](2026-11-22-release-0.7.2.md) | v0.7.2 Release 资产、设备 OTA、`build=e0f155a` |
+| [`2026-11-24-m1a-radio-hal.md`](2026-11-24-m1a-radio-hal.md) | radio HAL M1a 主机/构建通过;**真机未测** |
+
+本表不追求完整;新增证据按 `YYYY-MM-DD-<topic>.md` 命名,关键结论补一行即可。
+
 > **修正(2026-11-15,0.5.0)**:`2026-11-15-bringup.md` §6 的"长发/停止之后模块没有回任何字节"
 > 已被推翻。实际是 `0xFE` 心跳(长发,~25Hz)与 `0xFF`(停止),见 `2026-11-15-oled.md` §4。
 

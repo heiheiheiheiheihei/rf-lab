@@ -139,13 +139,13 @@ BLE 参数(与固件一致):
 
 | 项 | 状态 |
 |---|---|
-| `assembleRelease` + 签名 | ✅ 2026-11-21(0.7.1),1,050,176B,versionCode 3,release 密钥 v2 签名,`apksigner verify` 通过;0.7.0 为 1,027,080B |
+| `assembleRelease` + 签名 | ✅ 0.7.2:1,050,272B/versionCode 4/release 密钥 v2;0.7.1:1,050,176B/versionCode 3 |
 | 资源内嵌 | ✅ `assets/index.html` 129,449B,与 `web/dist` 一致 |
-| Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 3/0.7.1,minSdk 26,targetSdk 35,INTERNET + REQUEST_INSTALL_PACKAGES |
+| Manifest/权限/包名 | ✅ `aapt2 dump badging`: `dev.rflab.terminal` 4/0.7.2,minSdk 26,targetSdk 35,INTERNET + REQUEST_INSTALL_PACKAGES |
 | 自更新逻辑(主机) | ✅ `./tools/app_update_test.sh` 36 checks;真实 Release 的 `./name` SUMS 查表与实际哈希一致 |
-| 自更新真机链路 | ✅ 2026-11-22:0.7.0→0.7.1 弹窗/下载/系统安装器/覆盖安装成功(用户确认) |
-| GitHub Release 发布 | ✅ [v0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.1)(CI run 44918804371,1,050,176B,sha256 `59f763…`,`SHA256SUMS.txt` 与实际哈希一致);v0.7.0 历史 Release 保留;官网按钮指向 `latest/download` |
-| 真机安装/启动 | ✅ 0.7.1 已在真机安装;0.7.0 亦已真机连 BLE |
+| 自更新真机链路 | ✅ 2026-11-22:0.7.0→0.7.1 弹窗/下载/系统安装器/覆盖安装成功(用户确认);⏳ 0.7.2 未复测 |
+| GitHub Release 发布 | ✅ [v0.7.2](https://github.com/heiheiheiheiheihei/rf-lab/releases/tag/v0.7.2)(1,050,272B + `firmware.bin` + `SHA256SUMS.txt`);v0.7.0/v0.7.1 历史 Release 保留;官网按钮指向 `latest/download` |
+| 真机安装/启动 | ✅ 0.7.1 已在真机安装;0.7.0 亦已真机连 BLE;⏳ 0.7.2 真机安装 |
 | 真机 BLE 扫描/连接/鉴权/码库 | ✅ 手机连接、AUTH、`DISP TEST 30` 回显、码表 9 条(2026-11-21);✅ BLE `NAME/GROUP/SYM/EDIT` 写入(2026-11-22);⏳ BLE `SEND` |
 | Android 15 edge-to-edge 视觉 | ⏳ 需要真机 |
 

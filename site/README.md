@@ -1,9 +1,8 @@
 # site/ — RF-LAB 官网 / 配装台
 
-**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.1](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **手表:** [OPPO Watch 2 客户端源码](https://github.com/heiheiheiheiheihei/rf-lab/tree/master/watch) · **部署:** GitHub Pages / Actions(见文末)
+**线上:** <https://heiheiheiheiheihei.github.io/rf-lab/> · **下载:** [Android APK 0.7.2](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest/download/rf-lab-android.apk) · **手表:** [OPPO Watch 2 客户端源码](https://github.com/heiheiheiheiheihei/rf-lab/tree/master/watch) · **部署:** GitHub Pages / Actions(见文末)
 **2026-11-21 已上线交互 demo:** `/assets/terminal.html` 与 `/assets/terminal-demo.js` 均 200;真机 BLE 连接/码表已验(2026-11-21);线上交互回归仍未验证。
-**2026-11-22 新增手表区:** 46mm OW20W1 真机截图、独立 release key / 0.1.0;
-已由 Pages 发布(commit `e359992` / [run 45001726431](https://github.com/heiheiheiheiheihei/rf-lab/actions/runs/45001726431))。
+**2026-11-22 新增手表区:** 46mm OW20W1 真机截图、独立 release key / 0.1.0,已由 Pages 发布。
 
 静态单页,把项目从“315/433 固定码工具”讲成“¥100–999 的模块化射频实验室”。
 无站点构建、无外部字体、无 CDN、无外部/API 请求;直接打开 `site/index.html` 就能看。
@@ -40,8 +39,8 @@ python3 -m http.server 8088 -d site
 | 位置 | 链接 |
 |---|---|
 | 导航栏 CTA(吸顶) | `releases/latest/download/rf-lab-android.apk` |
-| 首屏 CTA 第三颗按钮 | 同上,标 `0.7.1 · ↓` |
-| 状态板 Android APK 行 | 文字标 `0.7.1 · release 签名 · 1.05 MB`;下载走导航/页脚 |
+| 首屏 CTA 第三颗按钮 | 同上,标 `0.7.2 · ↓` |
+| 状态板 Android APK 行 | 文字标 `0.7.2 · release 签名 · 1.05 MB`;下载走导航/页脚 |
 | 页脚 SOURCE | 同上 + [Releases](https://github.com/heiheiheiheiheihei/rf-lab/releases/latest) |
 | 手表 | [`releases/download/watch-v0.1.0/rf-lab-watch.apk`](https://github.com/heiheiheiheiheihei/rf-lab/releases/download/watch-v0.1.0/rf-lab-watch.apk) · 源码/规格 `watch/README.md` |
 
@@ -78,7 +77,7 @@ python3 -m http.server 8088 -d site
 不是真机在线。
 
 `../docs/evidence/ui-2026-11-21-*.png` 仍是 **mock API 布局验收图**,不是新皮肤上机截图;
-真实 LAN 图 `../docs/evidence/ui-lan-live.png` 仍是 0.6.0 旧皮肤。2026-11-21 视觉尚未重新烧录验证。
+真实 LAN 图 `../docs/evidence/ui-lan-live.png` 仍是 0.6.0 旧皮肤。全量视觉尚未重新烧录验证(0.7.1 码库页已有真机截图)。
 
 ## 硬件效果图 / 接线图
 
@@ -104,7 +103,7 @@ python3 -m http.server 8088 -d site
 
 ## 现役 / 路线图边界(硬规则)
 
-- **现役**:YS-RF34DL 315/433 固定码学习/发射;Web HTTP+SSE;BLE 广播/真机码表;Android APK 0.7.1;
+- **现役**:YS-RF34DL 315/433 固定码学习/发射;Web HTTP+SSE;BLE 广播/真机码表;Android APK 0.7.2;
   OPPO Watch 2 0.1.0(46mm 真机);uConsole TUI 主机测试。上机证据在 `../docs/evidence/`。
 - **路线图**:CC1101 / NRF24L01 / SI4463 / LR1121、SPI 背板、MQTT bridge、
   Home Assistant Discovery。页面里必须保持“路线图 / 未实现 / 概念”标识。
@@ -183,4 +182,3 @@ Pages 使用 **GitHub Actions** 发布,工作流:[`../.github/workflows/pages.ym
   `/rf-lab/robots.txt`、`/rf-lab/sitemap.xml` 均 200。
 - 重新部署前先跑 `python3 tools/build_web.py` + `node --check site/app.js` +
   `node --check site/assets/terminal-demo.js` + `python3 tools/site_check.py`。
-- 旧 Cloudflare Pages 项目 `rf-lab` 保留为历史镜像,不再作为官方入口。
